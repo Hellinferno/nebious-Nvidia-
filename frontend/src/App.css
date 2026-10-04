@@ -1,0 +1,28 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.status-box {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.success {
+  color: #047857;
+  background-color: #d1fae5;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.error {
+  color: #b91c1c;
+  background-color: #fee2e2;
+  padding: 1rem;
+  border-radius: 4px;
+}
