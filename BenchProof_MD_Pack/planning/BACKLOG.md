@@ -8,7 +8,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-01 — Event and account readiness · P0
 
-**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (environment facts recorded 4 Oct; registration/credits/runner access still unconfirmed).
 
 **Work:** Review this event eligibility/registration; record actual inference/runner access, credits, expiry and billing controls. Keep account facts separate from offered resources.
 
@@ -18,7 +18,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-02 — Source scaffold and configuration · P0
 
-**Owner:** Ravi. **Dependencies:** B-01 account facts; docs can scaffold independently. **Target:** 4 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-01 account facts; docs can scaffold independently. **Target:** 4 Oct. **Status:** DONE 4 Oct (locked install, health/ready/worker heartbeat, explicit live-mode refusal; see progress log).
 
 **Work:** Create installable Python package, React/TypeScript UI, locked dependencies, .env.example and safe ignore rules. Add domain/API/state/evaluator module boundaries from repository structure.
 
@@ -28,7 +28,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-03 — Executable constraints and development fixtures · P0
 
-**Owner:** Ravi. **Dependencies:** B-02. **Target:** 4–6 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-02. **Target:** 4–6 Oct. **Status:** IN_PROGRESS (4 Oct: five development cases, trusted oracle, reference repairs and clean control validated; unapproved-manifest rejection and shallow candidate remain).
 
 **Work:** Implement five visible development cases and original synthetic inputs; pin approved C-API/C-AMOUNT/C-CALLER/C-IDEMPOTENCY/C-INTEGRITY mappings. Write external trusted oracle and reference repairs.
 
@@ -38,7 +38,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-04 — Real NVIDIA inference adapter · P0
 
-**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** BLOCKED (adapter and preflight script exist; no NEBIUS_API_KEY available on 4 Oct, so no real inference recorded).
 
 **Work:** Discover actual model catalog; record model card/license. Validate structured constraint-linked actions, repair proposal, usage, timeouts and format rejection behind a narrow adapter.
 
@@ -48,7 +48,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-05 — Isolated runner and protected transport · P0
 
-**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 5–6 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 5–6 Oct. **Status:** TODO (sandbox access not yet requested as of 4 Oct).
 
 **Work:** Map tested SDK calls to prepare/run/cancel/artifacts; pin image, keep launcher outside editable app source. Verify fresh state, network/resource controls and remote-operation lifecycle.
 

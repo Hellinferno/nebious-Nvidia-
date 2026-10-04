@@ -1,28 +1,98 @@
 .container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.status-box {
-  margin-top: 2rem;
   padding: 1.5rem;
-  border-radius: 8px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
+  text-align: left;
 }
 
-.success {
-  color: #047857;
-  background-color: #d1fae5;
-  padding: 1rem;
-  border-radius: 4px;
+.subtitle {
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+}
+
+.panel {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+}
+
+.panel h2 {
+  margin-bottom: 0.75rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+.facts dt {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.list li:first-child {
+  border-top: none;
+}
+
+.meta {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.examples {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.examples th,
+.examples td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
 }
 
 .error {
-  color: #b91c1c;
-  background-color: #fee2e2;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 4px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+@media (max-width: 480px) {
+  .facts {
+    grid-template-columns: 1fr;
+  }
+  .examples thead {
+    display: none;
+  }
+  .examples tr {
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .examples td {
+    display: block;
+    border-bottom: none;
+  }
 }

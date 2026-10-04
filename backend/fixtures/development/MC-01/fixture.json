@@ -1,0 +1,12 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "MC-01",
+  "suite": "development-v2",
+  "family": "Exact amount boundary",
+  "constraint": "C-AMOUNT",
+  "defect": "Each line amount is rounded before summing (premature rounding)",
+  "visibility": "development",
+  "candidate_editable_paths": ["app/"],
+  "language": "python",
+  "synthetic": true
+}

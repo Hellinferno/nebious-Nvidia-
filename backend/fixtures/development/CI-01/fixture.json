@@ -1,0 +1,12 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "CI-01",
+  "suite": "development-v2",
+  "family": "Cross-module caller impact",
+  "constraint": "C-INTEGRITY",
+  "defect": "Worker bypasses services.process_invoice and skips the idempotency check",
+  "visibility": "development",
+  "candidate_editable_paths": ["app/"],
+  "language": "python",
+  "synthetic": true
+}

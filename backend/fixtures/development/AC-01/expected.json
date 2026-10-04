@@ -1,0 +1,6 @@
+{
+  "intended_failing_checks": ["api-field-presence"],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "notes": "amount-boundary and caller-consistency read total_amount and become UNKNOWN as a consequence; they are not the intended fault."
+}

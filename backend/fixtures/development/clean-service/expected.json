@@ -1,0 +1,6 @@
+{
+  "intended_failing_checks": [],
+  "expected_verdict": "VERIFIED",
+  "reference_repair": null,
+  "notes": "Clean control must pass every required check untouched; any accepted repair here is an unjustified change."
+}

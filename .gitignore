@@ -45,3 +45,14 @@ dist-ssr/
 # BenchProof specifics
 artifacts/
 *.db
+
+# Virtual environments
+venv/
+.venv/
+
+# Freebuff workspace metadata
+.freebuff/
+
+# Local SQLite WAL files
+*.db-wal
+*.db-shm

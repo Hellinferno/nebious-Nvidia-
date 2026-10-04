@@ -53,8 +53,8 @@ If it is too late tonight, move environment/account checks to the first 30 minut
 ### Work in order
 
 1. [ ] Confirm eligibility/registration and actual account/credit/expiry facts (30–45 min); record beta runner access as granted, requested or absent.
-2. [ ] Create backend/UI packages, tested locks, .env.example and safe ignores (60 min); start health and a minimal UI without candidate execution.
-3. [ ] Write C-API/C-AMOUNT/C-INTEGRITY and the synthetic service interfaces (60–75 min); create AC/MC/clean development source and trusted expected properties.
+2. [x] Create backend/UI packages, tested locks, .env.example and safe ignores (60 min); start health and a minimal UI without candidate execution.
+3. [x] Write C-API/C-AMOUNT/C-INTEGRITY and the synthetic service interfaces (60–75 min); create AC/MC/clean development source and trusted expected properties.
 4. [ ] Discover the model catalog, verify a NVIDIA card/license and run one real bounded inference (60 min); save sanitized model/response/usage metadata.
 5. [ ] Request/check runner access and prepare tomorrow’s pinned image/transport plan (30 min); commit scaffolding and record remaining dependency failures.
 

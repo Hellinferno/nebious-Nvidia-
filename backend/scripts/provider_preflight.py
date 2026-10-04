@@ -1,54 +1,124 @@
-import os
+"""Provider preflight (B-04): catalog discovery + one real bounded NVIDIA inference.
+
+Fails explicitly (exit 1) when credentials are missing. Writes a sanitized
+record (no key, no headers) to artifacts/preflight/provider_<timestamp>.json.
+
+Usage:  python scripts/provider_preflight.py [--model MODEL_ID]
+Env:    NEBIUS_API_KEY (required), NEBIUS_BASE_URL (optional), NEBIUS_MODEL_ID (optional)
+"""
+
+from __future__ import annotations
+
+import argparse
 import json
-from openai import OpenAI
+import os
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from dotenv import load_dotenv
 
-def main():
-    load_dotenv(dotenv_path="../.env")
-    
-    api_key = os.getenv("NEBIUS_API_KEY")
-    base_url = os.getenv("NEBIUS_BASE_URL", "https://api.studio.nebius.ai/v1/")
-    
-    if not api_key or api_key == "your_api_key_here":
-        print("Error: NEBIUS_API_KEY is missing or invalid in .env")
-        return
+from benchproof.providers import NebiusAdapter, ProviderError
 
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    
-    print("Fetching model catalog...")
-    models = client.models.list()
-    for m in models.data:
-        print(f"- {m.id}")
-        
-    target_model = "meta-llama/Meta-Llama-3.1-70B-Instruct" # Typical model on Nebius, adjust as needed
-    
-    print(f"\nRunning bounded inference on {target_model}...")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ARTIFACT_DIR = REPO_ROOT / "artifacts" / "preflight"
+
+
+def pick_model(catalog: list[dict], requested: str | None) -> str | None:
+    ids = [m["id"] for m in catalog]
+    if requested:
+        return requested if requested in ids else None
+    nvidia = [i for i in ids if i.lower().startswith("nvidia/")]
+    return nvidia[0] if nvidia else None
+
+
+def _save(record: dict) -> None:
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    ts = record["timestamp"].replace(":", "").replace("-", "")[:15]
+    path = ARTIFACT_DIR / f"provider_{ts}.json"
+    path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    print(f"Saved {path.relative_to(REPO_ROOT)}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="exact model id; defaults to NEBIUS_MODEL_ID or the first nvidia/* catalog entry",
+    )
+    args = parser.parse_args()
+
+    load_dotenv(REPO_ROOT / ".env")
+    requested = args.model or os.getenv("NEBIUS_MODEL_ID") or None
+
+    record: dict = {
+        "schema_version": "benchproof/v2",
+        "kind": "provider_preflight",
+        "timestamp": datetime.now(UTC).isoformat(),
+        "status": "BLOCKED",
+    }
+
     try:
-        response = client.chat.completions.create(
-            model=target_model,
-            messages=[{"role": "user", "content": "Return the string 'HELLO_NVIDIA' and nothing else."}],
-            max_tokens=10
+        adapter = NebiusAdapter()
+    except ProviderError as e:
+        record["blocker"] = str(e)
+        print(f"BLOCKED: {e}. Set NEBIUS_API_KEY in {REPO_ROOT / '.env'} (see .env.example).")
+        _save(record)
+        return 1
+
+    try:
+        catalog = adapter.list_models()
+    except ProviderError as e:
+        record["blocker"] = str(e)
+        print(f"BLOCKED: {e}")
+        _save(record)
+        return 1
+
+    record["catalog_size"] = len(catalog)
+    record["nvidia_models"] = sorted(
+        m["id"] for m in catalog if m["id"].lower().startswith("nvidia/")
+    )
+    print(f"Catalog: {len(catalog)} models; NVIDIA-prefixed: {record['nvidia_models']}")
+
+    model = pick_model(catalog, requested)
+    if model is None:
+        record["blocker"] = (
+            f"requested model {requested!r} not in catalog"
+            if requested
+            else "no nvidia/* model in catalog"
         )
-        
-        output = response.choices[0].message.content
-        usage = response.usage
-        
-        metadata = {
-            "model": target_model,
-            "response": output,
-            "prompt_tokens": usage.prompt_tokens if usage else None,
-            "completion_tokens": usage.completion_tokens if usage else None
-        }
-        
-        os.makedirs("../artifacts", exist_ok=True)
-        with open("../artifacts/inference_metadata.json", "w") as f:
-            json.dump(metadata, f, indent=2)
-            
-        print("Inference successful! Saved metadata to artifacts/inference_metadata.json")
-        print(json.dumps(metadata, indent=2))
-        
-    except Exception as e:
-        print(f"Inference failed: {e}")
+        print(f"BLOCKED: {record['blocker']}")
+        _save(record)
+        return 1
+    record["selected_model"] = model
+    # Manual step: record the model card / license URL in PROGRESS_LOG before relying on it.
+    record["model_card_verified"] = False
+
+    try:
+        result = adapter.complete(
+            model=model,
+            system_prompt="You are a terse assistant.",
+            user_prompt=(
+                "Suggest one bounded check for a Python invoice-total rounding constraint. "
+                "One sentence."
+            ),
+            max_tokens=128,
+        )
+    except ProviderError as e:
+        record["blocker"] = str(e)
+        print(f"BLOCKED: {e}")
+        _save(record)
+        return 1
+
+    record["status"] = "OK"
+    record["inference"] = result
+    print(json.dumps(result, indent=2))
+    _save(record)
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

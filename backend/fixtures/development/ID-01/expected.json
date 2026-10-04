@@ -1,0 +1,6 @@
+{
+  "intended_failing_checks": ["idempotency-duplicate", "idempotency-conflict"],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "notes": "Identical resubmission must return the original receipt_id; conflicting payload must return 409."
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "ID-01",
+  "suite": "development-v2",
+  "family": "Tenant-scoped idempotency",
+  "constraint": "C-INTEGRITY",
+  "defect": "Idempotency lookup removed; duplicates always create a new receipt",
+  "visibility": "development",
+  "candidate_editable_paths": ["app/"],
+  "language": "python",
+  "synthetic": true
+}

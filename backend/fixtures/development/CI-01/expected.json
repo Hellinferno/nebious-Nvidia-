@@ -1,0 +1,6 @@
+{
+  "intended_failing_checks": ["worker-caller-path"],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "notes": "Worker computes the same total today, so caller-consistency passes; the static caller-path check is what exposes the bypass."
+}

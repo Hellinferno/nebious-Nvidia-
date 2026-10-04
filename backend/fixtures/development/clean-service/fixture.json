@@ -1,0 +1,12 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "clean-service",
+  "suite": "development-v2",
+  "family": "Clean control",
+  "constraint": null,
+  "defect": null,
+  "visibility": "development",
+  "candidate_editable_paths": ["app/"],
+  "language": "python",
+  "synthetic": true
+}

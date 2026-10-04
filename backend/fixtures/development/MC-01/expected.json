@@ -1,0 +1,6 @@
+{
+  "intended_failing_checks": ["amount-boundary"],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "notes": "Boundary input 0.005 + 0.005 must total 0.01; premature per-line rounding yields 0.02 on both route and worker, so caller-consistency still passes."
+}

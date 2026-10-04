@@ -1,0 +1,12 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "AC-01",
+  "suite": "development-v2",
+  "family": "API compatibility",
+  "constraint": "C-API",
+  "defect": "ReceiptResponse renames total_amount to amount and drops status",
+  "visibility": "development",
+  "candidate_editable_paths": ["app/"],
+  "language": "python",
+  "synthetic": true
+}

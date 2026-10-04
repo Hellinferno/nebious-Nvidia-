@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-04 — Day 1 scaffold (B-02 done; B-03 in progress; B-04 blocked)
+
+- Backend: installable `benchproof-backend` package with `requirements.lock.txt`; FastAPI `health`, `ready`, `examples`, `constraints`/`contracts`, `audits` (create/get/list/cancel); SQLite migrations incl. worker heartbeats; lifespan-based startup.
+- Constraints: pinned C-API, C-AMOUNT, C-INTEGRITY v1 with canonical hashes and a combined contract hash.
+- Fixtures: five `development-v2` cases (AC-01, MC-01, CI-01, ID-01, clean-service) with public `fixture.json`, trusted `expected.json` and `reference/` repairs kept outside `app/`; source hashing per fixture.
+- Evaluator: seven deterministic checks; gate returns VERIFIED / REJECTED / INCONCLUSIVE; development harness and `scripts/validate_fixtures.py` validate faulty, reference and clean behavior.
+- Provider: Nebius Token Factory adapter (timeout, no retries); `scripts/provider_preflight.py` fails explicitly without a key and writes a sanitized record.
+- Worker: `scripts/start_worker.py` heartbeat only; no candidate execution exists.
+- UI: reads real `/api/v1` records and shows mode, provider/runner/worker state, constraints and examples.
+- Tests: 40 pytest cases; ruff and oxlint clean. No model call, runner, graph, patch, export or deployment is claimed.
+
 ## 2026-10-03 — research-aligned planning pack v2
 
 - Applied the recovered coding-agent research and checked comparison claims against primary product documentation.
