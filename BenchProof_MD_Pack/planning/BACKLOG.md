@@ -8,7 +8,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-01 — Event and account readiness · P0
 
-**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (environment facts recorded 4 Oct; registration/credits/runner access still unconfirmed).
+**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (4 Oct owner confirmation: registration confirmed; no Nebius account or credits yet; sandbox access not requested).
 
 **Work:** Review this event eligibility/registration; record actual inference/runner access, credits, expiry and billing controls. Keep account facts separate from offered resources.
 
@@ -38,7 +38,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-04 — Real NVIDIA inference adapter · P0
 
-**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** BLOCKED (adapter and preflight script exist; no NEBIUS_API_KEY available on 4 Oct, so no real inference recorded).
+**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** BLOCKED (adapter and preflight script exist; no Nebius account on 4 Oct, so no key and no real inference recorded).
 
 **Work:** Discover actual model catalog; record model card/license. Validate structured constraint-linked actions, repair proposal, usage, timeouts and format rejection behind a narrow adapter.
 
