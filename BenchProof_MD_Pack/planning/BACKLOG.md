@@ -8,7 +8,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-01 — Event and account readiness · P0
 
-**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (registration confirmed 4 Oct; Nebius account and key present 5 Oct; credits/expiry/billing not yet recorded; sandbox access not requested).
+**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (registration confirmed 4 Oct; Nebius service-account static key present 5 Oct, expires 2031-10-04; credits/billing not yet recorded; sandbox access not requested).
 
 **Work:** Review this event eligibility/registration; record actual inference/runner access, credits, expiry and billing controls. Keep account facts separate from offered resources.
 

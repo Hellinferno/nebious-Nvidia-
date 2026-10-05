@@ -175,7 +175,7 @@ def main() -> int:
                 "Suggest one bounded check for a Python invoice-total rounding constraint. "
                 "One sentence."
             ),
-            max_tokens=128,
+            max_tokens=512,  # reasoning model: 128 left no visible content
         )
     except ProviderError as e:
         return _blocked(record, str(e))
