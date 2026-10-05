@@ -28,7 +28,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-03 — Executable constraints and development fixtures · P0
 
-**Owner:** Ravi. **Dependencies:** B-02. **Target:** 4–6 Oct. **Status:** IN_PROGRESS (4 Oct: five development cases, trusted oracle, reference repairs and clean control validated; unapproved-manifest rejection and shallow candidate remain).
+**Owner:** Ravi. **Dependencies:** B-02. **Target:** 4–6 Oct. **Status:** DONE 5 Oct for the P0 minimum (AC/MC/CI/ID/clean validated in-process and through the Docker runner; relaxed/unknown/incomplete manifests → CONTRACT_UNAPPROVED; missing oracle → REQUIRED_CHECK_MISSING; trusted assets verified absent from candidate snapshots). Shallow-candidate case deferred to the gate suite in B-18.
 
 **Work:** Implement five visible development cases and original synthetic inputs; pin approved C-API/C-AMOUNT/C-CALLER/C-IDEMPOTENCY/C-INTEGRITY mappings. Write external trusted oracle and reference repairs.
 
@@ -48,7 +48,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-05 — Isolated runner and protected transport · P0
 
-**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 5–6 Oct. **Status:** TODO (sandbox access not yet requested as of 4 Oct).
+**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 5–6 Oct. **Status:** IN_PROGRESS (5 Oct: Sandboxes token accepted but no spawn/list permission → BLOCKED pending the beta access request; local Docker runner tested as the development alternate, D-024: fresh snapshot, network none, read-only, env cleared, timeout kill, judged outside).
 
 **Work:** Map tested SDK calls to prepare/run/cancel/artifacts; pin image, keep launcher outside editable app source. Verify fresh state, network/resource controls and remote-operation lifecycle.
 
@@ -58,7 +58,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-06 — Typed records, jobs and events · P0
 
-**Owner:** Ravi. **Dependencies:** B-02/B-03. **Target:** 6 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-02/B-03. **Target:** 6 Oct. **Status:** IN_PROGRESS (5 Oct: leases, CAS transitions, ordered resumable events + SSE, idempotent POST, immutable check results/artifacts, evaluator-only verdicts; owner-mismatch denial pending B-13; worker lease processing pending Day 4).
 
 **Work:** Implement strict v2 domain schemas, SQLite ownership/leases/transitions, action budgets and resumable SSE. Persist remote IDs and reservations before follow-up work.
 

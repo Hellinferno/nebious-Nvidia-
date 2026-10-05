@@ -15,5 +15,6 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setattr(api_main.settings, "database_path", str(tmp_path / "test.db"))
     monkeypatch.setattr(api_main.settings, "nebius_api_key", "")
     monkeypatch.setattr(api_main.settings, "nebius_model_id", "")
+    monkeypatch.setattr(api_main.settings, "benchproof_runner", "mock")  # never probe a real runner in tests
     with TestClient(api_main.app) as c:
         yield c

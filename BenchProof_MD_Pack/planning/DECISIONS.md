@@ -48,14 +48,26 @@ The initial design had no completed implementation or benchmark to migrate. Inde
 | --- | --- | --- | --- |
 | O-001 | Exact NVIDIA model and parameters | Actual catalog/card/license, five development preflight behaviors, usage | 4–8 Oct |
 | O-002 | Contree auth/SDK/lifecycle and limits | Real image/command/fresh state/artifact/cancel observations | 5–6 Oct |
-| O-003 | Tested alternate runner if needed | Actual provisionability, isolation, cost and track fit | 6 Oct |
-| O-004 | App host/persistence/lifetime | Durable disk/worker/HTTPS, restoration and judging reserve | Select 6 Oct; deploy 19 Oct |
+| O-003 | Tested alternate runner if needed | Resolved for development 5 Oct by D-024 (local Docker runner); hosted execution route still Sandboxes pending access | 6 Oct |
+| O-004 | App host/persistence/lifetime | Proposal 5 Oct, untested: one Linux VM with Docker, persistent disk for SQLite/artifacts, HTTPS reverse proxy; decide after runner access is known | Select 6 Oct; deploy 19 Oct |
 | O-005 | Actual usage/cost ceilings | Dated prices/grants/expiry and measured upper bounds | 6 Oct; finalize 20 Oct |
 | O-006 | Supported graph forms and mappings | Fixture AST coverage, unknown-edge tests and reviewed manifest | 7–8 Oct |
 | O-007 | Final suite/scope and fingerprint normalization | P0/P1 evidence, controls and budget forecast | Suite 17 Oct; configuration 20 Oct |
 | O-008 | License/model/image/asset inventory | Actual component terms and top-level LICENSE | 25 Oct |
 | O-009 | Mutation adequacy required or optional per release contract | Valid templates, survivor behavior, overhead and explicit accepted policy | 15–20 Oct |
 | O-010 | Optional external-agent tools/configuration | Real access/versions/terms and remaining time | P2 only |
+
+## Decisions recorded during implementation
+
+### D-024 — Local Docker runner as the tested development alternate to Nebius Sandboxes
+
+- Date, owner, status: 5 October 2026, Ravi, accepted for development; hosted route remains open.
+- Trigger and observed evidence: Sandboxes `GET /whoami` returned 200 with every permission `false` and `/images` returned 403 (`artifacts/runner/runner_20261005T181249.json`). Docker Desktop 29.7.2 (linux engine) available locally. Contract `6d5b95ce…`; no graph yet.
+- Constraints and options investigated: (a) wait for Sandboxes beta access — blocks all execution work; (b) run candidates in-process — violates the protected boundary; (c) local Docker container with network none, read-only root, cleared env, resource caps, timeout kill — selected.
+- Selected option, rationale and artifacts: (c). Candidate image `benchproof-candidate:dev@sha256:104ce828…` from `python@sha256:02108f5d…`; launcher `backend/runner/launcher/observe_invoice.py` mounted read-only outside `app/`; trusted oracle judges `observations.json` on the host. Evidence: clean VERIFIED, MC-01 REJECTED, timeout negative killed, isolation probes all denied.
+- Cost, security, user, schedule and coverage effects: no provider cost; shared-kernel isolation only (not VM); unblocks Days 3–10 development; the final hosted story still needs Sandboxes or an isolated VM route per doc 07 — a local container is not accepted as the hosted route merely because it starts.
+- Dependency hashes, affected documents/contracts and revisit condition: image digest above; docs 07/09, backlog B-05, O-003/O-004. Revisit when Sandboxes `spawn` permission is granted or by the 6 Oct fallback review.
+- Superseded ID: none.
 
 ## Decision entry template
 

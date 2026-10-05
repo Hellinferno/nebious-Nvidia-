@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-05 — Days 2–3: isolated runner boundary, approved constraints, durable state
+
+- Provider: first real NVIDIA inference on Nebius (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`), structured-JSON proposal validated server-side; credential identified as a short-lived session token (owner must create a long-lived key).
+- Execution: `benchproof.execution` adapter contract; `DockerRunner` (network none, read-only, cleared env, caps, timeout kill) and labeled `MockRunner`; protected launcher `runner/launcher/observe_invoice.py`; pinned candidate image `backend/runner/image/Dockerfile`; `scripts/runner_preflight.py`. Nebius Sandboxes recorded BLOCKED (no spawn permission); Contree SDK 0.3.6 installed for the record (D-024).
+- Evaluator: single observation-based oracle shared by the in-process harness and the Docker runner; expected values never read from candidate output; forged PASS text ignored.
+- Constraints: executable check registry; `approve_manifest` rejects relaxed/unknown/incomplete proposals (CONTRACT_UNAPPROVED) and missing oracles (REQUIRED_CHECK_MISSING); registry validated at API startup.
+- Storage: leases, CAS transitions, ordered events, idempotency keys, SQLite triggers making check_results/artifacts immutable, evaluator-only check/verdict writes that must agree with stored checks.
+- API: `Idempotency-Key` on `POST /audits` (replay vs 409 conflict), `contract_hash` pin, `GET /audits/{id}/events` as JSON or SSE with `after`/`Last-Event-ID`, CAS cancel with events, cached runner readiness.
+- Tests: 76 pytest cases (3 Docker-backed, skipped without a daemon); ruff clean. No graph, patch, export, deployment or hosted sandbox run is claimed.
+
 ## 2026-10-04 — Day 1 scaffold (B-02 done; B-03 in progress; B-04 blocked)
 
 - Backend: installable `benchproof-backend` package with `requirements.lock.txt`; FastAPI `health`, `ready`, `examples`, `constraints`/`contracts`, `audits` (create/get/list/cancel); SQLite migrations incl. worker heartbeats; lifespan-based startup.

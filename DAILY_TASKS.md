@@ -74,10 +74,10 @@ If account/model access blocks inference, finish schemas/fixtures and label prov
 
 ### Work in order
 
-1. [ ] Install the actual verified runner SDK and map auth/lifecycle methods (45 min); record version and image digest.
-2. [ ] Execute one bounded candidate through protected input/output transport (60 min); save operation ID, exit, logs and artifact retrieval.
-3. [ ] Check fresh filesystem state, absence of secrets/oracle assets, network/metadata denial and timeout cleanup (60 min); record enforcement gaps.
-4. [ ] Run the trusted AC/MC reference behavior and clean control from outside candidate execution (30–45 min); commit adapter and boundary notes.
+1. [x] Install the actual verified runner SDK and map auth/lifecycle methods (45 min); record version and image digest.
+2. [x] Execute one bounded candidate through protected input/output transport (60 min); save operation ID, exit, logs and artifact retrieval.
+3. [x] Check fresh filesystem state, absence of secrets/oracle assets, network/metadata denial and timeout cleanup (60 min); record enforcement gaps.
+4. [x] Run the trusted AC/MC reference behavior and clean control from outside candidate execution (30–45 min); commit adapter and boundary notes.
 
 ### Deliverable and acceptance evidence
 
@@ -95,10 +95,10 @@ If beta access is absent, investigate the isolated AI Cloud route and keep mocks
 
 ### Work in order
 
-1. [ ] Pin owner-approved contract/check mappings and reject missing required checks (45 min); keep evaluator assets outside fixture snapshots.
-2. [ ] Implement v2 records, SQLite migrations, owner relations, leases and conditional lifecycle writes (75 min); add immutable artifact references.
-3. [ ] Add idempotent run creation and ordered resumable events (45 min); prove duplicate body/key does not start duplicate work.
-4. [ ] Record tested runner/host decisions and price/access blockers (30 min); test wrong contract/source version and candidate verdict-write rejection.
+1. [x] Pin owner-approved contract/check mappings and reject missing required checks (45 min); keep evaluator assets outside fixture snapshots.
+2. [x] Implement v2 records, SQLite migrations, owner relations, leases and conditional lifecycle writes (75 min); add immutable artifact references.
+3. [x] Add idempotent run creation and ordered resumable events (45 min); prove duplicate body/key does not start duplicate work.
+4. [x] Record tested runner/host decisions and price/access blockers (30 min); test wrong contract/source version and candidate verdict-write rejection.
 
 ### Deliverable and acceptance evidence
 
