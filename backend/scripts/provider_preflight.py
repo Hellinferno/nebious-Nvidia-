@@ -95,7 +95,7 @@ def structured_check(adapter: NebiusAdapter, model: str) -> dict:
             model=model,
             system_prompt=system,
             user_prompt=user,
-            max_tokens=128,
+            max_tokens=512,  # reasoning models spend tokens before the JSON; 128 truncated
             response_format={"type": "json_object"},
         )
     except ProviderError as e:
@@ -103,6 +103,7 @@ def structured_check(adapter: NebiusAdapter, model: str) -> dict:
         return out
     out["supported"] = True
     out["raw"] = res["content"]
+    out["finish_reason"] = res["finish_reason"]
     out["usage"] = res["usage"]
     out["elapsed_ms"] = res["elapsed_ms"]
     try:

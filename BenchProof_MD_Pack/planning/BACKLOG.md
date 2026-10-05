@@ -8,7 +8,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-01 — Event and account readiness · P0
 
-**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (4 Oct owner confirmation: registration confirmed; no Nebius account or credits yet; sandbox access not requested).
+**Owner:** Ravi. **Dependencies:** None. **Target:** 4 Oct. **Status:** IN_PROGRESS (registration confirmed 4 Oct; Nebius account and key present 5 Oct; credits/expiry/billing not yet recorded; sandbox access not requested).
 
 **Work:** Review this event eligibility/registration; record actual inference/runner access, credits, expiry and billing controls. Keep account facts separate from offered resources.
 
@@ -38,7 +38,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-04 — Real NVIDIA inference adapter · P0
 
-**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** BLOCKED (adapter and preflight script exist; no Nebius account on 4 Oct, so no key and no real inference recorded).
+**Owner:** Ravi. **Dependencies:** B-01/B-02. **Target:** 4–8 Oct. **Status:** IN_PROGRESS (5 Oct: real catalog + bounded inference + valid structured JSON proposal on `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, no credential leakage; model card/license, tool loop and repair-proposal behaviors remain).
 
 **Work:** Discover actual model catalog; record model card/license. Validate structured constraint-linked actions, repair proposal, usage, timeouts and format rejection behind a narrow adapter.
 
