@@ -34,7 +34,7 @@ class NebiusAdapter:
     ):
         load_dotenv(dotenv_path=_REPO_ROOT / ".env")
         self.api_key = api_key or os.getenv("NEBIUS_API_KEY", "")
-        self.base_url = base_url or os.getenv("NEBIUS_BASE_URL", DEFAULT_BASE_URL)
+        self.base_url = base_url or os.getenv("NEBIUS_BASE_URL", "").strip() or DEFAULT_BASE_URL
         if self.api_key in _PLACEHOLDER_KEYS:
             raise ProviderError("NEBIUS_API_KEY not configured")
         self._client = OpenAI(
