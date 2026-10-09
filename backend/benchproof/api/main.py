@@ -18,8 +18,8 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from benchproof import __version__
@@ -27,7 +27,15 @@ from benchproof.constraints import contract_hash, get_constraint, list_constrain
 from benchproof.constraints.approval import ensure_registry_executable
 from benchproof.domain import AuditRecord, RunState
 from benchproof.fixtures import list_fixture_ids, list_public_examples, public_example
-from benchproof.storage import get_audit, list_audits, migrate, save_audit
+from benchproof.storage import (
+    get_audit,
+    get_graph_by_audit_id,
+    list_actions,
+    list_audits,
+    migrate,
+    save_audit,
+    save_graph,
+)
 from benchproof.storage.heartbeat import latest_heartbeat
 from benchproof.storage.lifecycle import (
     TERMINAL_STATES,
@@ -302,3 +310,343 @@ def cancel_audit(audit_id: str) -> dict[str, str]:
         raise _error(409, "INVALID_INPUT", f"Audit already in terminal state: {current['run_state'] if current else '?'}")
     append_event(audit_id, "cancelled", {"remote_reconciliation": "not applicable (no remote run)"}, db_path=_db())
     return {"status": "cancelled", "audit_id": audit_id}
+
+
+# ── Engineering-State Graph (Day 4 / B-07) ────────────────────────────────
+
+@app.get("/api/v1/audits/{audit_id}/graph")
+def get_audit_graph(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    existing = get_graph_by_audit_id(audit_id, db_path=_db())
+    if existing:
+        return existing
+
+    from benchproof.fixtures import fixture_dir
+    from benchproof.graph.builder import build_state_graph
+
+    app_dir = fixture_dir(audit["fixture_id"]) / "app"
+    graph = build_state_graph(app_dir, audit["contract_hash"])
+    save_graph(
+        graph_id=graph.graph_id,
+        source_hash=graph.source_hash,
+        contract_hash=graph.contract_hash,
+        graph_hash=graph.graph_hash,
+        coverage=graph.coverage,
+        graph_data=graph.model_dump(),
+        audit_id=audit_id,
+        db_path=_db(),
+    )
+    return {
+        "graph_id": graph.graph_id,
+        "audit_id": audit_id,
+        "source_hash": graph.source_hash,
+        "contract_hash": graph.contract_hash,
+        "graph_hash": graph.graph_hash,
+        "coverage": graph.coverage,
+        "graph": graph.model_dump(),
+    }
+
+
+# ── Blast Radius & Deterministic Risk (Day 5 / B-08) ─────────────────────
+
+@app.get("/api/v1/audits/{audit_id}/impact")
+def get_audit_impact(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.fixtures import fixture_dir
+    from benchproof.graph.builder import build_state_graph
+    from benchproof.impact import analyze_impact
+
+    app_dir = fixture_dir(audit["fixture_id"]) / "app"
+    graph = build_state_graph(app_dir, audit["contract_hash"])
+    impact = analyze_impact(graph)
+    return impact.to_dict()
+
+
+# ── NVIDIA Investigation & Probe Execution (Day 5 / B-08) ────────────────
+
+@app.post("/api/v1/audits/{audit_id}/diagnose")
+def diagnose_audit(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.investigation import InvestigationError, run_investigation
+
+    try:
+        res = run_investigation(
+            fixture_id=audit["fixture_id"],
+            audit_id=audit_id,
+            db_path=_db(),
+        )
+        return res
+    except InvestigationError as e:
+        status_code = 409 if e.code in {"STALE_SOURCE", "CONTRACT_UNAPPROVED", "STALE_CONTEXT"} else 422
+        raise _error(status_code, e.code, e.message)
+
+
+# ── Actions Trajectory ───────────────────────────────────────────────────
+
+@app.get("/api/v1/audits/{audit_id}/actions")
+def get_audit_actions(audit_id: str) -> list[dict[str, Any]]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    return list_actions(audit_id, db_path=_db())
+
+
+# ── Restricted Patch Authoring & Import (Day 6 / B-09) ───────────────────
+
+class ProposePatchRequest(BaseModel):
+    diff: str
+    base_source_hash: str
+    target_files: list[str] = Field(default_factory=list)
+    explanation: str = ""
+    author: str = "nemotron-repair"
+
+
+@app.post("/api/v1/audits/{audit_id}/patch")
+def propose_patch(audit_id: str, req: ProposePatchRequest) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.fixtures import fixture_dir, source_hash_for_dir
+    from benchproof.patch import (
+        PatchProposal,
+        PatchValidationError,
+        compute_diff_hash,
+        validate_patch,
+    )
+    from benchproof.storage import save_patch
+    from benchproof.storage.lifecycle import append_event
+
+    current_shash = source_hash_for_dir(fixture_dir(audit["fixture_id"]) / "app")
+    patch_id = f"patch-{uuid.uuid4().hex[:12]}"
+
+    proposal = PatchProposal(
+        patch_id=patch_id,
+        audit_id=audit_id,
+        base_source_hash=req.base_source_hash,
+        target_files=req.target_files,
+        diff=req.diff,
+        explanation=req.explanation,
+        author=req.author,
+    )
+
+    try:
+        _, approved_paths = validate_patch(proposal, current_shash)
+    except PatchValidationError as e:
+        status_code = 409 if e.code == "PATCH_BASE_MISMATCH" else 422
+        raise _error(status_code, e.code, e.message)
+
+    diff_hash = compute_diff_hash(req.diff)
+    changed_lines = len(req.diff.splitlines())
+
+    save_patch(
+        patch_id=patch_id,
+        audit_id=audit_id,
+        base_hash=req.base_source_hash,
+        diff_hash=diff_hash,
+        diff_text=req.diff,
+        approved_paths=approved_paths,
+        changed_lines=changed_lines,
+        policy_result="APPROVED",
+        author=req.author,
+        provider_meta={"explanation": req.explanation},
+        db_path=_db(),
+    )
+
+    append_event(
+        audit_id=audit_id,
+        event_type="patch_proposed",
+        payload={
+            "patch_id": patch_id,
+            "diff_hash": diff_hash,
+            "approved_paths": approved_paths,
+            "changed_lines": changed_lines,
+        },
+        db_path=_db(),
+    )
+
+    return {
+        "patch_id": patch_id,
+        "audit_id": audit_id,
+        "policy_result": "APPROVED",
+        "diff_hash": diff_hash,
+        "approved_paths": approved_paths,
+        "changed_lines": changed_lines,
+    }
+
+
+@app.get("/api/v1/audits/{audit_id}/patches")
+def get_audit_patches(audit_id: str) -> list[dict[str, Any]]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.storage import list_patches
+    return list_patches(audit_id, db_path=_db())
+
+
+# ── Fresh Independent Acceptance Gate (Day 6 / B-10) ─────────────────────
+
+class VerifyCandidateRequest(BaseModel):
+    patch_id: str | None = None
+    use_docker: bool = False
+
+
+@app.post("/api/v1/audits/{audit_id}/verify")
+def verify_audit_candidate(audit_id: str, req: VerifyCandidateRequest) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.gate import GateError, execute_acceptance_gate
+
+    try:
+        result = execute_acceptance_gate(
+            audit_id=audit_id,
+            patch_id=req.patch_id,
+            use_docker=req.use_docker,
+            db_path=_db(),
+        )
+        return result
+    except GateError as e:
+        status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "PATCH_NOT_FOUND"} else 422
+        raise _error(status_code, e.code, e.message)
+
+
+@app.get("/api/v1/audits/{audit_id}/gate")
+def get_audit_gate_status(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.storage.lifecycle import list_check_results
+
+    checks = list_check_results(audit_id, db_path=_db())
+    return {
+        "audit_id": audit_id,
+        "gate_verdict": audit.get("gate_verdict", "PENDING"),
+        "run_state": audit.get("run_state", "QUEUED"),
+        "checks": checks,
+    }
+
+
+# ── Evidence Bundle Export & Independent Replay (Day 7 / B-11) ───────────
+
+@app.post("/api/v1/audits/{audit_id}/bundle")
+def create_audit_bundle(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.bundle import export_bundle
+    from benchproof.bundle.exporter import SafeArchivePathError, SecurityExclusionError
+
+    try:
+        bundle_path, manifest = export_bundle(audit_id, db_path=_db())
+    except (SecurityExclusionError, SafeArchivePathError) as e:
+        # Refuse to produce a bundle that would leak secrets or contain unsafe paths.
+        raise _error(422, "BUNDLE_EXCLUSION_VIOLATION", str(e)) from e
+    except (ValueError, OSError) as e:
+        raise _error(500, "BUNDLE_EXPORT_FAILED", f"Bundle export error: {e}") from e
+
+    import hashlib
+    sha256 = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+    return {
+        "audit_id": audit_id,
+        "bundle_path": str(bundle_path),
+        "bundle_name": bundle_path.name,
+        "sha256": sha256,
+        "byte_size": bundle_path.stat().st_size,
+        "manifest": manifest.model_dump(),
+    }
+
+
+@app.get("/api/v1/audits/{audit_id}/bundle")
+def get_audit_bundle(
+    audit_id: str,
+    metadata: bool = Query(default=False, description="Return JSON metadata instead of binary zip"),
+) -> Any:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.bundle import export_bundle
+
+    bundles_dir = Path("artifacts") / "bundles"
+    bundle_path = bundles_dir / f"benchproof-audit-{audit_id}.zip"
+
+    if not bundle_path.exists():
+        bundle_path, _ = export_bundle(audit_id, db_path=_db())
+    else:
+        from benchproof.bundle.validator import validate_bundle_nonexecuting
+        val = validate_bundle_nonexecuting(bundle_path)
+        if not val["valid"]:
+            bundle_path, _ = export_bundle(audit_id, db_path=_db())
+
+    if metadata:
+        import hashlib
+        import json
+        import zipfile
+        with zipfile.ZipFile(bundle_path, "r") as zf:
+            m_data = json.loads(zf.read("manifest.json").decode("utf-8"))
+        sha256 = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+        return {
+            "audit_id": audit_id,
+            "bundle_path": str(bundle_path),
+            "bundle_name": bundle_path.name,
+            "sha256": sha256,
+            "byte_size": bundle_path.stat().st_size,
+            "manifest": m_data,
+        }
+
+    return FileResponse(
+        path=str(bundle_path),
+        media_type="application/zip",
+        filename=f"benchproof-audit-{audit_id}.zip",
+    )
+
+
+@app.post("/api/v1/audits/{audit_id}/bundle/validate")
+def validate_audit_bundle(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.bundle import export_bundle, validate_bundle_nonexecuting
+
+    bundles_dir = Path("artifacts") / "bundles"
+    bundle_path = bundles_dir / f"benchproof-audit-{audit_id}.zip"
+    if not bundle_path.exists():
+        bundle_path, _ = export_bundle(audit_id, db_path=_db())
+
+    return validate_bundle_nonexecuting(bundle_path)
+
+
+@app.get("/api/v1/audits/{audit_id}/replay")
+@app.post("/api/v1/audits/{audit_id}/replay")
+def replay_audit_bundle(audit_id: str) -> dict[str, Any]:
+    audit = get_audit(audit_id, db_path=_db())
+    if audit is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+
+    from benchproof.bundle import export_bundle, replay_bundle
+
+    bundles_dir = Path("artifacts") / "bundles"
+    bundle_path = bundles_dir / f"benchproof-audit-{audit_id}.zip"
+    if not bundle_path.exists():
+        bundle_path, _ = export_bundle(audit_id, db_path=_db())
+
+    replay_rec = replay_bundle(bundle_path)
+    return replay_rec.model_dump()
+
+

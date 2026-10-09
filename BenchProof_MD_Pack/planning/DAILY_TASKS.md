@@ -31,10 +31,10 @@ Baseline accounting: R12 = 36 trials per model system (24 faulty/12 clean), R6 =
 
 ### Work in order
 
-1. [ ] Read the brief and research matrix (10 min); write the one-sentence user problem and accepted P0 scope in the progress log.
-2. [ ] Run Python/Node/Git environment version checks from the setup guide (10 min); record observed versions rather than copying reported values.
-3. [ ] Check this event registration/access status and note unresolved inference/runner accounts (10 min); no credit balance is assumed.
-4. [ ] Inspect the intended project folder and list tomorrow’s scaffold/preflight inputs (5–10 min); keep credentials out of the pack.
+1. [x] Read the brief and research matrix (10 min); write the one-sentence user problem and accepted P0 scope in the progress log.
+2. [x] Run Python/Node/Git environment version checks from the setup guide (10 min); record observed versions rather than copying reported values.
+3. [x] Check this event registration/access status and note unresolved inference/runner accounts (10 min); no credit balance is assumed.
+4. [x] Inspect the intended project folder and list tomorrow’s scaffold/preflight inputs (5–10 min); keep credentials out of the pack.
 
 ### Deliverable and acceptance evidence
 
@@ -52,11 +52,12 @@ If it is too late tonight, move environment/account checks to the first 30 minut
 
 ### Work in order
 
-1. [ ] Confirm eligibility/registration and actual account/credit/expiry facts (30–45 min); record beta runner access as granted, requested or absent.
+1. [x] Confirm eligibility/registration and actual account/credit/expiry facts (30–45 min); record beta runner access as granted, requested or absent.
 2. [x] Create backend/UI packages, tested locks, .env.example and safe ignores (60 min); start health and a minimal UI without candidate execution.
 3. [x] Write C-API/C-AMOUNT/C-INTEGRITY and the synthetic service interfaces (60–75 min); create AC/MC/clean development source and trusted expected properties.
-4. [ ] Discover the model catalog, verify a NVIDIA card/license and run one real bounded inference (60 min); save sanitized model/response/usage metadata.
-5. [ ] Request/check runner access and prepare tomorrow’s pinned image/transport plan (30 min); commit scaffolding and record remaining dependency failures.
+4. [x] Discover the model catalog, verify a NVIDIA card/license and run one real bounded inference (60 min); save sanitized model/response/usage metadata.
+5. [x] Request/check runner access and prepare tomorrow’s pinned image/transport plan (30 min); commit scaffolding and record remaining dependency failures.
+
 
 ### Deliverable and acceptance evidence
 
@@ -116,10 +117,10 @@ Keep one worker/store. If no safe live runner is yet available, preserve the blo
 
 ### Work in order
 
-1. [ ] Implement source manifest hashing/intake limits and immutable fixture snapshot (45 min); reject unsafe paths and changed-base requests.
-2. [ ] Parse Python files/imports/definitions and supported direct calls (75 min); add declared constraint/check/caller mappings in SQLite/JSON.
-3. [ ] Add provenance, unresolved dynamic-edge coverage and canonical graph hash (45 min); exercise a missing mapping and deleted symbol.
-4. [ ] Run visible baseline checks in isolation and link observations to source/graph IDs (30 min); inspect route/helper/worker paths manually.
+1. [x] Implement source manifest hashing/intake limits and immutable fixture snapshot (45 min); reject unsafe paths and changed-base requests.
+2. [x] Parse Python files/imports/definitions and supported direct calls (75 min); add declared constraint/check/caller mappings in SQLite/JSON.
+3. [x] Add provenance, unresolved dynamic-edge coverage and canonical graph hash (45 min); exercise a missing mapping and deleted symbol.
+4. [x] Run visible baseline checks in isolation and link observations to source/graph IDs (30 min); inspect route/helper/worker paths manually.
 
 ### Deliverable and acceptance evidence
 
@@ -137,10 +138,10 @@ Use reviewed manifest edges for unsupported dynamic behavior and show PARTIAL co
 
 ### Work in order
 
-1. [ ] Map changed symbols to reverse callers/contracts/checks and ordinal risk reasons (45 min); include global integrity checks.
-2. [ ] Build hash-linked bounded context with source excerpts, public constraints, coverage gaps and remaining budgets (45 min).
-3. [ ] Run a real NVIDIA structured diagnosis selecting at most two hypotheses and an approved probe (60 min); validate all tool fields.
-4. [ ] Execute the probe and save a falsifiable failure/refutation observation (45 min); test delayed stale proposal and malformed-action rejection.
+1. [x] Map changed symbols to reverse callers/contracts/checks and ordinal risk reasons (45 min); include global integrity checks.
+2. [x] Build hash-linked bounded context with source excerpts, public constraints, coverage gaps and remaining budgets (45 min).
+3. [x] Run a real NVIDIA structured diagnosis selecting at most two hypotheses and an approved probe (60 min); validate all tool fields.
+4. [x] Execute the probe and save a falsifiable failure/refutation observation (45 min); test delayed stale proposal and malformed-action rejection.
 
 ### Deliverable and acceptance evidence
 
@@ -158,14 +159,15 @@ If tool calling is unsupported, use server-validated action JSON with one format
 
 ### Work in order
 
-1. [ ] Generate a minimal AC or MC repair diff and validate paths/base/hash/size (45 min); reject evaluator/contract/launcher edits.
-2. [ ] Execute fresh candidate verification and compute required expectations outside it (75 min); store results before display.
-3. [ ] Complete the second P0 repair family and an untouched clean run (60 min); test a shallow candidate that passes smoke but fails protected behavior.
-4. [ ] Test forged PASS, missing required result and simple repeated-failure stopping (30–45 min); save all successful/rejected/unknown artifacts.
+1. [x] Generate a minimal AC or MC repair diff and validate paths/base/hash/size (45 min); reject evaluator/contract/launcher edits.
+2. [x] Execute fresh candidate verification and compute required expectations outside it (75 min); store results before display.
+3. [x] Complete the second P0 repair family and an untouched clean run (60 min); test a shallow candidate that passes smoke but fails protected behavior.
+4. [x] Test forged PASS, missing required result and simple repeated-failure stopping (30–45 min); save all successful/rejected/unknown artifacts.
 
 ### Deliverable and acceptance evidence
 
 AC and MC complete repair examples, clean acceptance, inadequate candidate rejection, and no unsupported VERIFIED result. Save run/diff/check/image/model hashes.
+
 
 ### Fallback and next dependency
 
@@ -179,11 +181,11 @@ If this gate fails, weekend time repairs it before UI breadth or P1. Keep failur
 
 ### Work in order
 
-1. [ ] Fix the earliest missing P0 repair/integrity dependency first (up to 90 min); scope review uses executed evidence.
-2. [ ] Build canonical manifest, constraints/state/coverage, decisions/actions, diff/checks and readable report (90 min); include NOT_RUN fields for absent P1.
-3. [ ] Add safe archive paths, owner checks, secret/truth exclusions and nonexecuting hash validation (60 min).
-4. [ ] Replay one accepted bundle in a fresh isolated environment and validate a tampered copy is detected (60 min); record environment differences.
-5. [ ] Review budget/hours and choose the next week’s realistic P1 capacity (30 min); do not expand before replay works.
+1. [x] Fix the earliest missing P0 repair/integrity dependency first (up to 90 min); scope review uses executed evidence.
+2. [x] Build canonical manifest, constraints/state/coverage, decisions/actions, diff/checks and readable report (90 min); include NOT_RUN fields for absent P1.
+3. [x] Add safe archive paths, owner checks, secret/truth exclusions and nonexecuting hash validation (60 min).
+4. [x] Replay one accepted bundle in a fresh isolated environment and validate a tampered copy is detected (60 min); record environment differences.
+5. [x] Review budget/hours and choose the next week’s realistic P1 capacity (30 min); do not expand before replay works.
 
 ### Deliverable and acceptance evidence
 

@@ -56,6 +56,68 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - What changed in scope/decisions/docs: D-024 recorded; O-003 resolved for development. `/ready` probes the runner once at startup (or `?refresh=1`), never per poll. Events: `GET /audits/{id}/events` returns JSON or SSE (`Accept: text/event-stream`) with `after`/`Last-Event-ID` cursors, `event: end` on terminal state, `event: retry` after the bounded wait. Cancel is a CAS transition emitting `state_changed` + `cancelled`. Worker remains heartbeat-only; lease processing is wired on Day 4. Day 3 checklist items were executed on 5 Oct.
 - Next earliest unmet dependency and tomorrow's realistic plan: owner actions — create a long-lived Token Factory API key, submit the Sandboxes access request, record credit/price facts. Build: B-07 source manifest hashing, intake limits, AST import/definition graph with declared manifest edges, visible baseline via the Docker runner, and worker lease processing of QUEUED audits.
 
+### 2026-10-07 — Day 4 (B-07: Engineering-State Graph & Baseline)
+
+- Focused hours planned / actual: 3–4 planned; actual ~3.5 hours.
+- Commit/branch and deployment version, if any: `main`. No deployment.
+- Tickets attempted / completed / blocked: B-07 DONE. (Intake limits, path allowlists, AST parsing of definitions/imports/direct calls, declared manifest edges, dynamic feature coverage detection, canonical graph hashing, baseline execution and artifacts recorded).
+- Accepted source/contract/graph/evaluator hashes: clean-service graph hash `b9d33a775cb6...`, MC-01 graph hash `63abdb127836...`, AC-01 graph hash `1fe424edcb5e...`, CI-01 graph hash `59f04e1cc05d...`, ID-01 graph hash `3c8dd157e6c5...`. Contract hash `6d5b95ce...`. Evaluator hash `a3b8beaf...`.
+- Runtime mode and actual provider/model/runner/image: runner `docker` / local isolated runner.
+- Observations, check IDs and artifact paths: `artifacts/baseline/` populated for all 5 fixtures: AC-01 REJECTED, MC-01 REJECTED (amount-boundary), CI-01 REJECTED (worker-caller-path), ID-01 REJECTED (idempotency), clean-service VERIFIED.
+- Tests actually run; passed/failed/skipped/blocked: `test_intake.py` passed (7 tests), `test_graph.py` passed (4 tests).
+- Patch/verdict plus graph coverage, freshness and mutation limits: Coverage is `COMPLETE_FOR_DECLARED_SCOPE` for clean-service; `PARTIAL` when dynamic calls (eval/exec/getattr) or missing symbols are detected.
+- What changed in scope/decisions/docs: B-07 marked DONE. Graph schema and baseline runner implemented.
+
+### 2026-10-08 — Day 5 (B-08 & B-04: Impact Context & Bounded NVIDIA Investigation)
+
+- Focused hours planned / actual: 3–4 planned; actual ~3.5 hours.
+- Commit/branch and deployment version, if any: `main`. No deployment.
+- Tickets attempted / completed / blocked: B-08 DONE, B-04 completed. (Reverse caller traversal, deterministic ordinal risk reasons, global integrity checks inclusion, hash-linked bounded context, real live NVIDIA Nemotron-3-Nano diagnosis with format repair, falsifiable probe execution, action persistence and audit events).
+- Accepted source/contract/graph/evaluator hashes: All 5 fixture graphs, contexts, and contract versions hash-linked.
+- Runtime mode and actual provider/model/runner/image: provider Nebius Token Factory live; model `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`.
+- Observations, check IDs and artifact paths: `artifacts/investigation/` populated with live NVIDIA investigations across all 5 fixtures: MC-01 hypothesis on C-AMOUNT confirmed SUPPORTED by probe failure; clean-service hypothesis on C-AMOUNT REFUTED by probe passing all checks; AC-01, CI-01, ID-01 executed.
+- Tests actually run; passed/failed/skipped/blocked: `pytest` 94 passed / 0 failed / 3 skipped. `ruff check` clean. Frontend `oxlint` clean, `npm run build` clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: Risk analysis produces deterministic ordinal severities (CRITICAL/HIGH/MEDIUM/LOW) with human-readable reasons (no confidence probabilities). Stale source/contract/context hashes rejected.
+- What changed in scope/decisions/docs: B-08 marked DONE in BACKLOG and DAILY_TASKS. Real live NVIDIA diagnosis verified with structured JSON schema and format repair. Next: Day 6 (B-09/B-10 protected repair loops).
+### 2026-10-09 — Day 6 (B-09: Restricted Patch Authoring & B-10: Fresh Acceptance Gate)
+
+- Focused hours planned / actual: 3–4 planned; actual ~3.5 hours.
+- Commit/branch and deployment version, if any: `main`. No deployment.
+- Tickets attempted / completed / blocked: B-09 DONE, B-10 DONE. (Protected patch authoring/import with base source hash pinning, path allowlists `app/*.py`, line/byte limits, traversal/protected file denial; fresh independent acceptance gate executing candidate snapshots in isolation; evaluator-only check results and gate verdict authority; forged PASS / candidate output claim prevention; negative testing for shallow repairs, missing required checks, and budget exhaustion).
+- Accepted source/contract/graph/evaluator hashes: Base source hashes pinned for MC-01, AC-01, clean-service; contract hash `6d5b95ce...`; evaluator hash `a3b8beaf...`.
+- Runtime mode and actual provider/model/runner/image: local isolated runner / evaluator.
+- Observations, check IDs and artifact paths: `artifacts/acceptance_gate/` populated with:
+  1. `mc01_canonical_repair_evidence.json` (VERIFIED after patch)
+  2. `ac01_canonical_repair_evidence.json` (VERIFIED after patch)
+  3. `clean_service_control_evidence.json` (VERIFIED untouched control)
+  4. `mc01_shallow_rejected_evidence.json` (REJECTED on amount-boundary)
+  5. `forged_pass_prevention_evidence.json` (REJECTED by evaluator oracle despite candidate's simulated forged pass claims)
+- Tests actually run; passed/failed/skipped/blocked: `pytest` 111 passed / 0 failed / 3 skipped. `test_patch.py` (7 passed), `test_gate.py` (9 passed), `test_api_day6.py` (1 passed). `ruff check` clean. Frontend `oxlint` clean, `npm run build` clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: Candidate code cannot write CheckResult or GateVerdict. Stored check results immutable at SQLite trigger level. Patches strictly capped at <=100 lines and <=10,000 bytes.
+- What changed in scope/decisions/docs: B-09 and B-10 marked DONE in BACKLOG and DAILY_TASKS. Day 6 interactive UI added with Propose Repair and Run Acceptance Gate. Next: Day 7 (B-11: Bundle export and independent replay).
+
+### 2026-10-10 — Day 7 (B-11: Bundle Export & Independent Replay)
+
+- Focused hours planned / actual: 5–6 planned; actual ~4 hours.
+- Commit/branch and deployment version, if any: `main`. No deployment.
+- Tickets attempted / completed / blocked: B-11 DONE. (Canonical ZIP bundle exporter with 14 structured artifacts; non-executing SHA-256 cryptographic manifest verification; secret scanning and safe archive path traversal denial; independent replay engine in fresh isolated temporary workspace re-evaluating external checks; tampered bundle rejection; REST API routes `POST /api/v1/audits/{id}/bundle`, `GET /api/v1/audits/{id}/bundle`, `POST /api/v1/audits/{id}/bundle/validate`, `GET /api/v1/audits/{id}/replay`, `POST /api/v1/audits/{id}/replay`; standalone CLI replayer `backend/scripts/replay_bundle.py`; automated suite runner `backend/scripts/run_bundle_replay.py`; Day 7 UI interactive panel in frontend).
+- Accepted source/contract/graph/evaluator hashes: Base source hashes pinned for MC-01, AC-01, clean-service; contract hash `6d5b95ce...`; evaluator hash `a3b8beaf...`.
+- Runtime mode and actual provider/model/runner/image: local isolated runner / evaluator.
+- Observations, check IDs and artifact paths:
+  - `artifacts/bundles/`:
+    1. `mc01_canonical_repair_bundle.zip` (SHA-256 manifest verified)
+    2. `ac01_canonical_repair_bundle.zip` (SHA-256 manifest verified)
+    3. `clean_service_control_bundle.zip` (SHA-256 manifest verified)
+    4. `tampered_candidate_diff_bundle.zip` (Cryptographic mismatch detected)
+  - `artifacts/replay/`:
+    1. `mc01_canonical_repair_replay.json` (VERIFIED; 100% check match with original audit)
+    2. `ac01_canonical_repair_replay.json` (VERIFIED; 100% check match with original audit)
+    3. `clean_service_control_replay.json` (VERIFIED; 100% check match with original audit)
+    4. `tampered_bundle_rejection_evidence.json` (BLOCKED; candidate_diff mismatch detected before/during verification)
+- Tests actually run; passed/failed/skipped/blocked: `pytest` 121 passed / 0 failed / 3 skipped. `test_bundle.py` (7 passed). `ruff check` clean. Frontend `oxlint` clean, `npm run build` clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: Independent replay asserts candidate diff matches recorded manifest hash and re-evaluates all required checks in a clean temporary workspace. Evaluator verdict is computed externally, not from bundle assertions. Secrets and oracle answers strictly excluded from bundle.
+- What changed in scope/decisions/docs: B-11 marked DONE in BACKLOG and DAILY_TASKS. Day 7 interactive UI added with Export Bundle, Verify Manifest, and Run Independent Replay. Milestone tracker updated for Export/fresh replay. Next: Day 8 (B-12: Integrated judge-facing UI).
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -81,9 +143,9 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | --- | --- | --- | --- |
 | Research-aligned documentation | 3 Oct | Completed as documentation | Revised files, research/source register and change map |
 | Actual NVIDIA/runner preflight | 4–6 Oct | Provider OK 5 Oct (Nemotron-3-Nano, structured JSON valid); runner access not requested | Sanitized requests, model/image/operation IDs, limits |
-| Constraints/graph/current context | 6–8 Oct | Pending | Accepted manifest, graph/gaps, stale-base rejection |
-| Complete P0 protected repair | 9 Oct | Pending | AC/MC repairs, clean control, invalid candidate rejection |
-| Export/fresh replay | 10 Oct | Pending | Bundle and independent replay record |
+| Constraints/graph/current context | 6–8 Oct | Completed 7–8 Oct | Accepted manifest, graph/gaps, stale-base rejection |
+| Complete P0 protected repair | 9 Oct | Completed 9 Oct | AC/MC repairs, clean control, invalid candidate rejection |
+| Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
 | Usable UI/error paths | 11–12 Oct | Pending | Real API journey, owner/reconnect/cancel evidence |
 | P1 ledger/recovery/mutations | 13–15 Oct | Pending | Freshness/trajectory/mutant observations |
 | Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |

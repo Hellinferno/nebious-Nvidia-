@@ -68,7 +68,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-07 — Immutable intake, state graph and baseline · P0
 
-**Owner:** Ravi. **Dependencies:** B-03/B-05/B-06. **Target:** 7 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-03/B-05/B-06. **Target:** 7 Oct. **Status:** DONE (7 Oct: intake limits/path validation, AST definitions/imports/calls, declared contract/check links, canonical graph hashing, dynamic feature coverage detection, baseline execution and artifacts saved).
 
 **Work:** Hash approved source, parse supported AST forms, add reviewed typed manifest edges and coverage issues. Run visible baseline in isolation and map source changes to nodes.
 
@@ -78,7 +78,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-08 — Impact, current context and bounded planner · P0
 
-**Owner:** Ravi. **Dependencies:** B-04/B-07. **Target:** 8 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-04/B-07. **Target:** 8 Oct. **Status:** DONE (8 Oct: reverse callers/contracts/checks traversal, deterministic ordinal risk reasons, global integrity checks inclusion, hash-linked bounded context, real live NVIDIA Nemotron-3-Nano diagnosis with format repair, falsifiable probe execution, action persistence and audit events).
 
 **Work:** Reverse-traverse changed callers/contracts/checks; apply deterministic risk reasons; build bounded hash-linked context. NVIDIA proposes at most two falsifiable hypotheses and named probes.
 
@@ -88,7 +88,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-09 — Restricted patch authoring/import · P0
 
-**Owner:** Ravi. **Dependencies:** B-08. **Target:** 9 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-08. **Target:** 9 Oct. **Status:** DONE (9 Oct: base hash enforcement, app/* allowlist, line/byte ceiling enforcement, protected-file denial, clean candidate workspace patch application, canonical MC-01 and AC-01 repair diffs).
 
 **Work:** Implement provider-neutral diff record and validated patch proposal. Enforce base hash, app-path allowlist, line/byte ceilings and protected-file/mode restrictions.
 
@@ -98,7 +98,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-10 — Fresh independent acceptance gate · P0
 
-**Owner:** Ravi. **Dependencies:** B-03/B-05/B-09. **Target:** 9 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-03/B-05/B-09. **Target:** 9 Oct. **Status:** DONE (9 Oct: independent acceptance gate, trusted external evaluator computing expected values, MC-01 and AC-01 repairs VERIFIED, clean-service untouched VERIFIED, shallow candidate REJECTED, forged PASS prevented, missing check yielding INCONCLUSIVE, budget exhaustion stopping, evidence saved in artifacts/acceptance_gate/).
 
 **Work:** Execute approved candidate fresh; trusted evaluator computes expected behavior externally and stores check/verdict. Required failure/unknown/missing result cannot pass.
 
@@ -106,9 +106,10 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 **Scope/cut line:** Acceptance authority and required-check integrity never cut.
 
+
 ## B-11 — Bundle export and independent replay · P0
 
-**Owner:** Ravi. **Dependencies:** B-10. **Target:** 10 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-10. **Target:** 10 Oct. **Status:** DONE (10 Oct: canonical manifest, constraints, state, coverage, decisions, trajectory, candidate diff, source-manifest, checks, mutations, environment, usage, and Markdown reports in ZIP bundle; non-executing SHA-256 cryptographic manifest verification; secret exclusion and safe archive traversal denial; isolated temporary container/workspace replay with check re-evaluation and verdict match assertion; tampered diff detection blocks replay; REST endpoints and standalone CLI replayer scripts; evidence in artifacts/bundles/ and artifacts/replay/).
 
 **Work:** Export canonical version/hash manifest, constraints, graph/gaps, decisions/actions, diff, results and REPLAY guide with safe paths/ownership and omissions.
 

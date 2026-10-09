@@ -261,3 +261,39 @@ class AuditRecord(BaseModel):
         }
     )
     reservations: dict[str, Any] = Field(default_factory=dict)
+
+
+# ── Bundle & Replay ──────────────────────────────────────────────────────
+
+class BundleManifest(BaseModel):
+    schema_version: str = "benchproof/v2"
+    audit_id: str
+    fixture_id: str
+    run_state: str
+    gate_verdict: str
+    created_at: str
+    exported_at: str
+    omissions: list[str] = Field(default_factory=list)
+    artifact_hashes: dict[str, str] = Field(default_factory=dict)
+    manifest_hash: str = ""
+
+    def compute_hash(self) -> str:
+        payload = self.model_dump(exclude={"manifest_hash"})
+        self.manifest_hash = _canonical_hash(payload)
+        return self.manifest_hash
+
+
+class ReplayRecord(BaseModel):
+    schema_version: str = "benchproof/v2"
+    replay_id: str
+    original_audit_id: str
+    bundle_sha256: str
+    replayed_verdict: str
+    original_verdict: str
+    verdict_matches: bool
+    checks_matched: bool
+    check_comparisons: list[dict[str, Any]] = Field(default_factory=list)
+    tampered: bool = False
+    tamper_details: list[str] = Field(default_factory=list)
+    environment: dict[str, Any] = Field(default_factory=dict)
+    created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
