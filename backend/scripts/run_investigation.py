@@ -39,7 +39,7 @@ def main() -> int:
         )
         save_audit(rec)
 
-        res = run_investigation(fixture_id=fid, audit_id=audit_id)
+        res = run_investigation(fixture_id=fid, audit_id=audit_id, mode="live")
         fname = f"{fid}_{ts}.json"
         out_path = ARTIFACTS_DIR / fname
         out_path.write_text(json.dumps(res, indent=2), encoding="utf-8")

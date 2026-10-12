@@ -26,7 +26,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from benchproof import __version__
 from benchproof.constraints import contract_hash, get_constraint, list_constraints
 from benchproof.constraints.approval import ensure_registry_executable
-from benchproof.domain import AuditRecord, RunState
+from benchproof.domain import AuditRecord, DecisionReviewStatus, RunState
 from benchproof.fixtures import list_fixture_ids, list_public_examples, public_example
 from benchproof.storage import (
     get_audit,
@@ -350,6 +350,120 @@ def cancel_audit(
     )
 
 
+# ── Decision Ledger & Fresh Context (Day 10 / B-14) ───────────────────────
+
+class CreateDecisionRequest(BaseModel):
+    statement: str
+    review_status: Literal["PROPOSED", "REVIEWED"] = "PROPOSED"
+    dependency_paths: list[str] = Field(default_factory=list)
+    include_source: bool = False
+    include_contract: bool = True
+    include_graph: bool = False
+    evidence_ids: list[str] = Field(default_factory=list)
+    revisit_condition: str | None = None
+    supersedes: str | None = None
+
+
+def _refresh_decision_ledger(audit: dict[str, Any]) -> dict[str, Any]:
+    from benchproof.constraints import contract_hash as current_contract_hash
+    from benchproof.decisions import refresh_decisions
+    from benchproof.fixtures import fixture_dir
+
+    ledger = refresh_decisions(
+        audit["audit_id"],
+        fixture_dir(audit["fixture_id"]) / "app",
+        current_contract_hash(),
+        _db(),
+    )
+    for decision_id in ledger["invalidated_decision_ids"]:
+        append_event(
+            audit["audit_id"],
+            "decision_invalidated",
+            {"decision_id": decision_id, "reason": "declared dependency changed or was deleted"},
+            db_path=_db(),
+        )
+    return ledger
+
+
+@app.post("/api/v1/audits/{audit_id}/decisions", status_code=201)
+def create_audit_decision(
+    audit_id: str,
+    body: CreateDecisionRequest,
+    owner_ref: str = Depends(_request_owner),
+) -> JSONResponse:
+    audit = _owned_audit(audit_id, owner_ref)
+    from benchproof.decisions import DecisionError, create_decision
+    from benchproof.fixtures import fixture_dir
+    from benchproof.storage import get_decision
+
+    if body.supersedes:
+        prior = get_decision(body.supersedes, _db())
+        if prior is None or prior["audit_id"] != audit_id:
+            raise _error(409, "INVALID_INPUT", "Superseded decision does not belong to this audit")
+    try:
+        decision = create_decision(
+            audit_id=audit_id,
+            app_dir=fixture_dir(audit["fixture_id"]) / "app",
+            statement=body.statement,
+            owner=owner_ref,
+            review_status=DecisionReviewStatus(body.review_status),
+            current_contract_hash=contract_hash(),
+            dependency_paths=body.dependency_paths,
+            include_source=body.include_source,
+            include_contract=body.include_contract,
+            include_graph=body.include_graph,
+            evidence_ids=body.evidence_ids,
+            revisit_condition=body.revisit_condition,
+            supersedes=body.supersedes,
+            db_path=_db(),
+        )
+    except DecisionError as exc:
+        raise _error(422, exc.code, exc.message) from exc
+    append_event(
+        audit_id,
+        "decision_recorded",
+        {
+            "decision_id": decision.decision_id,
+            "review_status": decision.review_status.value,
+            "dependency_count": len(decision.dependencies),
+        },
+        db_path=_db(),
+    )
+    return JSONResponse(decision.model_dump(mode="json"), status_code=201)
+
+
+@app.get("/api/v1/audits/{audit_id}/decisions")
+def get_audit_decisions(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
+    return _refresh_decision_ledger(audit)
+
+
+@app.get("/api/v1/audits/{audit_id}/context")
+def get_audit_context(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
+    from benchproof.decisions import build_current_context
+    from benchproof.fixtures import fixture_dir
+
+    graph, impact, context, ledger = build_current_context(
+        audit_id,
+        fixture_dir(audit["fixture_id"]) / "app",
+        contract_hash(),
+        db_path=_db(),
+    )
+    return {
+        "context": context.model_dump(mode="json"),
+        "impact": impact.to_dict(),
+        "graph_hash": graph.graph_hash,
+        "decisions": ledger,
+    }
+
+
 # ── Engineering-State Graph (Day 4 / B-07) ────────────────────────────────
 
 @app.get("/api/v1/audits/{audit_id}/graph")
@@ -398,14 +512,23 @@ def get_audit_impact(
 ) -> dict[str, Any]:
     audit = _owned_audit(audit_id, owner_ref)
 
+    from benchproof.decisions import build_current_context
     from benchproof.fixtures import fixture_dir
-    from benchproof.graph.builder import build_state_graph
-    from benchproof.impact import analyze_impact
 
     app_dir = fixture_dir(audit["fixture_id"]) / "app"
-    graph = build_state_graph(app_dir, audit["contract_hash"])
-    impact = analyze_impact(graph)
-    return impact.to_dict()
+    _, impact, context, ledger = build_current_context(
+        audit_id,
+        app_dir,
+        contract_hash(),
+        db_path=_db(),
+    )
+    result = impact.to_dict()
+    result.update(
+        context_hash=context.context_hash,
+        current_decision_ids=context.current_decision_ids,
+        decision_refresh_overhead_ms=ledger["refresh_overhead_ms"],
+    )
+    return result
 
 
 # ── NVIDIA Investigation & Probe Execution (Day 5 / B-08) ────────────────
@@ -423,11 +546,15 @@ def diagnose_audit(
         res = run_investigation(
             fixture_id=audit["fixture_id"],
             audit_id=audit_id,
+            mode=audit["mode"],
             db_path=_db(),
         )
         return res
     except InvestigationError as e:
-        status_code = 409 if e.code in {"STALE_SOURCE", "CONTRACT_UNAPPROVED", "STALE_CONTEXT"} else 422
+        if e.code == "PROVIDER_UNAVAILABLE":
+            status_code = 503
+        else:
+            status_code = 409 if e.code in {"STALE_SOURCE", "CONTRACT_UNAPPROVED", "STALE_CONTEXT"} else 422
         raise _error(status_code, e.code, e.message)
 
 
@@ -450,6 +577,7 @@ class ProposePatchRequest(BaseModel):
     target_files: list[str] = Field(default_factory=list)
     explanation: str = ""
     author: str = "nemotron-repair"
+    context_hash: str | None = None
 
 
 @app.post("/api/v1/audits/{audit_id}/patch")
@@ -471,6 +599,30 @@ def propose_patch(
     from benchproof.storage.lifecycle import append_event
 
     current_shash = source_hash_for_dir(fixture_dir(audit["fixture_id"]) / "app")
+    from benchproof.storage import list_decisions
+
+    ledger_exists = bool(list_decisions(audit_id, _db()))
+    if ledger_exists or req.context_hash:
+        from benchproof.decisions import build_current_context
+
+        _, _, current_context, _ = build_current_context(
+            audit_id,
+            fixture_dir(audit["fixture_id"]) / "app",
+            contract_hash(),
+            db_path=_db(),
+        )
+        if ledger_exists and not req.context_hash:
+            raise _error(
+                409,
+                "STALE_CONTEXT",
+                "A current context_hash is required when the audit has decision history",
+            )
+        if req.context_hash != current_context.context_hash:
+            raise _error(
+                409,
+                "STALE_CONTEXT",
+                "Patch was authored against an old decision/source/contract context",
+            )
     patch_id = f"patch-{uuid.uuid4().hex[:12]}"
 
     proposal = PatchProposal(

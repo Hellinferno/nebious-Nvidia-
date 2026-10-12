@@ -25,9 +25,8 @@ from benchproof.baseline import run_baseline
 from benchproof.constraints import contract_hash, get_constraint
 from benchproof.domain import ContextPacket
 from benchproof.fixtures import fixture_dir, source_hash_for_dir
-from benchproof.impact import ImpactReport, analyze_impact
-from benchproof.impact.context import build_context_packet
-from benchproof.providers import NebiusAdapter, ProviderError
+from benchproof.impact import ImpactReport
+from benchproof.providers import NebiusAdapter
 from benchproof.storage import save_action
 from benchproof.storage.lifecycle import append_event
 
@@ -105,6 +104,7 @@ def generate_structured_diagnosis(
     model_id: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
+    provider_mode: str = "live",
 ) -> tuple[DiagnosisProposal, dict[str, Any]]:
     """Generate a structured diagnosis proposal via NVIDIA Nemotron or fallback."""
     user_prompt = f"""Context:
@@ -141,34 +141,41 @@ Return JSON with format:
     provider_metadata: dict[str, Any] = {}
     raw_content = ""
 
-    # Try live provider if configured
-    try:
-        adapter = NebiusAdapter(api_key=api_key, base_url=base_url)
-        active_model = model_id or "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
-        res = adapter.complete(
-            model=active_model,
-            system_prompt=INVESTIGATOR_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            max_tokens=1024,
-            temperature=0.0,
-            response_format={"type": "json_object"},
-        )
-        raw_content = res.get("content", "")
-        provider_metadata = {
-            "mode": "live",
-            "provider": "nebius-token-factory",
-            "model_id": res.get("response_model") or active_model,
-            "response_id": res.get("response_id"),
-            "usage": res.get("usage"),
-            "elapsed_ms": res.get("elapsed_ms"),
-        }
-    except (ProviderError, Exception) as exc:  # noqa: BLE001
-        # Fallback to deterministic mock proposal for offline / test mode
+    # Mock mode is deterministic and must never issue a paid/live request.
+    if provider_mode == "mock":
         provider_metadata = {
             "mode": "mock",
             "provider": "deterministic-mock-investigator",
-            "reason": str(exc),
+            "reason": "audit requested mock mode",
         }
+    else:
+        try:
+            adapter = NebiusAdapter(api_key=api_key, base_url=base_url)
+            active_model = model_id or "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+            res = adapter.complete(
+                model=active_model,
+                system_prompt=INVESTIGATOR_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                max_tokens=1024,
+                temperature=0.0,
+                response_format={"type": "json_object"},
+            )
+            raw_content = res.get("content", "")
+            provider_metadata = {
+                "mode": "live",
+                "provider": "nebius-token-factory",
+                "model_id": res.get("response_model") or active_model,
+                "response_id": res.get("response_id"),
+                "usage": res.get("usage"),
+                "elapsed_ms": res.get("elapsed_ms"),
+            }
+        except Exception as exc:
+            raise InvestigationError(
+                "PROVIDER_UNAVAILABLE",
+                f"Live provider request failed ({type(exc).__name__}); no mock fallback was used",
+            ) from exc
+
+    if provider_metadata["mode"] == "mock":
         primary_c = impact.impacted_contracts[0] if impact.impacted_contracts else "C-AMOUNT"
         primary_sym = impact.changed_symbols[0] if impact.changed_symbols else "app/money.py:compute_total"
         raw_content = json.dumps({
@@ -240,6 +247,7 @@ def run_investigation(
     target_symbols: list[str] | None = None,
     current_source_hash: str | None = None,
     current_contract_hash: str | None = None,
+    mode: str = "mock",
     db_path: Path | None = None,
 ) -> dict[str, Any]:
     """Execute a complete, bounded investigation cycle."""
@@ -259,11 +267,23 @@ def run_investigation(
             f"Stale contract hash: provided {current_contract_hash} != current {actual_chash}",
         )
 
-    # 2. Build Graph and Analyze Impact
-    from benchproof.graph.builder import build_state_graph
-    graph = build_state_graph(app_dir, actual_chash)
-    impact = analyze_impact(graph, changed_symbols=target_symbols)
-    context = build_context_packet(app_dir, graph, impact)
+    # 2. Rebuild Graph, Impact, and current-only reviewed decision context.
+    from benchproof.decisions import build_current_context
+
+    graph, impact, context, ledger = build_current_context(
+        audit_id,
+        app_dir,
+        actual_chash,
+        target_symbols=target_symbols,
+        db_path=db_path,
+    )
+    for decision_id in ledger["invalidated_decision_ids"]:
+        append_event(
+            audit_id,
+            "decision_invalidated",
+            {"decision_id": decision_id, "reason": "declared dependency changed or was deleted"},
+            db_path=db_path,
+        )
 
     # 3. Emit action_started event
     action_id = f"act-{uuid.uuid4().hex[:12]}"
@@ -276,7 +296,55 @@ def run_investigation(
     )
 
     # 4. Generate Diagnosis
-    proposal, provider_meta = generate_structured_diagnosis(context, impact)
+    proposal, provider_meta = generate_structured_diagnosis(context, impact, provider_mode=mode)
+
+    # The model call is an asynchronous trust boundary. Reject a response if
+    # source, contract, graph, or the reviewed-decision set moved meanwhile.
+    response_shash = source_hash_for_dir(app_dir)
+    response_chash = contract_hash()
+    _, _, response_context, _ = build_current_context(
+        audit_id,
+        app_dir,
+        response_chash,
+        target_symbols=target_symbols,
+        db_path=db_path,
+    )
+    if (
+        response_shash != actual_shash
+        or response_chash != actual_chash
+        or response_context.context_hash != context.context_hash
+    ):
+        elapsed_ms = int((time.perf_counter() - started_time) * 1000)
+        save_action(
+            action_id=action_id,
+            audit_id=audit_id,
+            role="investigator",
+            tool="diagnose",
+            canonical_args_hash=context.context_hash,
+            source_hash=actual_shash,
+            context_hash=context.context_hash,
+            elapsed_ms=elapsed_ms,
+            status="rejected_stale_context",
+            db_path=db_path,
+        )
+        append_event(
+            audit_id,
+            "context_stale",
+            {
+                "action_id": action_id,
+                "requested_context_hash": context.context_hash,
+                "current_context_hash": response_context.context_hash,
+                "requested_source_hash": actual_shash,
+                "current_source_hash": response_shash,
+                "requested_contract_hash": actual_chash,
+                "current_contract_hash": response_chash,
+            },
+            db_path=db_path,
+        )
+        raise InvestigationError(
+            "STALE_CONTEXT",
+            "Provider response was discarded because its source, contract, or decision context changed",
+        )
 
     # 5. Execute Selected Probe
     probe_name = proposal.selected_probe
@@ -370,5 +438,7 @@ def run_investigation(
         },
         "hypotheses_evaluation": hypotheses_evaluation,
         "provider_metadata": provider_meta,
+        "current_decision_ids": context.current_decision_ids,
+        "decision_refresh_overhead_ms": ledger["refresh_overhead_ms"],
         "created_at": datetime.now(UTC).isoformat(),
     }

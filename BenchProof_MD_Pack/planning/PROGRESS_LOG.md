@@ -133,6 +133,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - What changed in scope/decisions/docs: B-12/B-13 and Days 8–9 marked done; D-025 records the opaque local owner capability boundary; API contract and README updated.
 - Next earliest unmet dependency and tomorrow's realistic plan: B-14 source/decision dependency freshness, then B-15 stopping/recovery and B-16 mutation strength, without regressing complete P0.
 
+### 2026-10-12 — Day 10 pulled forward (B-14: decision ledger and dependency freshness)
+
+- Focused hours planned / actual: 3–4 planned; actual not time-tracked.
+- Commit/branch and deployment version, if any: `main`; local tested change, no deployment.
+- Tickets attempted / completed / blocked: B-14 DONE. Added PROPOSED/REVIEWED decision records, server-computed typed dependencies, sticky invalidation, current-reviewed-only context rebuilding, and stale provider/patch rejection.
+- Accepted source/contract/graph/evaluator hashes: hashes are computed per audit/dependency and exposed as expected/current versions; no frozen evaluation hash changed or is claimed.
+- Runtime mode and actual provider/model/runner/image: deterministic mock mode for tests (now guaranteed not to call the live provider); no model call or provider spend. Docker-dependent checks skipped because the daemon was unavailable.
+- Observations, check IDs and artifact paths: `backend/tests/test_decisions.py`; `artifacts/decisions/f6_freshness_transitions.json` records changed-file, deleted-file and changed-contract stale transitions plus unchanged, unrelated-edit and unrelated-add fresh controls. This is development/F6 preparation, not frozen evaluation evidence.
+- Tests actually run; passed/failed/skipped/blocked: targeted decision/investigation/bundle suite 21 passed; final full pytest 132 passed / 0 failed / 3 Docker-dependent skipped; ruff clean; frontend production build and oxlint clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: stale and unreviewed decisions are excluded from `current_decision_ids`; staleness does not auto-revive if bytes return; late diagnosis responses and patches carrying an old context hash return `STALE_CONTEXT`. Mutation strength remains NOT_RUN.
+- Model tokens, executions, retries, cost/price snapshot and remaining reserve: zero model calls, executions or retries; no cost incurred.
+- Repeated failure/recovery event and strategy change, if any: full regression exposed mock audits attempting live inference; fixed by making mock/live provider selection explicit. No B-15 trajectory recovery is claimed.
+- What changed in scope/decisions/docs: B-14 and Day 10 marked done; decision API/data contract, README, release checklist and bundle omission list updated. UI now displays review/freshness state, stale reason, expected/current hashes and measured refresh overhead.
+- Next earliest unmet dependency and tomorrow's realistic plan: B-15 canonical no-progress detection and one fresh-context strategy recovery, then B-16 trusted mutation sensitivity.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -162,7 +177,7 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | Complete P0 protected repair | 9 Oct | Completed 9 Oct | AC/MC repairs, clean control, invalid candidate rejection |
 | Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
 | Usable UI/error paths | 11–12 Oct | Completed in code/tests 12 Oct; screenshot NOT_RECORDED | API journey tests, owner/reconnect/cancel evidence, build/lint |
-| P1 ledger/recovery/mutations | 13–15 Oct | Pending | Freshness/trajectory/mutant observations |
+| P1 ledger/recovery/mutations | 13–15 Oct | In progress: ledger complete 12 Oct; recovery/mutations pending | Freshness/trajectory/mutant observations |
 | Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |
 | Frozen suite assets | 17 Oct | Pending | R12/R6 plus separate selected suites and commit |
 | Hosted release candidate | 19 Oct | Pending | Incognito journey, persistent store and restore |

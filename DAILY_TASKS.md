@@ -246,10 +246,10 @@ Cut visual polish and P1 breadth if a protected route or recovery behavior fails
 
 ### Work in order
 
-1. [ ] Define reviewed/proposed decision ledger records with dependency hashes, evidence and revisit conditions (45 min).
-2. [ ] Invalidate changed/deleted dependencies and rebuild current-only context (60 min); handle relevant and unrelated changes separately.
-3. [ ] Reject an old provider response after source/contract changes; exercise three stale and three fresh development transitions (60 min).
-4. [ ] Expose stale reason/current version in the result details and record overhead (30 min); update source/contract/context docs.
+1. [x] Define reviewed/proposed decision ledger records with dependency hashes, evidence and revisit conditions (45 min).
+2. [x] Invalidate changed/deleted dependencies and rebuild current-only context (60 min); handle relevant and unrelated changes separately.
+3. [x] Reject an old provider response after source/contract changes; exercise three stale and three fresh development transitions (60 min).
+4. [x] Expose stale reason/current version in the result details and record overhead (30 min); update source/contract/context docs.
 
 ### Deliverable and acceptance evidence
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import zipfile
 from pathlib import Path
 
@@ -94,8 +95,8 @@ def test_export_bundle_creates_valid_zip_with_all_files(bundle_db: Path, tmp_pat
     assert manifest.gate_verdict == "VERIFIED"
     assert manifest.audit_id == audit_id
     assert manifest.fixture_id == "mc-01"
-    assert "P1-decisions" in manifest.omissions
     assert "P1-mutations" in manifest.omissions
+    assert "P1-decisions" not in manifest.omissions
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         names = set(zf.namelist())
@@ -116,6 +117,9 @@ def test_export_bundle_creates_valid_zip_with_all_files(bundle_db: Path, tmp_pat
             "REPLAY.md",
         }
         assert expected_names.issubset(names)
+        decisions = json.loads(zf.read("decisions.json"))
+        assert decisions["status"] == "COMPLETE"
+        assert decisions["decisions"] == []
 
         # Check content of report and replay
         report = zf.read("report.md").decode("utf-8")

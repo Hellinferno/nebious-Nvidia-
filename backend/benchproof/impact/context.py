@@ -22,10 +22,11 @@ def build_context_packet(
     impact: ImpactReport,
     current_decision_ids: list[str] | None = None,
     remaining_budget: dict[str, int] | None = None,
+    contract_hash_override: str | None = None,
 ) -> ContextPacket:
     """Construct a bounded, hash-linked context packet."""
     shash = source_hash_for_dir(app_dir)
-    chash = contract_hash()
+    chash = contract_hash_override or contract_hash()
 
     # Build excerpts for impacted files
     excerpts: dict[str, str] = {}

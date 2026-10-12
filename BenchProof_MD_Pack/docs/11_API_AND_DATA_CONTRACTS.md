@@ -15,6 +15,8 @@ Research-aligned schema target: `benchproof/v2`. Implement strict typed records 
 | GET `/api/v1/audits/{id}/events` | SSE with sequence/resume cursor | Owner check; bounded retention |
 | GET `/api/v1/audits/{id}/impact` | Graph subset, risk reasons, coverage | Current source/graph version |
 | GET `/api/v1/audits/{id}/decisions` | Reviewed/proposed/stale ledger | Owner; no private reasoning |
+| POST `/api/v1/audits/{id}/decisions` | Record proposed or human-reviewed decision with server-computed dependencies | Owner; at least one file/source/contract/graph dependency |
+| GET `/api/v1/audits/{id}/context` | Rebuilt current source/contract/graph/decision packet | Owner; stale and unreviewed decisions excluded |
 | POST `/api/v1/audits/{id}/patches` | Authorized developer diff import | Disabled for arbitrary public intake; base hash validated |
 | GET `/api/v1/patches/{id}` | Normalized diff and policy result | Owner via parent audit |
 | POST `/api/v1/patches/{id}/verify` | Request fresh protected gate | Owner, approved patch/contract, budget reservation |
@@ -32,7 +34,7 @@ Use structured body arguments, not source paths in URLs. Audit, event, patch, ga
 | Graph | graph_id/hash, source/contract hashes, builder_version, nodes/edges, coverage, unresolved_items |
 | Edge | from/to, type, OBSERVED/DECLARED/INFERRED provenance, source span/manifest ref, uncertainty |
 | Context | context_hash, source/contract/graph hashes, current_decision_ids, excerpts, selected_checks, unresolved_coverage, remaining_budget |
-| Decision | ID, statement, status/freshness, dependency hashes, evidence IDs, owner/role, timestamp, supersedes, revisit_condition |
+| Decision | ID, statement, PROPOSED/REVIEWED state, CURRENT/STALE/SUPERSEDED freshness, typed dependency expected/current hashes and CHANGED/DELETED reason, evidence IDs, owner/role, timestamp, supersedes, revisit_condition, validation overhead |
 | Action | action_id, role, tool, canonical_args_hash, source/context hash, observation IDs, failure_fingerprint, usage, elapsed, status |
 | Patch | patch_id, base_hash, diff_hash, approved_paths, changed_lines, targeted_constraints, policy_result, author/provider metadata |
 | CheckResult | check_id/version, patch/source/contract/image/evaluator hashes, PASS/FAIL/UNKNOWN, oracle_kind, observation refs, duration, reason |
@@ -65,7 +67,7 @@ Event types include audit_created, state_changed, graph_built, coverage_limited,
 
 Events have audit/attempt/sequence/timestamp and an artifact/result ID. SSE replays from `Last-Event-ID`; the snapshot remains authoritative if retention has expired. Terminal event emission follows committed results.
 
-Error codes: INVALID_INPUT, OWNER_DENIED, SOURCE_LIMIT, STALE_SOURCE, CONTRACT_UNAPPROVED, REQUIRED_CHECK_MISSING, GRAPH_UNRESOLVED, PATCH_PROTECTED_PATH, PROVIDER_UNAVAILABLE, RUNNER_UNAVAILABLE, BUDGET_EXHAUSTED, CHECK_UNKNOWN, MUTATION_INVALID and CANCEL_PENDING. Safe user messages explain the next action; internal details remain sanitized server records.
+Error codes: INVALID_INPUT, OWNER_DENIED, SOURCE_LIMIT, STALE_SOURCE, STALE_CONTEXT, CONTRACT_UNAPPROVED, REQUIRED_CHECK_MISSING, GRAPH_UNRESOLVED, PATCH_PROTECTED_PATH, PROVIDER_UNAVAILABLE, RUNNER_UNAVAILABLE, BUDGET_EXHAUSTED, CHECK_UNKNOWN, MUTATION_INVALID and CANCEL_PENDING. Safe user messages explain the next action; internal details remain sanitized server records.
 
 ## Evidence bundle
 

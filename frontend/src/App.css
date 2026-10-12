@@ -319,11 +319,55 @@ summary:focus-visible {
 }
 
 .action-result,
+.decision-ledger,
 .diff-card,
 .result-stack,
 .evidence-card,
 .evidence-line {
   margin-top: 1rem;
+}
+
+.decision-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.decision-compose label {
+  color: var(--text-h);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.decision-compose input {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.decision-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.decision-row {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.decision-row p {
+  margin: 0 0 0.4rem;
+}
+
+.stale-reason {
+  color: var(--danger, #b91c1c);
 }
 
 .code-diff {
@@ -443,6 +487,7 @@ small {
   .constraint-list { grid-template-columns: 1fr; }
   .section-head { align-items: stretch; flex-direction: column; }
   .button-group { justify-content: stretch; }
+  .decision-compose { grid-template-columns: 1fr; }
   .button-group .btn { flex: 1 1 100%; }
   .mode-control select { width: 100%; }
   .next-action { grid-template-columns: 1fr; gap: 0.25rem; }

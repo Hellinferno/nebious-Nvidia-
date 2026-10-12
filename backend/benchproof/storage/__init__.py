@@ -7,7 +7,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from benchproof.domain import AuditRecord, GateVerdict, RunState
+from benchproof.domain import AuditRecord, Decision, GateVerdict, RunState
 
 _DB_PATH = Path("benchproof.db")
 
@@ -124,6 +124,24 @@ def migrate(db_path: Path | None = None) -> None:
             elapsed_ms          INTEGER NOT NULL DEFAULT 0,
             status              TEXT NOT NULL DEFAULT 'completed',
             created_at          TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS decisions (
+            decision_id       TEXT PRIMARY KEY,
+            audit_id          TEXT NOT NULL REFERENCES audits(audit_id),
+            statement         TEXT NOT NULL,
+            review_status     TEXT NOT NULL DEFAULT 'PROPOSED',
+            freshness_status  TEXT NOT NULL DEFAULT 'CURRENT',
+            dependencies_json TEXT NOT NULL DEFAULT '[]',
+            evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+            owner             TEXT NOT NULL DEFAULT '',
+            role              TEXT NOT NULL DEFAULT '',
+            created_at        TEXT NOT NULL,
+            supersedes        TEXT,
+            revisit_condition TEXT,
+            stale_reason      TEXT,
+            current_versions  TEXT NOT NULL DEFAULT '{}',
+            reviewed_at       TEXT
         );
     """)
     conn.commit()
@@ -313,6 +331,94 @@ def list_actions(audit_id: str, db_path: Path | None = None) -> list[dict[str, A
         d["usage"] = json.loads(d["usage_json"])
         out.append(d)
     return out
+
+
+def save_decision(
+    audit_id: str,
+    decision: Decision,
+    db_path: Path | None = None,
+) -> None:
+    """Insert an immutable decision statement and its declared dependencies."""
+    conn = _connect(db_path)
+    conn.execute(
+        """INSERT INTO decisions
+           (decision_id, audit_id, statement, review_status, freshness_status,
+            dependencies_json, evidence_ids_json, owner, role, created_at,
+            supersedes, revisit_condition, stale_reason, current_versions, reviewed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            decision.decision_id,
+            audit_id,
+            decision.statement,
+            decision.review_status.value,
+            decision.status.value,
+            json.dumps([dependency.model_dump(mode="json") for dependency in decision.dependencies]),
+            json.dumps(decision.evidence_ids),
+            decision.owner,
+            decision.role,
+            decision.timestamp.isoformat(),
+            decision.supersedes,
+            decision.revisit_condition,
+            decision.stale_reason,
+            json.dumps(decision.current_versions),
+            decision.reviewed_at.isoformat() if decision.reviewed_at else None,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def update_decision_freshness(
+    decision_id: str,
+    freshness_status: str,
+    dependencies: list[dict[str, Any]],
+    current_versions: dict[str, str | None],
+    stale_reason: str | None,
+    db_path: Path | None = None,
+) -> None:
+    conn = _connect(db_path)
+    conn.execute(
+        """UPDATE decisions
+           SET freshness_status=?, dependencies_json=?, current_versions=?, stale_reason=?
+           WHERE decision_id=?""",
+        (
+            freshness_status,
+            json.dumps(dependencies),
+            json.dumps(current_versions),
+            stale_reason,
+            decision_id,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_decision(decision_id: str, db_path: Path | None = None) -> dict[str, Any] | None:
+    conn = _connect(db_path)
+    row = conn.execute("SELECT * FROM decisions WHERE decision_id=?", (decision_id,)).fetchone()
+    conn.close()
+    return _decode_decision_row(row) if row else None
+
+
+def list_decisions(audit_id: str, db_path: Path | None = None) -> list[dict[str, Any]]:
+    conn = _connect(db_path)
+    rows = conn.execute(
+        "SELECT * FROM decisions WHERE audit_id=? ORDER BY created_at ASC",
+        (audit_id,),
+    ).fetchall()
+    conn.close()
+    return [_decode_decision_row(row) for row in rows]
+
+
+def _decode_decision_row(row: sqlite3.Row) -> dict[str, Any]:
+    data = dict(row)
+    data["status"] = data.pop("freshness_status")
+    data["dependencies"] = json.loads(data.pop("dependencies_json"))
+    data["dependency_hashes"] = [item["expected_hash"] for item in data["dependencies"]]
+    data["evidence_ids"] = json.loads(data.pop("evidence_ids_json"))
+    data["current_versions"] = json.loads(data["current_versions"])
+    data["timestamp"] = data.pop("created_at")
+    return data
 
 
 def save_patch(

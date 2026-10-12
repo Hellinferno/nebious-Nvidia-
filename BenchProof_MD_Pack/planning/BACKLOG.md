@@ -139,7 +139,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-14 — Decision ledger and dependency freshness · P1; source-hash guard P0
 
-**Owner:** Ravi. **Dependencies:** B-07/B-08. **Target:** 13 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-07/B-08. **Target:** 13 Oct. **Status:** DONE (12 Oct: reviewed/proposed SQLite ledger with server-computed file/source/contract/graph hashes; changed/deleted dependency invalidation; sticky stale state; current-reviewed-only context rebuild; late provider response and old-context patch rejection; API, bundle and UI stale/version/overhead detail; three stale and three fresh transition tests; F6 preparation artifact).
 
 **Work:** Record reviewed/proposed decisions with dependencies/evidence/revisit triggers. Invalidate changed/deleted hashes, exclude stale decisions and rebuild context.
 

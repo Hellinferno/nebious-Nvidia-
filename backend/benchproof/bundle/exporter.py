@@ -14,7 +14,7 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from benchproof.constraints import list_constraints
+from benchproof.constraints import contract_hash, list_constraints
 from benchproof.domain import Artifact, BundleManifest
 from benchproof.fixtures import (
     CANDIDATE_DIR,
@@ -118,12 +118,21 @@ def export_bundle(
     state_json = json.dumps(state_data, indent=2, sort_keys=True)
     coverage_json = json.dumps(coverage_data, indent=2, sort_keys=True)
 
-    # 3. decisions.json (P1 decision ledger placeholder)
+    # 3. decisions.json (dependency-aware, current/stale decision ledger)
+    from benchproof.decisions import refresh_decisions
+
+    decision_ledger = refresh_decisions(
+        audit_id,
+        fixture_dir(fixture_id) / CANDIDATE_DIR,
+        contract_hash(),
+        db_path,
+    )
     decisions_data = {
         "schema_version": "benchproof/v2",
-        "status": "NOT_RUN",
-        "omission_note": "P1 decision ledger scheduled for Day 10 (Ticket B-14)",
-        "decisions": [],
+        "status": "COMPLETE",
+        "current_decision_ids": decision_ledger["current_decision_ids"],
+        "refresh_overhead_ms": decision_ledger["refresh_overhead_ms"],
+        "decisions": decision_ledger["decisions"],
     }
     decisions_json = json.dumps(decisions_data, indent=2, sort_keys=True)
 
@@ -304,7 +313,7 @@ python scripts/replay_bundle.py --bundle benchproof-audit-{audit_id}.zip
         gate_verdict=audit["gate_verdict"],
         created_at=audit["created_at"],
         exported_at=datetime.now(UTC).isoformat(),
-        omissions=["P1-decisions", "P1-mutations"],
+        omissions=["P1-mutations"],
         artifact_hashes=artifact_hashes,
     )
     manifest.compute_hash()

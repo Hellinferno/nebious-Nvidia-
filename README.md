@@ -8,21 +8,25 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (12 October 2026, Days 1–9)
+## Current state (12 October 2026, Days 1–10)
 
 Implemented: curated intake; accepted executable constraints; durable owner-scoped
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
 source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP
 evidence export, non-executing integrity validation and fresh replay; and a connected
-responsive UI that restores the active audit and SSE cursor after reload. Remote
-cancellation stays `CANCEL_PENDING` until worker reconciliation confirms termination.
+responsive UI that restores the active audit and SSE cursor after reload; and a
+dependency-aware decision ledger. Reviewed decisions enter context only while their
+declared file/source/contract/graph hashes remain current. Changed or deleted
+dependencies become sticky `STALE`, late provider responses and old-context patches
+are rejected, and decision reasons/current versions are exported and shown in the UI.
+Remote cancellation stays `CANCEL_PENDING` until worker reconciliation confirms termination.
 
 Owner access currently uses a browser-generated opaque capability in the required
 `X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
 not a claim of production identity authentication. Hosted sandbox execution remains
-blocked because Nebius Sandboxes spawn permission has not been granted. P1 decision
-freshness, recovery and mutation-strength work begins after 12 October.
+blocked because Nebius Sandboxes spawn permission has not been granted. P1 recovery
+and mutation-strength work remains next.
 
 ## Setup (Windows, PowerShell)
 
@@ -68,7 +72,7 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 123 passed, 3 Docker skips on 12 Oct
+.\venv\Scripts\python.exe -m pytest                                   # 132 passed, 3 Docker skips on 12 Oct
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
@@ -85,6 +89,7 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 | `backend/benchproof/api` | FastAPI endpoints (owner-scoped audits, events, gate, bundles, replay) |
 | `backend/benchproof/constraints` | Pinned owner-approved constraints, contract hash, manifest approval |
 | `backend/benchproof/domain` | `benchproof/v2` typed records |
+| `backend/benchproof/decisions` | Reviewed/proposed ledger, dependency invalidation and current-context rebuild |
 | `backend/benchproof/evaluator` | Check registry, observation oracle, gate, development harness |
 | `backend/benchproof/execution` | Execution adapter contract, Docker runner, mock runner |
 | `backend/benchproof/fixtures` | Fixture registry and source hashing |

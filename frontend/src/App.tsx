@@ -81,6 +81,33 @@ type ImpactData = {
   risk_severity: string
   risk_reasons: string[]
   coverage_status: string
+  context_hash: string
+  current_decision_ids: string[]
+  decision_refresh_overhead_ms: number
+}
+type DecisionDependency = {
+  dependency_type: string
+  dependency_key: string
+  expected_hash: string
+  current_hash: string | null
+  status: string
+  reason?: string | null
+}
+type DecisionRecord = {
+  decision_id: string
+  statement: string
+  review_status: string
+  status: string
+  dependencies: DecisionDependency[]
+  evidence_ids: string[]
+  stale_reason?: string | null
+  revisit_condition?: string | null
+}
+type DecisionLedger = {
+  decisions: DecisionRecord[]
+  current_decision_ids: string[]
+  invalidated_decision_ids: string[]
+  refresh_overhead_ms: number
 }
 type PatchRecord = {
   patch_id: string
@@ -163,7 +190,8 @@ function short(value?: string) {
 function badge(value: string) {
   const normalized = value.toUpperCase()
   if (['PASS', 'VERIFIED', 'COMPLETED', 'AUTHENTIC', 'MATCH', 'FULL'].includes(normalized)) return 'success'
-  if (['FAIL', 'REJECTED', 'FAILED', 'TIMED_OUT', 'TAMPERED', 'MISMATCH'].includes(normalized)) return 'danger'
+  if (['FAIL', 'REJECTED', 'FAILED', 'TIMED_OUT', 'TAMPERED', 'MISMATCH', 'STALE', 'CHANGED', 'DELETED'].includes(normalized)) return 'danger'
+  if (['CURRENT', 'REVIEWED'].includes(normalized)) return 'success'
   if (['BLOCKED', 'CANCEL_PENDING', 'INCONCLUSIVE', 'UNKNOWN'].includes(normalized)) return 'warning'
   return 'neutral'
 }
@@ -179,6 +207,7 @@ function issueFrom(error: unknown): Issue {
     BUDGET_EXHAUSTED: 'Review partial evidence; do not start another paid action.',
     STALE_SOURCE: 'Start a fresh audit against the current source hash.',
     PATCH_BASE_MISMATCH: 'Rebuild impact context and propose a patch against the current source.',
+    STALE_CONTEXT: 'Reload the current decision context before requesting another diagnosis or patch.',
     CHECK_UNKNOWN: 'Inspect the unknown check; it cannot produce a VERIFIED verdict.',
     CANCEL_PENDING: 'Wait for remote termination reconciliation; no new work will be started.',
   }
@@ -196,6 +225,8 @@ function App() {
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [graph, setGraph] = useState<GraphData | null>(null)
   const [impact, setImpact] = useState<ImpactData | null>(null)
+  const [decisionLedger, setDecisionLedger] = useState<DecisionLedger | null>(null)
+  const [decisionStatement, setDecisionStatement] = useState('Preserve the accepted contract while applying the smallest relevant repair.')
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
   const [activePatch, setActivePatch] = useState<PatchRecord | null>(null)
   const [gateResult, setGateResult] = useState<GateResult | null>(null)
@@ -227,14 +258,16 @@ function App() {
       setSelectedMode(snapshot.mode)
       localStorage.setItem(ACTIVE_AUDIT_KEY, auditId)
       localStorage.setItem(ACTIVE_FIXTURE_KEY, snapshot.fixture_id)
-      const [graphResponse, impactResponse, patchesResponse, gateResponse] = await Promise.all([
+      const [graphResponse, impactResponse, decisionsResponse, patchesResponse, gateResponse] = await Promise.all([
         api.get(`/api/v1/audits/${auditId}/graph`),
         api.get<ImpactData>(`/api/v1/audits/${auditId}/impact`),
+        api.get<DecisionLedger>(`/api/v1/audits/${auditId}/decisions`),
         api.get<PatchRecord[]>(`/api/v1/audits/${auditId}/patches`),
         api.get(`/api/v1/audits/${auditId}/gate`),
       ])
       setGraph(graphResponse.data.graph ?? graphResponse.data)
       setImpact(impactResponse.data)
+      setDecisionLedger(decisionsResponse.data)
       setActivePatch(patchesResponse.data.at(-1) ?? null)
       if (gateResponse.data.checks?.length) {
         const checks: Check[] = gateResponse.data.checks
@@ -348,6 +381,7 @@ function App() {
     setIssue(null)
     setEvents([])
     setDiagnosis(null)
+    setDecisionLedger(null)
     setActivePatch(null)
     setGateResult(null)
     setBundleInfo(null)
@@ -467,11 +501,40 @@ function App() {
           {diagnosis && <article className="card action-result"><h3>Investigation observations</h3><p className="meta">{diagnosis.provider_metadata.provider} · {diagnosis.provider_metadata.mode} · action <code>{diagnosis.action_id}</code></p>
             {diagnosis.hypotheses_evaluation.map((item) => <p key={item.hypothesis_id}><span className={`badge badge-${badge(item.outcome)}`}>{item.outcome}</span> {item.claim} — {item.detail}</p>)}
           </article>}
+          <article className="card decision-ledger" aria-labelledby="decisions-h">
+            <div className="section-head"><div><h3 id="decisions-h">Reviewed decision ledger</h3><p className="meta">Current-only context <code>{short(impact?.context_hash)}</code> · refresh {decisionLedger?.refresh_overhead_ms ?? impact?.decision_refresh_overhead_ms ?? 0} ms</p></div></div>
+            <div className="decision-compose">
+              <label>Decision statement<input value={decisionStatement} onChange={(event) => setDecisionStatement(event.target.value)} /></label>
+              <button type="button" className="btn btn-secondary" disabled={loading || !decisionStatement.trim() || isTerminal} onClick={() => void runAction(async () => {
+                await api.post(`/api/v1/audits/${audit.audit_id}/decisions`, {
+                  statement: decisionStatement,
+                  review_status: 'REVIEWED',
+                  dependency_paths: plan?.targetFiles ?? [],
+                  include_contract: true,
+                  include_source: !plan,
+                  evidence_ids: graph ? [graph.graph_hash] : [],
+                  revisit_condition: 'Re-review when a declared dependency changes or is deleted.',
+                })
+                const [ledgerResponse, impactResponse] = await Promise.all([
+                  api.get<DecisionLedger>(`/api/v1/audits/${audit.audit_id}/decisions`),
+                  api.get<ImpactData>(`/api/v1/audits/${audit.audit_id}/impact`),
+                ])
+                setDecisionLedger(ledgerResponse.data)
+                setImpact(impactResponse.data)
+              })}>Record reviewed decision</button>
+            </div>
+            {!decisionLedger?.decisions.length ? <p className="meta">No decisions recorded. Proposed records stay outside active context until reviewed.</p> : <div className="decision-list">{decisionLedger.decisions.map((decision) => <div key={decision.decision_id} className="decision-row">
+              <p><code>{decision.decision_id}</code> <span className={`badge badge-${badge(decision.review_status)}`}>{decision.review_status}</span> <span className={`badge badge-${badge(decision.status)}`}>{decision.status}</span></p>
+              <strong>{decision.statement}</strong>
+              {decision.stale_reason && <p className="stale-reason">Stale reason: {decision.stale_reason}</p>}
+              <ul className="compact-list">{decision.dependencies.map((dependency) => <li key={`${dependency.dependency_type}:${dependency.dependency_key}`}><span className={`badge badge-${badge(dependency.status)}`}>{dependency.status}</span> <code>{dependency.dependency_key}</code> expected <code>{short(dependency.expected_hash)}</code> · current <code>{short(dependency.current_hash ?? undefined)}</code></li>)}</ul>
+            </div>)}</div>}
+          </article>
         </section>
 
         <section className="panel" aria-labelledby="repair-h">
           <div className="section-head"><div><p className="eyebrow">4 · Review and verify</p><h2 id="repair-h">Protected candidate repair</h2></div><div className="button-group">
-            <button type="button" className="btn btn-secondary" disabled={loading || !plan || isTerminal} onClick={() => void runAction(async () => { if (!plan || !graph) return; const response = await api.post<PatchRecord>(`/api/v1/audits/${audit.audit_id}/patch`, { diff: plan.diff, base_source_hash: graph.source_hash, target_files: plan.targetFiles, explanation: plan.explanation }); setActivePatch({ ...response.data, diff_text: plan.diff }) })}>Propose bounded diff</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || !plan || isTerminal} onClick={() => void runAction(async () => { if (!plan || !graph) return; const response = await api.post<PatchRecord>(`/api/v1/audits/${audit.audit_id}/patch`, { diff: plan.diff, base_source_hash: graph.source_hash, target_files: plan.targetFiles, explanation: plan.explanation, context_hash: impact?.context_hash }); setActivePatch({ ...response.data, diff_text: plan.diff }) })}>Propose bounded diff</button>
             <button type="button" className="btn btn-primary" disabled={loading || isTerminal} onClick={() => void runAction(async () => { const response = await api.post<GateResult>(`/api/v1/audits/${audit.audit_id}/verify`, { patch_id: activePatch?.patch_id ?? null, use_docker: false }); setGateResult(response.data) })}>Verify independently</button>
           </div></div>
           {!plan && <p className="scope-note">No automatic repair is approved for this case. Verification remains available.</p>}

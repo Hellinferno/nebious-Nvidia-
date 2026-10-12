@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-12 — Day 10 pulled forward: decision freshness and current-only context
+
+- Ledger: SQLite-backed PROPOSED/REVIEWED decisions now retain evidence, revisit conditions and server-computed file/source/contract/graph dependency hashes. Only CURRENT + REVIEWED IDs enter a context packet.
+- Freshness: changed and deleted dependencies become sticky `STALE`; unrelated file edits leave specifically declared dependencies current. Responses expose stale reasons, expected/current versions and refresh overhead. `decisions.json` now contains the actual ledger and no longer claims `P1-decisions` as omitted.
+- Trust boundary: source, contract, graph and decision context are rebuilt after provider inference; a late response is recorded and rejected with `STALE_CONTEXT`. UI-authored patches carry the context hash and are rejected if the relevant context moved.
+- UI/API: added owner-scoped decision create/list and current-context endpoints plus a reviewed-ledger panel showing dependency status and versions. Mock audits are deterministic and never call the live provider; live mode remains explicit.
+- Verification: three stale transitions (file changed, file deleted, contract changed), three fresh controls (unchanged, unrelated edit, unrelated add), stale/unreviewed exclusion, late-response rejection and old-context patch rejection are covered. Full regression: 132 passed, 3 Docker-dependent skipped; ruff, TypeScript/Vite build and oxlint passed. F6 preparation evidence is in `artifacts/decisions/f6_freshness_transitions.json` (development-only, not frozen evaluation data).
+- Still open: B-15 recovery, B-16 mutation strength, Nebius Sandboxes spawn access/hosted execution, production identity, deployment, frozen evaluations and release/submission work.
+
 ## 2026-10-12 — Days 8–9: connected UI, recovery and owner boundary
 
 - UI: one connected curated journey for live/mock selection, run lifecycle and resumable events, graph coverage and affected paths, investigation observations, readable bounded diff, explicit acceptance, gate-versus-test-strength results, and evidence build/validation/replay/download. Active audit, fixture, opaque owner capability and SSE cursor survive reload; a pending create retains its idempotency key.

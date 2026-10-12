@@ -64,6 +64,17 @@ class DecisionStatus(str, Enum):
     SUPERSEDED = "SUPERSEDED"
 
 
+class DecisionReviewStatus(str, Enum):
+    PROPOSED = "PROPOSED"
+    REVIEWED = "REVIEWED"
+
+
+class DecisionDependencyStatus(str, Enum):
+    CURRENT = "CURRENT"
+    CHANGED = "CHANGED"
+    DELETED = "DELETED"
+
+
 class PatchPolicyResult(str, Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
@@ -152,10 +163,20 @@ class ContextPacket(BaseModel):
 
 # ── Decision ─────────────────────────────────────────────────────────────
 
+class DecisionDependency(BaseModel):
+    dependency_type: str  # "source" | "contract" | "graph" | "file"
+    dependency_key: str
+    expected_hash: str
+    current_hash: str | None = None
+    status: DecisionDependencyStatus = DecisionDependencyStatus.CURRENT
+    reason: str | None = None
+
 class Decision(BaseModel):
     decision_id: str
     statement: str
     status: DecisionStatus = DecisionStatus.CURRENT
+    review_status: DecisionReviewStatus = DecisionReviewStatus.PROPOSED
+    dependencies: list[DecisionDependency] = Field(default_factory=list)
     dependency_hashes: list[str] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
     owner: str = ""
@@ -163,6 +184,9 @@ class Decision(BaseModel):
     timestamp: datetime = Field(default_factory=_utcnow)
     supersedes: str | None = None
     revisit_condition: str | None = None
+    stale_reason: str | None = None
+    current_versions: dict[str, str | None] = Field(default_factory=dict)
+    reviewed_at: datetime | None = None
 
 
 # ── Action ───────────────────────────────────────────────────────────────
