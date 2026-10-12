@@ -118,6 +118,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - Patch/verdict plus graph coverage, freshness and mutation limits: Independent replay asserts candidate diff matches recorded manifest hash and re-evaluates all required checks in a clean temporary workspace. Evaluator verdict is computed externally, not from bundle assertions. Secrets and oracle answers strictly excluded from bundle.
 - What changed in scope/decisions/docs: B-11 marked DONE in BACKLOG and DAILY_TASKS. Day 7 interactive UI added with Export Bundle, Verify Manifest, and Run Independent Replay. Milestone tracker updated for Export/fresh replay. Next: Day 8 (B-12: Integrated judge-facing UI).
 
+### 2026-10-12 — Days 8–9 (B-12/B-13: connected UI, recovery and access)
+
+- Focused hours planned / actual: 8–10 planned across both days; actual not time-tracked.
+- Commit/branch and deployment version, if any: `main`; local tested change, no deployment.
+- Tickets attempted / completed / blocked: B-12 DONE and B-13 DONE. Curated live/mock selection, accepted-constraint summary, graph/impact, resumable event trail, bounded diff, explicit verify, separate gate/test-strength result, bundle validation/replay/download, reload restore, safe error states, owner checks and two-phase remote cancellation are connected to real API records.
+- Accepted source/contract/graph/evaluator hashes: resolved from each selected fixture/audit at runtime; no new frozen evaluation hash is claimed.
+- Runtime mode and actual provider/model/runner/image: tests use mock provider/in-process evaluator; Docker-dependent cases skipped because the daemon was unavailable. The earlier actual Nebius model evidence is unchanged; no new paid inference was made.
+- Observations, check IDs and artifact paths: `backend/tests/test_api_day8_day9.py` covers owner isolation for audit/events/patch/bundle access, idempotent restore/cursor resume, pending remote cancel and reconciliation, and wrong-parent patch rejection. `backend/tests/test_execution.py` covers Docker readiness timeout reporting. Frontend active state/cursor live in browser localStorage and all private requests carry the opaque owner capability.
+- Tests actually run; passed/failed/skipped/blocked: `pytest` 123 passed / 0 failed / 3 skipped; `ruff check` clean; frontend `npm run build` and `npm run lint` clean. Headless Chrome/Edge capture was attempted but produced no file; screenshot and a full manual browser journey are NOT_RECORDED.
+- Patch/verdict plus graph coverage, freshness and mutation limits: lifecycle and gate verdict are shown separately; UNKNOWN is never styled as success; test strength remains explicitly `NOT RUN · P1`. Existing source-hash and patch path limits remain enforced.
+- Model tokens, executions, retries, cost/price snapshot and remaining reserve: no model call; no provider spend; no automatic retry loop added.
+- Repeated failure/recovery event and strategy change, if any: audit creation retains one idempotency key across network retry/reload. Remote cancellation remains `CANCEL_PENDING` until trusted reconciliation; counters are not reset.
+- What changed in scope/decisions/docs: B-12/B-13 and Days 8–9 marked done; D-025 records the opaque local owner capability boundary; API contract and README updated.
+- Next earliest unmet dependency and tomorrow's realistic plan: B-14 source/decision dependency freshness, then B-15 stopping/recovery and B-16 mutation strength, without regressing complete P0.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -146,7 +161,7 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | Constraints/graph/current context | 6–8 Oct | Completed 7–8 Oct | Accepted manifest, graph/gaps, stale-base rejection |
 | Complete P0 protected repair | 9 Oct | Completed 9 Oct | AC/MC repairs, clean control, invalid candidate rejection |
 | Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
-| Usable UI/error paths | 11–12 Oct | Pending | Real API journey, owner/reconnect/cancel evidence |
+| Usable UI/error paths | 11–12 Oct | Completed in code/tests 12 Oct; screenshot NOT_RECORDED | API journey tests, owner/reconnect/cancel evidence, build/lint |
 | P1 ledger/recovery/mutations | 13–15 Oct | Pending | Freshness/trajectory/mutant observations |
 | Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |
 | Frozen suite assets | 17 Oct | Pending | R12/R6 plus separate selected suites and commit |

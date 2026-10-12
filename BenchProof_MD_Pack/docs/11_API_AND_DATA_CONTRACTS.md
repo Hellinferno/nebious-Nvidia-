@@ -21,7 +21,7 @@ Research-aligned schema target: `benchproof/v2`. Implement strict typed records 
 | POST `/api/v1/audits/{id}/cancel` | Durable cancellation request | Owner; remote reconciliation follows |
 | GET `/api/v1/audits/{id}/bundle` | Safe immutable evidence download | Owner; hash/secret checks passed |
 
-Use structured body arguments, not source paths in URLs. POST idempotency keys bind owner, endpoint and body hash; same key/different body returns conflict. Reload/reconnect must not duplicate paid actions.
+Use structured body arguments, not source paths in URLs. Audit, event, patch, gate, bundle and replay routes require the opaque `X-BenchProof-Owner` capability and validate it against the parent audit; list results are owner-filtered. This is the bounded demo access mechanism, not production identity authentication. POST idempotency keys bind owner, endpoint and body hash; same key/different body returns conflict. Reload/reconnect must not duplicate paid actions.
 
 ## Required records
 
@@ -61,7 +61,7 @@ Placeholders above must become actual validated values in implementation. Do not
 
 ## Events and errors
 
-Event types include audit_created, state_changed, graph_built, coverage_limited, context_stale, decision_invalidated, action_started/completed, check_failed, patch_proposed/rejected, stalled, recovery_started, verification_completed, mutation_completed, budget_exhausted, cancel_pending, cancelled and bundle_ready.
+Event types include audit_created, state_changed, graph_built, coverage_limited, context_stale, decision_invalidated, action_started/completed, check_failed, patch_proposed/rejected, stalled, recovery_started, verification_completed, mutation_completed, budget_exhausted, cancel_pending, cancelled and bundle_ready. `CANCEL_PENDING` is non-terminal: a worker-side reconciliation may move it to `CANCELLED` only after remote termination is confirmed.
 
 Events have audit/attempt/sequence/timestamp and an artifact/result ID. SSE replays from `Last-Event-ID`; the snapshot remains authoritative if retention has expired. Terminal event emission follows committed results.
 

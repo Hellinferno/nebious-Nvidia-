@@ -45,16 +45,22 @@ class DockerRunner:
     def available(self) -> tuple[bool, str]:
         if shutil.which(self.docker) is None:
             return False, "docker CLI not found"
-        info = subprocess.run(
-            [self.docker, "info", "--format", "{{.ServerVersion}} {{.OSType}}"],
-            capture_output=True, text=True, timeout=30, check=False,
-        )
+        try:
+            info = subprocess.run(
+                [self.docker, "info", "--format", "{{.ServerVersion}} {{.OSType}}"],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return False, "docker daemon probe timed out after 30s"
         if info.returncode != 0:
             return False, "docker daemon not running"
-        img = subprocess.run(
-            [self.docker, "image", "inspect", self.image, "--format", "{{.Id}}"],
-            capture_output=True, text=True, timeout=30, check=False,
-        )
+        try:
+            img = subprocess.run(
+                [self.docker, "image", "inspect", self.image, "--format", "{{.Id}}"],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return False, "docker image probe timed out after 30s"
         if img.returncode != 0:
             return False, f"image {self.image} not built (see backend/runner/image/Dockerfile)"
         return True, f"daemon {info.stdout.strip()}; image {img.stdout.strip()}"

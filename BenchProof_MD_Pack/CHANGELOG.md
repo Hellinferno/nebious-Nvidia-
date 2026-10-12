@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-12 — Days 8–9: connected UI, recovery and owner boundary
+
+- UI: one connected curated journey for live/mock selection, run lifecycle and resumable events, graph coverage and affected paths, investigation observations, readable bounded diff, explicit acceptance, gate-versus-test-strength results, and evidence build/validation/replay/download. Active audit, fixture, opaque owner capability and SSE cursor survive reload; a pending create retains its idempotency key.
+- Access: every audit, event, action, patch, gate, bundle and replay route now requires `X-BenchProof-Owner`; audit listing is owner-filtered, patch lookup validates the parent audit, and a patch cannot be verified against another audit. Public intake remains curated examples only. The opaque capability is a bounded demo mechanism, not production authentication.
+- Cancellation/reliability: remote reservations enter non-terminal `CANCEL_PENDING`; only confirmed worker reconciliation produces `CANCELLED`. Repeated cancel requests do not duplicate events. Docker daemon/image probe timeouts report runner unavailability instead of aborting API startup.
+- Presentation: lifecycle state and gate verdict are separate; required-check UNKNOWN remains explicit; mutation/test strength is `NOT RUN · P1`; known provider, runner, budget, stale-source and cancellation errors retain evidence and provide a next action. Keyboard focus treatments and narrow-screen layouts are implemented.
+- Verification: 123 pytest cases passed and 3 Docker-dependent cases skipped with the daemon unavailable; ruff, TypeScript/Vite production build and oxlint passed. Installed headless Chrome/Edge did not produce a screenshot artifact in this environment, so no screenshot or full manual browser journey is claimed.
+- Still open: Nebius Sandboxes spawn access/hosted execution, production identity, deployment, P1 decision ledger/recovery/mutations, frozen evaluations and release/submission work.
+
 ## 2026-10-05 — Days 2–3: isolated runner boundary, approved constraints, durable state
 
 - Provider: first real NVIDIA inference on Nebius (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`), structured-JSON proposal validated server-side; credential identified as a short-lived session token (owner must create a long-lived key).

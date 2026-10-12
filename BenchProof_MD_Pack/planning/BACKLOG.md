@@ -119,7 +119,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-12 — Integrated developer-facing UI · P0
 
-**Owner:** Ravi. **Dependencies:** B-06/B-10/B-11. **Target:** 11 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-06/B-10/B-11. **Target:** 11 Oct. **Status:** DONE 12 Oct (connected curated live/mock flow, real graph/impact/events, readable bounded diff, explicit independent verify, gate-versus-test-strength separation, authenticated evidence download and replay; responsive/keyboard semantics build and lint clean. Automated headless screenshot capture was attempted but did not produce an artifact, so no screenshot is claimed).
 
 **Work:** Connect curated examples, constraint review, impact, events, diff/verify, separate verdict/test strength and export to actual API records.
 
@@ -129,7 +129,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-13 — Errors, reconnect, ownership and accessibility · P0
 
-**Owner:** Ravi. **Dependencies:** B-12. **Target:** 12 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-12. **Target:** 12 Oct. **Status:** DONE 12 Oct (local capability owner required on every audit/patch/bundle route; owner-filtered listing; patch-parent binding; localStorage audit/cursor restore; header-authenticated resumable SSE; idempotent create recovery; explicit lifecycle/verdict/UNKNOWN/error states; two-phase remote cancel with worker reconciliation; Docker readiness timeout no longer aborts API startup).
 
 **Work:** Restore audits after reload, resume SSE, handle provider/timeout/budget/cancel states and safe artifact access. Check keyboard/mobile core path.
 

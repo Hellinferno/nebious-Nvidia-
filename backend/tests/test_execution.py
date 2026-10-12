@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import subprocess
 
 import pytest
 
@@ -94,6 +95,18 @@ def test_in_process_and_launcher_schema_agree() -> None:
     assert obs["schema"] == "benchproof/observations-v1"
     assert set(obs["route"]) == {"first", "second", "conflict"}
     assert judge(obs, CLEAN)["verdict"] == "VERIFIED"
+
+
+def test_docker_availability_timeout_is_reported_not_raised(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda _: "docker")
+
+    def time_out(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd="docker info", timeout=30)
+
+    monkeypatch.setattr("subprocess.run", time_out)
+    ok, detail = DockerRunner().available()
+    assert ok is False
+    assert detail == "docker daemon probe timed out after 30s"
 
 
 # ── Docker (skipped when the daemon/image is unavailable) ───────────────

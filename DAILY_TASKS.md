@@ -203,11 +203,11 @@ If replay is blocked by a runner/image issue, preserve bundle and clear blocker;
 
 ### Work in order
 
-1. [ ] Implement curated example/task selection with supported scope, accepted constraints and live/mock mode (45 min).
-2. [ ] Connect creation/events to run status, compact impact list and concrete check observations (90 min); keep graph coverage visible.
-3. [ ] Add readable diff, explicit verify action, separate gate/test-strength fields and evidence download (90 min).
-4. [ ] Exercise faulty/clean/rejected/unknown journeys against the real API (60 min); remove hardcoded success states.
-5. [ ] Improve keyboard labels, narrow-screen diff and primary action clarity (30 min); record screenshot plus underlying run IDs.
+1. [x] Implement curated example/task selection with supported scope, accepted constraints and live/mock mode (45 min).
+2. [x] Connect creation/events to run status, compact impact list and concrete check observations (90 min); keep graph coverage visible.
+3. [x] Add readable diff, explicit verify action, separate gate/test-strength fields and evidence download (90 min).
+4. [x] Exercise faulty/clean/rejected/unknown journeys against the real API (60 min); remove hardcoded success states.
+5. [x] Improve keyboard labels, narrow-screen diff and primary action clarity (30 min); automated screenshot capture was attempted but produced no artifact, so no screenshot is claimed.
 
 ### Deliverable and acceptance evidence
 
@@ -225,10 +225,10 @@ If time slips, use a compact affected-path table and unified diff. Keep scope/st
 
 ### Work in order
 
-1. [ ] Restore existing audits after reload and resume SSE from sequence (60 min); confirm no duplicate POST or paid operation.
-2. [ ] Implement provider/runner/budget/timeouts, clean/rejected/blocked and cancel-pending views (60 min); retain partial evidence.
-3. [ ] Check owner authorization for runs/events/patches/artifacts and public curated-only intake (45 min).
-4. [ ] Test keyboard core path and mobile diff/readability (30 min); fix the largest confusion and record actual checks.
+1. [x] Restore existing audits after reload and resume SSE from sequence (60 min); confirm no duplicate POST or paid operation.
+2. [x] Implement provider/runner/budget/timeouts, clean/rejected/blocked and cancel-pending views (60 min); retain partial evidence.
+3. [x] Check owner authorization for runs/events/patches/artifacts and public curated-only intake (45 min).
+4. [x] Test keyboard core path and mobile diff/readability (30 min); fix the largest confusion and record actual checks.
 
 ### Deliverable and acceptance evidence
 

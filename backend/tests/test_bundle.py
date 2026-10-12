@@ -209,6 +209,7 @@ def test_replay_bundle_detects_tampered_bundle(bundle_db: Path, tmp_path: Path) 
 def test_api_bundle_and_replay_endpoints(bundle_db: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("benchproof.api.main._db", lambda: bundle_db)
     client = TestClient(app)
+    client.headers.update({"X-BenchProof-Owner": "test-owner"})
 
     audit_id = _create_verified_audit(bundle_db, "mc-01")
 

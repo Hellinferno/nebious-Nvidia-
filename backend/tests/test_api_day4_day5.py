@@ -17,6 +17,7 @@ def client(tmp_path: Path):
     migrate(db)
     migrate_lifecycle(db)
     with TestClient(app) as c:
+        c.headers.update({"X-BenchProof-Owner": "test-owner"})
         yield c
 
 

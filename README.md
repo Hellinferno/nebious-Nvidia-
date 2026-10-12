@@ -8,18 +8,21 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (5 October 2026, Days 1–3)
+## Current state (12 October 2026, Days 1–9)
 
-Implemented: FastAPI with health/ready/examples/constraints/audits/events,
-idempotent audit creation, SQLite with leases, CAS transitions, ordered events and
-immutable check results; a constraint registry (C-API, C-AMOUNT, C-INTEGRITY) with
-manifest approval; five development fixtures with trusted expected properties and
-reference repairs; an observation-based trusted evaluator; a local Docker runner
-(network none, read-only, cleared env, timeout kill) with a protected launcher; a
-Nebius Token Factory adapter with a real preflight; a heartbeat worker; a minimal UI.
+Implemented: curated intake; accepted executable constraints; durable owner-scoped
+audits, leases, ordered/resumable events and idempotent creation; Engineering-State
+Graph and deterministic impact context; bounded NVIDIA investigation; restricted
+source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP
+evidence export, non-executing integrity validation and fresh replay; and a connected
+responsive UI that restores the active audit and SSE cursor after reload. Remote
+cancellation stays `CANCEL_PENDING` until worker reconciliation confirms termination.
 
-Not implemented: graph/impact analysis, model-driven repair, patch policy, evidence
-export, hosted sandbox execution (Nebius Sandboxes access not yet granted), owner auth.
+Owner access currently uses a browser-generated opaque capability in the required
+`X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
+not a claim of production identity authentication. Hosted sandbox execution remains
+blocked because Nebius Sandboxes spawn permission has not been granted. P1 decision
+freshness, recovery and mutation-strength work begins after 12 October.
 
 ## Setup (Windows, PowerShell)
 
@@ -55,14 +58,17 @@ Set-Location frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Open http://127.0.0.1:5173. The UI shows the real mode. Set `BENCHPROOF_RUNNER=docker`
-in `.env` to have `/api/v1/ready` probe the local runner at startup.
+Open http://127.0.0.1:5173. The UI shows the real mode, stores an opaque local owner
+capability, and restores its last audit without issuing a second create request. Set
+`BENCHPROOF_RUNNER=docker` in `.env` to have `/api/v1/ready` probe the local runner at
+startup; daemon/image probe timeouts are reported as unavailable rather than crashing
+the API.
 
 ## Checks
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 76 tests; Docker tests skip without a daemon
+.\venv\Scripts\python.exe -m pytest                                   # 123 passed, 3 Docker skips on 12 Oct
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
@@ -76,7 +82,7 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 
 | Path | Purpose |
 | --- | --- |
-| `backend/benchproof/api` | FastAPI endpoints (audits, events, constraints, readiness) |
+| `backend/benchproof/api` | FastAPI endpoints (owner-scoped audits, events, gate, bundles, replay) |
 | `backend/benchproof/constraints` | Pinned owner-approved constraints, contract hash, manifest approval |
 | `backend/benchproof/domain` | `benchproof/v2` typed records |
 | `backend/benchproof/evaluator` | Check registry, observation oracle, gate, development harness |
@@ -89,4 +95,4 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 | `backend/fixtures/development/<id>/app` | Candidate-visible synthetic service |
 | `backend/fixtures/development/<id>/expected.json`, `reference/` | Trusted evaluator assets, never mounted into a candidate |
 | `backend/scripts` | Provider/runner preflight, worker, fixture validation |
-| `frontend/` | React/TypeScript/Vite UI |
+| `frontend/` | Connected React/TypeScript/Vite assurance and evidence UI |

@@ -203,6 +203,62 @@ def transition(
     return True
 
 
+def request_cancellation(
+    audit_id: str,
+    *,
+    remote_reconciliation_required: bool,
+    db_path: Path | None = None,
+) -> RunState:
+    """Durably request cancellation without claiming an active remote run has stopped."""
+    target = RunState.CANCEL_PENDING if remote_reconciliation_required else RunState.CANCELLED
+    cancellable = {s.value for s in RunState} - TERMINAL_STATES - {RunState.CANCEL_PENDING.value}
+    if not transition(audit_id, cancellable, target, db_path=db_path, reason="owner request"):
+        conn = _connect(db_path)
+        row = conn.execute("SELECT run_state FROM audits WHERE audit_id=?", (audit_id,)).fetchone()
+        conn.close()
+        current = row["run_state"] if row else "UNKNOWN"
+        if current == RunState.CANCEL_PENDING.value:
+            return RunState.CANCEL_PENDING
+        raise TransitionRejected(f"audit is already in state {current}")
+    append_event(
+        audit_id,
+        "cancel_pending" if remote_reconciliation_required else "cancelled",
+        {
+            "remote_reconciliation": (
+                "required" if remote_reconciliation_required else "not applicable"
+            )
+        },
+        db_path=db_path,
+    )
+    return target
+
+
+def reconcile_cancellation(
+    audit_id: str,
+    *,
+    remote_terminated: bool,
+    db_path: Path | None = None,
+) -> bool:
+    """Worker-side reconciliation: only confirmed remote termination becomes CANCELLED."""
+    if not remote_terminated:
+        return False
+    if not transition(
+        audit_id,
+        {RunState.CANCEL_PENDING},
+        RunState.CANCELLED,
+        db_path=db_path,
+        reason="remote termination confirmed",
+    ):
+        return False
+    append_event(
+        audit_id,
+        "cancelled",
+        {"remote_reconciliation": "confirmed"},
+        db_path=db_path,
+    )
+    return True
+
+
 # ── Immutable results and verdict authority ──────────────────────────────
 
 def record_check_result(

@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -45,12 +46,11 @@ from benchproof.storage.lifecycle import (
     idempotency_put,
     list_events,
     migrate_lifecycle,
-    transition,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PLACEHOLDER_KEYS = {"", "your_api_key_here"}
-_OWNER = "default-owner"  # single-owner development mode; owner auth is B-13
+_OWNER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
 # ── Settings ─────────────────────────────────────────────────────────────
@@ -84,13 +84,37 @@ def _error(status: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status, detail={"code": code, "message": message})
 
 
+def _request_owner(
+    x_benchproof_owner: str | None = Header(default=None, alias="X-BenchProof-Owner"),
+) -> str:
+    """Resolve the local/demo owner boundary without exposing an authentication claim."""
+    if x_benchproof_owner is None:
+        raise _error(401, "OWNER_REQUIRED", "X-BenchProof-Owner is required for audit records")
+    owner = x_benchproof_owner.strip()
+    if not _OWNER_PATTERN.fullmatch(owner):
+        raise _error(400, "INVALID_INPUT", "Invalid X-BenchProof-Owner value")
+    return owner
+
+
+def _owned_audit(audit_id: str, owner_ref: str) -> dict[str, Any]:
+    row = get_audit(audit_id, db_path=_db())
+    if row is None:
+        raise _error(404, "INVALID_INPUT", "Audit not found")
+    if row["owner_ref"] != owner_ref:
+        raise _error(403, "OWNER_DENIED", "This audit belongs to another owner")
+    return row
+
+
 def runner_status() -> dict[str, Any]:
     """Probe the configured runner once (startup or explicit refresh), never per poll."""
     mode = settings.benchproof_runner
     if mode == "docker":
         from benchproof.execution.docker_runner import DockerRunner
 
-        ok, detail = DockerRunner().available()
+        try:
+            ok, detail = DockerRunner().available()
+        except OSError as exc:
+            ok, detail = False, f"docker readiness probe failed: {type(exc).__name__}"
         return {"mode": mode, "isolated_execution_available": ok, "detail": detail}
     if mode == "contree":
         return {"mode": mode, "isolated_execution_available": False, "detail": "no spawn permission on this account"}
@@ -115,7 +139,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Idempotency-Key", "Last-Event-ID"],
+    allow_headers=["Content-Type", "Idempotency-Key", "Last-Event-ID", "X-BenchProof-Owner"],
 )
 
 
@@ -188,10 +212,11 @@ _ENDPOINT_CREATE = "POST /api/v1/audits"
 def create_audit(
     body: CreateAuditRequest,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    owner_ref: str = Depends(_request_owner),
 ) -> JSONResponse:
     bhash = body_hash(body.model_dump())
     if idempotency_key:
-        prior = idempotency_get(_OWNER, _ENDPOINT_CREATE, idempotency_key, _db())
+        prior = idempotency_get(owner_ref, _ENDPOINT_CREATE, idempotency_key, _db())
         if prior is not None:
             if prior["body_hash"] != bhash:
                 raise _error(409, "IDEMPOTENCY_CONFLICT", "Idempotency-Key reused with a different body")
@@ -217,7 +242,7 @@ def create_audit(
 
     audit = AuditRecord(
         audit_id=f"audit-{uuid.uuid4().hex[:12]}",
-        owner_ref=_OWNER,
+        owner_ref=owner_ref,
         fixture_id=body.fixture_id,
         source_hash=example["source_hash"],
         contract_hash=contract_hash(),
@@ -233,21 +258,21 @@ def create_audit(
     )
     response = audit.model_dump(mode="json")
     if idempotency_key:
-        idempotency_put(_OWNER, _ENDPOINT_CREATE, idempotency_key, bhash, audit.audit_id, response, _db())
+        idempotency_put(owner_ref, _ENDPOINT_CREATE, idempotency_key, bhash, audit.audit_id, response, _db())
     return JSONResponse(response, status_code=201)
 
 
 @app.get("/api/v1/audits")
-def list_all_audits() -> list[dict[str, Any]]:
-    return list_audits(db_path=_db())
+def list_all_audits(owner_ref: str = Depends(_request_owner)) -> list[dict[str, Any]]:
+    return list_audits(owner=owner_ref, db_path=_db())
 
 
 @app.get("/api/v1/audits/{audit_id}")
-def get_audit_by_id(audit_id: str) -> dict[str, Any]:
-    row = get_audit(audit_id, db_path=_db())
-    if row is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
-    return row
+def get_audit_by_id(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    return _owned_audit(audit_id, owner_ref)
 
 
 # ── Events (JSON list or SSE, resumable by sequence) ─────────────────────
@@ -278,10 +303,9 @@ def get_events(
     request: Request,
     after: int = Query(0, ge=0),
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    owner_ref: str = Depends(_request_owner),
 ) -> Any:
-    row = get_audit(audit_id, db_path=_db())
-    if row is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+    row = _owned_audit(audit_id, owner_ref)
     cursor = after
     if last_event_id and last_event_id.isdigit():
         cursor = max(cursor, int(last_event_id))
@@ -297,28 +321,43 @@ def get_events(
 
 # ── Cancel (durable CAS transition) ──────────────────────────────────────
 
-_CANCELLABLE = {s.value for s in RunState} - TERMINAL_STATES
-
-
 @app.post("/api/v1/audits/{audit_id}/cancel")
-def cancel_audit(audit_id: str) -> dict[str, str]:
-    row = get_audit(audit_id, db_path=_db())
-    if row is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
-    if not transition(audit_id, _CANCELLABLE, RunState.CANCELLED, db_path=_db(), reason="owner request"):
-        current = get_audit(audit_id, db_path=_db())
-        raise _error(409, "INVALID_INPUT", f"Audit already in terminal state: {current['run_state'] if current else '?'}")
-    append_event(audit_id, "cancelled", {"remote_reconciliation": "not applicable (no remote run)"}, db_path=_db())
-    return {"status": "cancelled", "audit_id": audit_id}
+def cancel_audit(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> JSONResponse:
+    row = _owned_audit(audit_id, owner_ref)
+    from benchproof.storage.lifecycle import TransitionRejected, request_cancellation
+
+    reservations = json.loads(row.get("reservations") or "{}")
+    remote_active = bool(reservations.get("remote_run_id"))
+    try:
+        target = request_cancellation(
+            audit_id,
+            remote_reconciliation_required=remote_active,
+            db_path=_db(),
+        )
+    except TransitionRejected as exc:
+        raise _error(409, "INVALID_INPUT", str(exc)) from exc
+    pending = target == RunState.CANCEL_PENDING
+    return JSONResponse(
+        {
+            "status": "cancel_pending" if pending else "cancelled",
+            "audit_id": audit_id,
+            "remote_reconciliation": "pending" if pending else "not_applicable",
+        },
+        status_code=202 if pending else 200,
+    )
 
 
 # ── Engineering-State Graph (Day 4 / B-07) ────────────────────────────────
 
 @app.get("/api/v1/audits/{audit_id}/graph")
-def get_audit_graph(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def get_audit_graph(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
 
     existing = get_graph_by_audit_id(audit_id, db_path=_db())
     if existing:
@@ -353,10 +392,11 @@ def get_audit_graph(audit_id: str) -> dict[str, Any]:
 # ── Blast Radius & Deterministic Risk (Day 5 / B-08) ─────────────────────
 
 @app.get("/api/v1/audits/{audit_id}/impact")
-def get_audit_impact(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def get_audit_impact(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
 
     from benchproof.fixtures import fixture_dir
     from benchproof.graph.builder import build_state_graph
@@ -371,10 +411,11 @@ def get_audit_impact(audit_id: str) -> dict[str, Any]:
 # ── NVIDIA Investigation & Probe Execution (Day 5 / B-08) ────────────────
 
 @app.post("/api/v1/audits/{audit_id}/diagnose")
-def diagnose_audit(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def diagnose_audit(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
 
     from benchproof.investigation import InvestigationError, run_investigation
 
@@ -393,11 +434,11 @@ def diagnose_audit(audit_id: str) -> dict[str, Any]:
 # ── Actions Trajectory ───────────────────────────────────────────────────
 
 @app.get("/api/v1/audits/{audit_id}/actions")
-def get_audit_actions(audit_id: str) -> list[dict[str, Any]]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
-
+def get_audit_actions(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> list[dict[str, Any]]:
+    _owned_audit(audit_id, owner_ref)
     return list_actions(audit_id, db_path=_db())
 
 
@@ -412,10 +453,12 @@ class ProposePatchRequest(BaseModel):
 
 
 @app.post("/api/v1/audits/{audit_id}/patch")
-def propose_patch(audit_id: str, req: ProposePatchRequest) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def propose_patch(
+    audit_id: str,
+    req: ProposePatchRequest,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
 
     from benchproof.fixtures import fixture_dir, source_hash_for_dir
     from benchproof.patch import (
@@ -486,13 +529,27 @@ def propose_patch(audit_id: str, req: ProposePatchRequest) -> dict[str, Any]:
 
 
 @app.get("/api/v1/audits/{audit_id}/patches")
-def get_audit_patches(audit_id: str) -> list[dict[str, Any]]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
-
+def get_audit_patches(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> list[dict[str, Any]]:
+    _owned_audit(audit_id, owner_ref)
     from benchproof.storage import list_patches
     return list_patches(audit_id, db_path=_db())
+
+
+@app.get("/api/v1/patches/{patch_id}")
+def get_patch_by_id(
+    patch_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    from benchproof.storage import get_patch
+
+    patch = get_patch(patch_id, db_path=_db())
+    if patch is None:
+        raise _error(404, "INVALID_INPUT", "Patch not found")
+    _owned_audit(patch["audit_id"], owner_ref)
+    return patch
 
 
 # ── Fresh Independent Acceptance Gate (Day 6 / B-10) ─────────────────────
@@ -503,10 +560,19 @@ class VerifyCandidateRequest(BaseModel):
 
 
 @app.post("/api/v1/audits/{audit_id}/verify")
-def verify_audit_candidate(audit_id: str, req: VerifyCandidateRequest) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def verify_audit_candidate(
+    audit_id: str,
+    req: VerifyCandidateRequest,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
+
+    if req.patch_id:
+        from benchproof.storage import get_patch
+
+        patch = get_patch(req.patch_id, db_path=_db())
+        if patch is None or patch["audit_id"] != audit_id:
+            raise _error(409, "PATCH_NOT_FOUND", "Patch does not belong to this audit")
 
     from benchproof.gate import GateError, execute_acceptance_gate
 
@@ -524,10 +590,11 @@ def verify_audit_candidate(audit_id: str, req: VerifyCandidateRequest) -> dict[s
 
 
 @app.get("/api/v1/audits/{audit_id}/gate")
-def get_audit_gate_status(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def get_audit_gate_status(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
 
     from benchproof.storage.lifecycle import list_check_results
 
@@ -543,10 +610,11 @@ def get_audit_gate_status(audit_id: str) -> dict[str, Any]:
 # ── Evidence Bundle Export & Independent Replay (Day 7 / B-11) ───────────
 
 @app.post("/api/v1/audits/{audit_id}/bundle")
-def create_audit_bundle(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def create_audit_bundle(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
 
     from benchproof.bundle import export_bundle
     from benchproof.bundle.exporter import SafeArchivePathError, SecurityExclusionError
@@ -575,10 +643,9 @@ def create_audit_bundle(audit_id: str) -> dict[str, Any]:
 def get_audit_bundle(
     audit_id: str,
     metadata: bool = Query(default=False, description="Return JSON metadata instead of binary zip"),
+    owner_ref: str = Depends(_request_owner),
 ) -> Any:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+    _owned_audit(audit_id, owner_ref)
 
     from benchproof.bundle import export_bundle
 
@@ -617,10 +684,11 @@ def get_audit_bundle(
 
 
 @app.post("/api/v1/audits/{audit_id}/bundle/validate")
-def validate_audit_bundle(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def validate_audit_bundle(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
 
     from benchproof.bundle import export_bundle, validate_bundle_nonexecuting
 
@@ -634,10 +702,11 @@ def validate_audit_bundle(audit_id: str) -> dict[str, Any]:
 
 @app.get("/api/v1/audits/{audit_id}/replay")
 @app.post("/api/v1/audits/{audit_id}/replay")
-def replay_audit_bundle(audit_id: str) -> dict[str, Any]:
-    audit = get_audit(audit_id, db_path=_db())
-    if audit is None:
-        raise _error(404, "INVALID_INPUT", "Audit not found")
+def replay_audit_bundle(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
 
     from benchproof.bundle import export_bundle, replay_bundle
 

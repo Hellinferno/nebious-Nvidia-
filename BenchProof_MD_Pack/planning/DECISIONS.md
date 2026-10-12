@@ -69,6 +69,16 @@ The initial design had no completed implementation or benchmark to migrate. Inde
 - Dependency hashes, affected documents/contracts and revisit condition: image digest above; docs 07/09, backlog B-05, O-003/O-004. Revisit when Sandboxes `spawn` permission is granted or by the 6 Oct fallback review.
 - Superseded ID: none.
 
+### D-025 — Opaque local owner capability for the bounded demo
+
+- Date, owner, status: 12 October 2026, Ravi, accepted for local/demo use only.
+- Trigger and observed evidence: B-13 required cross-session denial before hosted identity infrastructure exists. Earlier routes used one hard-coded owner and exposed all audits to any caller.
+- Constraints and options actually investigated: (a) keep the shared owner — rejected; (b) add full OAuth before deployment — premature and outside the Day 9 cut line; (c) require a high-entropy browser-generated capability in `X-BenchProof-Owner`, bind all records and idempotency keys to it, and owner-filter every private route — selected.
+- Selected option, rationale and artifacts: (c). The UI stores one capability in localStorage and sends it on API, SSE and bundle requests. Tests deny a different capability across audit, event, patch and bundle routes and prevent cross-audit patch verification.
+- Cost, security, user, schedule and coverage effects: no external identity dependency and reliable reload behavior. The capability is bearer-like and localStorage-backed; it is not production authentication, revocation, account recovery or multi-device identity. Do not expose it in bundles, URLs or logs.
+- Dependency hashes, affected documents/contracts and revisit condition: API/data contract, B-13, UI runtime and `test_api_day8_day9.py`. Replace or bind behind hosted authentication/reverse-proxy identity before claiming production multi-user security in B-20/B-23.
+- Superseded ID: the Day 3 hard-coded single-owner development behavior.
+
 ## Decision entry template
 
 ### D-[number] — title
