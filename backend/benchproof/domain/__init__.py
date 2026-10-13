@@ -55,6 +55,7 @@ class MutationOutcome(str, Enum):
     SURVIVED = "SURVIVED"
     INVALID = "INVALID"
     INCONCLUSIVE = "INCONCLUSIVE"
+    UNKNOWN = "UNKNOWN"
     SKIPPED = "SKIPPED"
 
 
@@ -246,10 +247,15 @@ class CheckResult(BaseModel):
 class MutationResult(BaseModel):
     template_id: str
     template_version: int = 1
+    family: str = ""
     mutant_hash: str = ""
+    base_candidate_hash: str = ""
     validity: str = ""  # "valid", "invalid_syntax", etc.
     outcome: MutationOutcome = MutationOutcome.SKIPPED
     supporting_check_ids: list[str] = Field(default_factory=list)
+    selected_check_ids: list[str] = Field(default_factory=list)
+    reason: str = ""
+    duration_ms: int = 0
 
 
 # ── Artifact ─────────────────────────────────────────────────────────────
@@ -285,6 +291,7 @@ class AuditRecord(BaseModel):
         default_factory=lambda: {
             "max_actions": 15,
             "max_patches": 5,
+            "max_executions": 12,
             "process_timeout_s": 60,
             "audit_deadline_s": 300,
         }

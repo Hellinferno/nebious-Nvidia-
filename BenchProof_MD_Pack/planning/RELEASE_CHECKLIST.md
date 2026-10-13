@@ -12,7 +12,7 @@ All implementation gates are pending. Feature freeze: 25 October. Internal submi
 - [x] Source/contract mismatches invalidate actions; P1 stale decisions are excluded if claimed.
 - [x] Repeated no-progress attempts stop; any P1 recovery is bounded and recorded.
 - [ ] Independent invalid candidate rejection, correct clean result and limited/blocked result work.
-- [ ] Mutation strength is separate; absent feature shows NOT_RUN, survivors/invalids stay visible.
+- [x] Mutation strength is separate; absent feature shows NOT_RUN, survivors/invalids stay visible.
 - [ ] Real UI reads API records; reload/cancel/errors preserve evidence without duplicate actions.
 - [ ] Export and preselected fresh replay work; three live hero runs passed.
 

@@ -172,12 +172,18 @@ def budget_snapshot(audit_id: str, db_path: Path | None = None) -> dict[str, int
     if audit is None:
         raise TrajectoryError("INVALID_INPUT", "Audit not found")
     limits = json.loads(audit.get("limits_json") or "{}")
+    reservations = json.loads(audit.get("reservations") or "{}")
     actions = list_actions(audit_id, db_path)
     patches = list_patches(audit_id, db_path)
     used_elapsed_ms = sum(int(action.get("elapsed_ms") or 0) for action in actions)
     return {
         "max_actions": max(0, int(limits.get("max_actions", 15)) - len(actions)),
         "max_patches": max(0, int(limits.get("max_patches", 5)) - len(patches)),
+        "max_executions": max(
+            0,
+            int(limits.get("max_executions", 12))
+            - int(reservations.get("mutation_executions", 0)),
+        ),
         "process_timeout_s": int(limits.get("process_timeout_s", 60)),
         "audit_deadline_s": max(
             0,
@@ -185,6 +191,7 @@ def budget_snapshot(audit_id: str, db_path: Path | None = None) -> dict[str, int
         ),
         "used_actions": len(actions),
         "used_patches": len(patches),
+        "used_executions": int(reservations.get("mutation_executions", 0)),
         "used_elapsed_ms": used_elapsed_ms,
     }
 

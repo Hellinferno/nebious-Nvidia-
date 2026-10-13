@@ -288,10 +288,10 @@ If detection is noisy, keep P0 hard stopping/caps and omit rich recovery claims.
 
 ### Work in order
 
-1. [ ] Author three semantic mutation templates for each implemented family from development behavior (60 min); use trusted oracles.
-2. [ ] Validate each template changes intended behavior and executes correctly (45 min); invalid syntax/import is not a killed regression.
-3. [ ] Run up to three relevant fresh mutant branches with shared budget accounting and unchanged candidate (60 min).
-4. [ ] Show killed/survived/invalid/skipped/unknown counts separately; choose whether adequacy is required or optional in the accepted release policy (30 min).
+1. [x] Author three semantic mutation templates for each implemented family from development behavior (60 min); use trusted oracles.
+2. [x] Validate each template changes intended behavior and executes correctly (45 min); invalid syntax/import is not a killed regression.
+3. [x] Run up to three relevant fresh mutant branches with shared budget accounting and unchanged candidate (60 min).
+4. [x] Show killed/survived/invalid/skipped/unknown counts separately; choose whether adequacy is required or optional in the accepted release policy (30 min).
 
 ### Deliverable and acceptance evidence
 

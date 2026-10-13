@@ -22,8 +22,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 from benchproof.constraints import contract_hash, list_constraints
 from benchproof.domain import CheckOutcome, CheckResult
@@ -87,16 +86,27 @@ def collect_observations_in_process(app_dir: Path) -> dict[str, Any]:
         routes = importlib.import_module(f"{pkg.__name__}.routes")
         worker = importlib.import_module(f"{pkg.__name__}.worker")
         repository = importlib.import_module(f"{pkg.__name__}.repository")
-        api = FastAPI()
-        api.include_router(routes.router)
-        client = TestClient(api)
+        schemas = importlib.import_module(f"{pkg.__name__}.schemas")
+        invoice_route = next(route for route in routes.router.routes if route.path == "/invoices")
 
         def call(lines: list[str]) -> dict[str, Any]:
-            r = client.post("/invoices", json={"tenant_id": "t1", "request_id": "r1", "line_amounts": lines})
-            body: Any = None
-            if r.headers.get("content-type", "").startswith("application/json"):
-                body = r.json()
-            return {"status": r.status_code, "body": body if isinstance(body, dict) else None}
+            req = schemas.InvoiceRequest(
+                tenant_id="t1", request_id="r1", line_amounts=lines
+            )
+            try:
+                raw = invoice_route.endpoint(req)
+                response_model = invoice_route.response_model
+                body: Any = raw
+                if response_model is not None:
+                    body = response_model.model_validate(raw).model_dump(
+                        exclude=invoice_route.response_model_exclude
+                    )
+                return {
+                    "status": invoice_route.status_code or 200,
+                    "body": body if isinstance(body, dict) else None,
+                }
+            except HTTPException as exc:
+                return {"status": exc.status_code, "body": {"detail": exc.detail}}
 
         obs["route"]["first"] = call(BOUNDARY_LINES)
         obs["route"]["second"] = call(BOUNDARY_LINES)

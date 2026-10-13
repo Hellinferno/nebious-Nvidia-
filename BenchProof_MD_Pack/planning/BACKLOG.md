@@ -159,7 +159,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-16 — Trusted mutation test-strength probes · P1
 
-**Owner:** Ravi. **Dependencies:** B-10; stable P0. **Target:** 15 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-10; stable P0. **Target:** 15 Oct. **Status:** DONE (13 Oct: twelve `development-semantic-v1` trusted templates, three per API/amount/caller/idempotency family; exact-anchor validation; max-three fresh branches plus accepted baseline under `max_executions`; immutable run/results; explicit killed/survived/invalid/skipped/unknown counts; optional policy; API/UI/bundle integration; clean-control development run killed 2 and exposed 1 tenant-key survivor while preserving the candidate hash).
 
 **Work:** Author semantic templates with external oracles, validate behavior changes, run max three relevant fresh branches and store killed/survived/invalid/unknown results.
 

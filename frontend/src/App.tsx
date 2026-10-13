@@ -127,6 +127,27 @@ type GateResult = {
   unknown_checks: string[]
   checks: Check[]
 }
+type MutationResult = {
+  template_id: string
+  template_version: number
+  family: string
+  validity: string
+  outcome: string
+  reason: string
+  duration_ms: number
+}
+type MutationRun = {
+  mutation_run_id: string
+  policy: string
+  strength_status: string
+  counts: { killed: number; survived: number; invalid: number; skipped: number; unknown: number }
+  candidate_unchanged: boolean
+  overhead_ms: number
+  execution_count: number
+  template_versions: string[]
+  results: MutationResult[]
+}
+type MutationLedger = { status: string; policy: string; runs: MutationRun[] }
 type Diagnosis = {
   action_id: string
   provider_metadata: { mode: string; provider: string; model_id?: string; usage?: { total_tokens?: number } }
@@ -201,10 +222,10 @@ function short(value?: string) {
 
 function badge(value: string) {
   const normalized = value.toUpperCase()
-  if (['PASS', 'VERIFIED', 'COMPLETED', 'AUTHENTIC', 'MATCH', 'FULL'].includes(normalized)) return 'success'
-  if (['FAIL', 'REJECTED', 'FAILED', 'TIMED_OUT', 'TAMPERED', 'MISMATCH', 'STALE', 'CHANGED', 'DELETED'].includes(normalized)) return 'danger'
+  if (['PASS', 'VERIFIED', 'COMPLETED', 'AUTHENTIC', 'MATCH', 'FULL', 'KILLED', 'ADEQUATE_FOR_DECLARED_MUTANTS'].includes(normalized)) return 'success'
+  if (['FAIL', 'REJECTED', 'FAILED', 'TIMED_OUT', 'TAMPERED', 'MISMATCH', 'STALE', 'CHANGED', 'DELETED', 'SURVIVED'].includes(normalized)) return 'danger'
   if (['CURRENT', 'REVIEWED'].includes(normalized)) return 'success'
-  if (['BLOCKED', 'CANCEL_PENDING', 'INCONCLUSIVE', 'UNKNOWN'].includes(normalized)) return 'warning'
+  if (['BLOCKED', 'CANCEL_PENDING', 'INCONCLUSIVE', 'UNKNOWN', 'WEAK'].includes(normalized)) return 'warning'
   return 'neutral'
 }
 
@@ -245,6 +266,7 @@ function App() {
   const [trajectory, setTrajectory] = useState<TrajectoryStatus | null>(null)
   const [activePatch, setActivePatch] = useState<PatchRecord | null>(null)
   const [gateResult, setGateResult] = useState<GateResult | null>(null)
+  const [mutationRun, setMutationRun] = useState<MutationRun | null>(null)
   const [bundleInfo, setBundleInfo] = useState<BundleInfo | null>(null)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [replayResult, setReplayResult] = useState<ReplayResult | null>(null)
@@ -273,19 +295,21 @@ function App() {
       setSelectedMode(snapshot.mode)
       localStorage.setItem(ACTIVE_AUDIT_KEY, auditId)
       localStorage.setItem(ACTIVE_FIXTURE_KEY, snapshot.fixture_id)
-      const [graphResponse, impactResponse, decisionsResponse, trajectoryResponse, patchesResponse, gateResponse] = await Promise.all([
+      const [graphResponse, impactResponse, decisionsResponse, trajectoryResponse, patchesResponse, gateResponse, mutationResponse] = await Promise.all([
         api.get(`/api/v1/audits/${auditId}/graph`),
         api.get<ImpactData>(`/api/v1/audits/${auditId}/impact`),
         api.get<DecisionLedger>(`/api/v1/audits/${auditId}/decisions`),
         api.get<TrajectoryStatus>(`/api/v1/audits/${auditId}/trajectory`),
         api.get<PatchRecord[]>(`/api/v1/audits/${auditId}/patches`),
         api.get(`/api/v1/audits/${auditId}/gate`),
+        api.get<MutationLedger>(`/api/v1/audits/${auditId}/mutations`),
       ])
       setGraph(graphResponse.data.graph ?? graphResponse.data)
       setImpact(impactResponse.data)
       setDecisionLedger(decisionsResponse.data)
       setTrajectory(trajectoryResponse.data)
       setActivePatch(patchesResponse.data.at(-1) ?? null)
+      setMutationRun(mutationResponse.data.runs.at(-1) ?? null)
       if (gateResponse.data.checks?.length) {
         const checks: Check[] = gateResponse.data.checks
         setGateResult({
@@ -402,6 +426,7 @@ function App() {
     setTrajectory(null)
     setActivePatch(null)
     setGateResult(null)
+    setMutationRun(null)
     setBundleInfo(null)
     setValidationResult(null)
     setReplayResult(null)
@@ -560,16 +585,22 @@ function App() {
           <div className="section-head"><div><p className="eyebrow">4 · Review and verify</p><h2 id="repair-h">Protected candidate repair</h2></div><div className="button-group">
             <button type="button" className="btn btn-secondary" disabled={loading || !plan || isTerminal} onClick={() => void runAction(async () => { if (!plan || !graph) return; const response = await api.post<PatchRecord>(`/api/v1/audits/${audit.audit_id}/patch`, { diff: plan.diff, base_source_hash: graph.source_hash, target_files: plan.targetFiles, explanation: plan.explanation, context_hash: impact?.context_hash }); setActivePatch({ ...response.data, diff_text: plan.diff }) })}>Propose bounded diff</button>
             <button type="button" className="btn btn-primary" disabled={loading || isTerminal} onClick={() => void runAction(async () => { const response = await api.post<GateResult>(`/api/v1/audits/${audit.audit_id}/verify`, { patch_id: activePatch?.patch_id ?? null, use_docker: false }); setGateResult(response.data) })}>Verify independently</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || gateResult?.verdict !== 'VERIFIED'} onClick={() => void runAction(async () => { const response = await api.post<MutationRun>(`/api/v1/audits/${audit.audit_id}/mutations`, { patch_id: activePatch?.patch_id ?? null, max_mutants: 3 }); setMutationRun(response.data) })}>Assess test strength</button>
           </div></div>
           {!plan && <p className="scope-note">No automatic repair is approved for this case. Verification remains available.</p>}
           {activePatch && <article className="diff-card"><p><strong>{activePatch.patch_id}</strong> · <span className={`badge badge-${badge(activePatch.policy_result)}`}>{activePatch.policy_result}</span> · {activePatch.changed_lines} changed diff lines</p><pre className="code-diff" tabIndex={0} aria-label="Proposed unified diff">{activePatch.diff_text ?? plan?.diff}</pre></article>}
           {gateResult && <div className="result-stack"><div className="result-summary">
             <div><span>Contract gate</span><strong className={`badge badge-${badge(gateResult.verdict)}`}>{gateResult.verdict}</strong></div>
             <div><span>Required checks</span><strong>{gateResult.passing_checks.length} pass · {gateResult.failing_checks.length} fail · {gateResult.unknown_checks.length} unknown</strong></div>
-            <div><span>Test strength</span><strong className="badge badge-neutral">NOT RUN · P1</strong></div>
+            <div><span>Test strength</span><strong className={`badge badge-${badge(mutationRun?.strength_status ?? 'NOT_RUN')}`}>{mutationRun?.strength_status ?? 'NOT_RUN'} · OPTIONAL</strong></div>
           </div><div className="table-scroll" tabIndex={0} aria-label="Acceptance check results"><table><thead><tr><th>Check</th><th>Outcome</th><th>Oracle</th><th>Observation</th></tr></thead><tbody>
             {gateResult.checks.map((check) => <tr key={check.check_id}><td><code>{check.check_id}</code></td><td><span className={`badge badge-${badge(check.outcome)}`}>{check.outcome}</span></td><td>{check.oracle_kind}</td><td>{check.reason || 'No reason recorded'}</td></tr>)}
           </tbody></table></div></div>}
+          {mutationRun && <article className="card action-result"><h3>Trusted semantic mutation evidence</h3>
+            <p><span className={`badge badge-${badge(mutationRun.strength_status)}`}>{mutationRun.strength_status}</span> {mutationRun.counts.killed} killed · {mutationRun.counts.survived} survived · {mutationRun.counts.invalid} invalid · {mutationRun.counts.skipped} skipped · {mutationRun.counts.unknown} unknown</p>
+            <p className="meta">{mutationRun.execution_count} shared-budget executions · {mutationRun.overhead_ms} ms · candidate {mutationRun.candidate_unchanged ? 'unchanged' : 'changed'} · policy {mutationRun.policy}</p>
+            <ul className="compact-list">{mutationRun.results.map((result) => <li key={result.template_id}><code>{result.template_id}@{result.template_version}</code> <span className={`badge badge-${badge(result.outcome)}`}>{result.outcome}</span> {result.reason}</li>)}</ul>
+          </article>}
         </section>
 
         <section className="panel" aria-labelledby="evidence-h">

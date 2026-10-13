@@ -818,6 +818,59 @@ def get_audit_gate_status(
     }
 
 
+# ── Trusted semantic mutation assessment (Day 12 / B-16) ───────────────
+
+class RunMutationRequest(BaseModel):
+    patch_id: str | None = None
+    max_mutants: int = Field(default=3, ge=1, le=3)
+
+
+@app.post("/api/v1/audits/{audit_id}/mutations")
+def run_audit_mutations(
+    audit_id: str,
+    req: RunMutationRequest,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
+    from benchproof.mutations import MutationError, run_mutation_assessment
+    from benchproof.patch import PatchValidationError
+
+    try:
+        return run_mutation_assessment(
+            audit_id,
+            patch_id=req.patch_id,
+            max_mutants=req.max_mutants,
+            db_path=_db(),
+        )
+    except MutationError as exc:
+        status = 409 if exc.code in {
+            "BUDGET_EXHAUSTED", "CANDIDATE_NOT_VERIFIED", "PATCH_NOT_FOUND",
+            "CANDIDATE_CHANGED",
+        } else 422
+        raise _error(status, exc.code, exc.message) from exc
+    except PatchValidationError as exc:
+        raise _error(409, exc.code, exc.message) from exc
+
+
+@app.get("/api/v1/audits/{audit_id}/mutations")
+def get_audit_mutations(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    _owned_audit(audit_id, owner_ref)
+    from benchproof.mutations import MUTATION_POLICY, TEMPLATE_SET_VERSION
+    from benchproof.storage import list_mutation_assessments
+
+    runs = list_mutation_assessments(audit_id, db_path=_db())
+    return {
+        "audit_id": audit_id,
+        "policy": MUTATION_POLICY,
+        "template_set_version": TEMPLATE_SET_VERSION,
+        "status": runs[-1]["strength_status"] if runs else "NOT_RUN",
+        "runs": runs,
+    }
+
+
 # ── Evidence Bundle Export & Independent Replay (Day 7 / B-11) ───────────
 
 @app.post("/api/v1/audits/{audit_id}/bundle")

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-13 — Day 12 pulled forward: trusted semantic mutation strength
+
+- Templates: added `development-semantic-v1` with twelve evaluator-owned exact-anchor mutations, three each for API, amount, caller and idempotency behavior. All twelve apply to the clean accepted candidate, parse/import, execute, change the candidate hash and produce an adjudicated semantic result.
+- Execution/scoring: a mutation run first requires a VERIFIED accepted baseline, reserves that baseline plus at most three relevant fresh branches against `max_executions`, and rebuilds every mutant from an immutable candidate copy. KILLED requires a valid intended deviation and a failing supporting protected check; invalid syntax/import is INVALID, never killed. Killed, survived, invalid, skipped and unknown remain separate.
+- Policy/UI/evidence: mutation adequacy is OPTIONAL for this release, so strength never changes the protected gate verdict. Owner-scoped run/read endpoints, immutable SQLite records, UI counts/template versions, bundle export and a `mutation_completed` event are implemented. A missing run remains honestly `NOT_RUN` and `P1-mutations` stays in bundle omissions.
+- Development evidence: `artifacts/mutations/development_strength.json` validates 12/12 templates. The bounded clean-control idempotency run killed 2/3 and exposed the intended cross-tenant-key survivor, reporting `WEAK`; four shared-budget executions were charged, 320 ms overhead was observed, and the accepted candidate hash stayed unchanged. A malformed test-only template was INVALID, not KILLED. This is development preparation, not a final M12 outcome.
+- Verification: mutation tests cover registry cardinality/versioning, every template, invalid syntax, survivor honesty, budget exhaustion, owner scope, persistence and bundle contents. Full regression: 159 passed, 3 Docker-dependent skipped; ruff, TypeScript/Vite build and oxlint passed. No live provider call or paid runner execution was made.
+- Still open: B-17 security hardening, Nebius Sandboxes spawn access/hosted execution, production identity, deployment, frozen final evaluations and release/submission work.
+
 ## 2026-10-13 — Day 11 pulled forward: bounded trajectory stopping and recovery
 
 - Fingerprints: `trajectory-fingerprint-v1` hashes normalized action intent and failure semantics while removing only unstable request/action IDs, UUIDs and timestamps. Stable semantic check observations prevent fresh row IDs from masquerading as progress.

@@ -147,6 +147,58 @@ def migrate(db_path: Path | None = None) -> None:
             current_versions  TEXT NOT NULL DEFAULT '{}',
             reviewed_at       TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS mutation_runs (
+            mutation_run_id      TEXT PRIMARY KEY,
+            audit_id             TEXT NOT NULL REFERENCES audits(audit_id),
+            patch_id             TEXT,
+            family               TEXT NOT NULL,
+            policy               TEXT NOT NULL DEFAULT 'OPTIONAL',
+            strength_status      TEXT NOT NULL,
+            base_candidate_hash  TEXT NOT NULL,
+            final_candidate_hash TEXT NOT NULL,
+            candidate_unchanged  INTEGER NOT NULL,
+            counts_json          TEXT NOT NULL DEFAULT '{}',
+            template_versions    TEXT NOT NULL DEFAULT '[]',
+            execution_count      INTEGER NOT NULL DEFAULT 0,
+            overhead_ms          INTEGER NOT NULL DEFAULT 0,
+            created_at           TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS mutation_results (
+            mutation_run_id      TEXT NOT NULL REFERENCES mutation_runs(mutation_run_id),
+            audit_id             TEXT NOT NULL REFERENCES audits(audit_id),
+            template_id          TEXT NOT NULL,
+            template_version     INTEGER NOT NULL,
+            family               TEXT NOT NULL,
+            mutant_hash          TEXT NOT NULL DEFAULT '',
+            base_candidate_hash  TEXT NOT NULL DEFAULT '',
+            validity             TEXT NOT NULL,
+            outcome              TEXT NOT NULL,
+            supporting_check_ids TEXT NOT NULL DEFAULT '[]',
+            selected_check_ids   TEXT NOT NULL DEFAULT '[]',
+            reason               TEXT NOT NULL DEFAULT '',
+            duration_ms          INTEGER NOT NULL DEFAULT 0,
+            created_at           TEXT NOT NULL,
+            PRIMARY KEY (mutation_run_id, template_id)
+        );
+
+        CREATE TRIGGER IF NOT EXISTS mutation_runs_no_update
+        BEFORE UPDATE ON mutation_runs BEGIN
+            SELECT RAISE(ABORT, 'mutation runs are immutable');
+        END;
+        CREATE TRIGGER IF NOT EXISTS mutation_runs_no_delete
+        BEFORE DELETE ON mutation_runs BEGIN
+            SELECT RAISE(ABORT, 'mutation runs are immutable');
+        END;
+        CREATE TRIGGER IF NOT EXISTS mutation_results_no_update
+        BEFORE UPDATE ON mutation_results BEGIN
+            SELECT RAISE(ABORT, 'mutation results are immutable');
+        END;
+        CREATE TRIGGER IF NOT EXISTS mutation_results_no_delete
+        BEFORE DELETE ON mutation_results BEGIN
+            SELECT RAISE(ABORT, 'mutation results are immutable');
+        END;
     """)
     action_columns = {row["name"] for row in conn.execute("PRAGMA table_info(actions)")}
     action_migrations = {
@@ -509,4 +561,98 @@ def list_patches(audit_id: str, db_path: Path | None = None) -> list[dict[str, A
         d["provider_meta"] = json.loads(d["provider_meta"])
         out.append(d)
     return out
+
+
+def save_mutation_assessment(
+    run: dict[str, Any],
+    results: list[dict[str, Any]],
+    db_path: Path | None = None,
+) -> None:
+    """Persist one immutable mutation assessment and all of its outcomes atomically."""
+    from datetime import UTC, datetime
+
+    conn = _connect(db_path)
+    created_at = datetime.now(UTC).isoformat()
+    try:
+        conn.execute(
+            """INSERT INTO mutation_runs
+               (mutation_run_id, audit_id, patch_id, family, policy, strength_status,
+                base_candidate_hash, final_candidate_hash, candidate_unchanged,
+                counts_json, template_versions, execution_count, overhead_ms, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                run["mutation_run_id"],
+                run["audit_id"],
+                run.get("patch_id"),
+                run["family"],
+                run["policy"],
+                run["strength_status"],
+                run["base_candidate_hash"],
+                run["final_candidate_hash"],
+                int(run["candidate_unchanged"]),
+                json.dumps(run["counts"], sort_keys=True),
+                json.dumps(run["template_versions"], sort_keys=True),
+                run["execution_count"],
+                run["overhead_ms"],
+                created_at,
+            ),
+        )
+        for result in results:
+            conn.execute(
+                """INSERT INTO mutation_results
+                   (mutation_run_id, audit_id, template_id, template_version, family,
+                    mutant_hash, base_candidate_hash, validity, outcome,
+                    supporting_check_ids, selected_check_ids, reason, duration_ms, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    run["mutation_run_id"],
+                    run["audit_id"],
+                    result["template_id"],
+                    result["template_version"],
+                    result["family"],
+                    result.get("mutant_hash", ""),
+                    result.get("base_candidate_hash", ""),
+                    result["validity"],
+                    result["outcome"],
+                    json.dumps(result.get("supporting_check_ids", [])),
+                    json.dumps(result.get("selected_check_ids", [])),
+                    result.get("reason", ""),
+                    result.get("duration_ms", 0),
+                    created_at,
+                ),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def list_mutation_assessments(
+    audit_id: str,
+    db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    conn = _connect(db_path)
+    runs = conn.execute(
+        "SELECT * FROM mutation_runs WHERE audit_id=? ORDER BY created_at ASC",
+        (audit_id,),
+    ).fetchall()
+    output: list[dict[str, Any]] = []
+    for row in runs:
+        item = dict(row)
+        item["candidate_unchanged"] = bool(item["candidate_unchanged"])
+        item["counts"] = json.loads(item.pop("counts_json"))
+        item["template_versions"] = json.loads(item["template_versions"])
+        result_rows = conn.execute(
+            """SELECT * FROM mutation_results
+               WHERE mutation_run_id=? ORDER BY template_id ASC""",
+            (item["mutation_run_id"],),
+        ).fetchall()
+        item["results"] = []
+        for result_row in result_rows:
+            result = dict(result_row)
+            result["supporting_check_ids"] = json.loads(result["supporting_check_ids"])
+            result["selected_check_ids"] = json.loads(result["selected_check_ids"])
+            item["results"].append(result)
+        output.append(item)
+    conn.close()
+    return output
 

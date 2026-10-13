@@ -27,6 +27,7 @@ from benchproof.storage import (
     get_audit,
     get_graph_by_audit_id,
     list_actions,
+    list_mutation_assessments,
     list_patches,
 )
 from benchproof.storage.lifecycle import (
@@ -179,12 +180,15 @@ def export_bundle(
     }
     checks_json = json.dumps(checks_data, indent=2, sort_keys=True)
 
-    # 8. mutations.json (P1 mutation suite placeholder)
+    # 8. mutations.json (optional strength evidence, separate from acceptance)
+    mutation_runs = list_mutation_assessments(audit_id, db_path=db_path)
+    latest_mutation = mutation_runs[-1] if mutation_runs else None
     mutations_data = {
         "schema_version": "benchproof/v2",
-        "status": "NOT_RUN",
-        "omission_note": "P1 mutation suite scheduled for Day 12 (Ticket B-16)",
-        "mutants": [],
+        "policy": "OPTIONAL",
+        "status": latest_mutation["strength_status"] if latest_mutation else "NOT_RUN",
+        "omission_note": None if latest_mutation else "Optional mutation assessment was not run",
+        "runs": mutation_runs,
     }
     mutations_json = json.dumps(mutations_data, indent=2, sort_keys=True)
 
@@ -229,6 +233,7 @@ def export_bundle(
 - **Gate Verdict:** **`{audit['gate_verdict']}`**
 - **Created At:** `{audit['created_at']}`
 - **Mode:** `{audit['mode']}`
+- **Mutation Strength:** **`{mutations_data['status']}`** (`OPTIONAL`; never changes the gate verdict)
 
 ## Evaluated Checks
 
@@ -319,7 +324,7 @@ python scripts/replay_bundle.py --bundle benchproof-audit-{audit_id}.zip
         gate_verdict=audit["gate_verdict"],
         created_at=audit["created_at"],
         exported_at=datetime.now(UTC).isoformat(),
-        omissions=["P1-mutations"],
+        omissions=[] if mutation_runs else ["P1-mutations"],
         artifact_hashes=artifact_hashes,
     )
     manifest.compute_hash()

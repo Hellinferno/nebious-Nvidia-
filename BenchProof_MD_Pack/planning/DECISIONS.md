@@ -79,6 +79,16 @@ The initial design had no completed implementation or benchmark to migrate. Inde
 - Dependency hashes, affected documents/contracts and revisit condition: API/data contract, B-13, UI runtime and `test_api_day8_day9.py`. Replace or bind behind hosted authentication/reverse-proxy identity before claiming production multi-user security in B-20/B-23.
 - Superseded ID: the Day 3 hard-coded single-owner development behavior.
 
+### D-026 — Mutation adequacy remains an optional release signal
+
+- Date, owner, status: 13 October 2026, Ravi, accepted for the current release contract.
+- Trigger and observed evidence: B-16 produced twelve valid semantic templates and a bounded clean-control idempotency run with two killed mutants and one surviving cross-tenant-key mutant (`artifacts/mutations/development_strength.json`). The required acceptance gate still passes its declared checks, showing that mutation sensitivity and contract conformance answer different questions.
+- Constraints and options actually investigated: (a) make every selected mutation mandatory for VERIFIED; (b) keep mutation strength optional and visibly separate; (c) omit mutation execution. Option (b) is selected because the accepted required contract does not yet declare a cross-tenant collision check, and retroactively changing gate policy would weaken comparability and conflate P0 acceptance with P1 diagnostic strength.
+- Selected option, rationale and artifacts: report NOT_RUN, ADEQUATE_FOR_DECLARED_MUTANTS, WEAK or INCONCLUSIVE independently. A survivor yields WEAK; invalid/skipped/unknown coverage prevents adequacy; none of these values can promote or demote the protected gate verdict. Template/result records are immutable and included in bundles when run.
+- Cost, security, user, schedule and coverage effects: each run consumes one baseline plus at most three mutant executions from `max_executions=12`; candidate hashes are checked before/after. The UI exposes every outcome count and labels policy OPTIONAL. `WEAK` is not hidden and adequacy is bounded to the named templates, never generalized to complete coverage.
+- Dependency hashes, affected documents/contracts and revisit condition: `development-semantic-v1`, B-16, API/data contract, UI and evidence bundle. Revisit O-009 only when the final release contract and M12 manifest are frozen; making mutations required is a new versioned policy, not an in-place reinterpretation.
+- Superseded ID: D-020's policy choice was previously open; its max-three trusted-template boundary remains.
+
 ## Decision entry template
 
 ### D-[number] — title

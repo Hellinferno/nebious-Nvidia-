@@ -163,6 +163,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - What changed in scope/decisions/docs: B-15 and Day 11 marked done; Action/API contracts, README, release checklist, changelog, bundle usage evidence and UI recovery state updated.
 - Next earliest unmet dependency and tomorrow's realistic plan: B-16 trusted semantic mutations, with at most three relevant branches and unchanged candidate/acceptance policy.
 
+### 2026-10-13 — Day 12 pulled forward (B-16: trusted semantic mutation strength)
+
+- Focused hours planned / actual: 3–4 planned; actual not time-tracked.
+- Commit/branch and deployment version, if any: `main`; local tested change, no deployment.
+- Tickets attempted / completed / blocked: B-16 DONE. Added twelve `development-semantic-v1` trusted templates, three for each API/amount/caller/idempotency family; exact-anchor application; syntax/import validity; max-three fresh mutant branches; immutable result storage; owner-scoped API; UI and bundle presentation.
+- Accepted source/contract/graph/evaluator hashes: the executed development run records its full clean-service accepted candidate hash before/after; candidate remained unchanged. The external evaluator hash is computed per execution. No final M12 manifest or outcome is claimed before suite freeze.
+- Runtime mode and actual provider/model/runner/image: in-process development evaluator only for template authoring and evidence; no NVIDIA model call, paid execution or Docker run. The production boundary still supports the protected runner path; the in-process harness remains development-only.
+- Observations, check IDs and artifact paths: `backend/tests/test_mutations.py`; `artifacts/mutations/development_strength.json`. All 12 trusted templates were applicable, changed the source hash, parsed/imported and executed: 11 KILLED, 1 SURVIVED (`idempotency-drop-tenant-key`). The separate malformed control was INVALID, not KILLED. The bounded relevant idempotency run selected three templates and reported 2 killed / 1 survived / 0 invalid / 0 skipped / 0 unknown, therefore WEAK.
+- Tests actually run; passed/failed/skipped/blocked: mutation suite 16 passed; full pytest 159 passed / 0 failed / 3 Docker-dependent skipped; ruff clean after removing stale directives; frontend production build and oxlint clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: mutation policy is explicitly OPTIONAL (D-026) and cannot modify acceptance. A run requires a VERIFIED baseline, reserves one baseline plus up to three branches from `max_executions`, persists template/version IDs and each outcome, and checks the accepted candidate hash after execution. Missing runs remain NOT_RUN in UI/bundles.
+- Model tokens, executions, retries, cost/price snapshot and remaining reserve: zero model calls/tokens/cost. The recorded bounded run charged four local executions, measured 320 ms mutation overhead, and left eight of the default twelve execution slots.
+- Repeated failure/recovery event and strategy change, if any: not applicable to this run; mutation branches do not reset action, patch or recovery counters.
+- What changed in scope/decisions/docs: B-16 and Day 12 marked done; D-026 selects optional adequacy; API/data contract, README, release checklist, changelog, bundle contents and UI updated. The development harness now invokes the registered route directly instead of allocating an unnecessary Windows loopback socket; oracle logic and Docker launcher remain unchanged.
+- Next earliest unmet dependency and tomorrow's realistic plan: B-17 integrity and execution hardening, followed by B-18 suite/assets freeze.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -192,7 +207,7 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | Complete P0 protected repair | 9 Oct | Completed 9 Oct | AC/MC repairs, clean control, invalid candidate rejection |
 | Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
 | Usable UI/error paths | 11–12 Oct | Completed in code/tests 12 Oct; screenshot NOT_RECORDED | API journey tests, owner/reconnect/cancel evidence, build/lint |
-| P1 ledger/recovery/mutations | 13–15 Oct | In progress: ledger/recovery complete 13 Oct; mutations pending | Freshness/trajectory/mutant observations |
+| P1 ledger/recovery/mutations | 13–15 Oct | Completed in code/development evidence 13 Oct; final selected suite outcomes still pending freeze | Freshness/trajectory/mutant observations |
 | Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |
 | Frozen suite assets | 17 Oct | Pending | R12/R6 plus separate selected suites and commit |
 | Hosted release candidate | 19 Oct | Pending | Incognito journey, persistent store and restore |

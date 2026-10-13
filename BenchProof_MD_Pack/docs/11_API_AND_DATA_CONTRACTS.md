@@ -19,6 +19,8 @@ Research-aligned schema target: `benchproof/v2`. Implement strict typed records 
 | GET `/api/v1/audits/{id}/context` | Rebuilt current source/contract/graph/decision packet | Owner; stale and unreviewed decisions excluded |
 | GET `/api/v1/audits/{id}/trajectory` | Fingerprint rule, recovery count and original remaining limits | Owner; persisted audit/action state |
 | POST `/api/v1/audits/{id}/recover` | Consume the single changed-strategy recovery | Owner; audit must be STALLED with action/time budget remaining |
+| POST `/api/v1/audits/{id}/mutations` | Run at most three relevant trusted semantic mutants | Owner; VERIFIED baseline, accepted patch and execution budget |
+| GET `/api/v1/audits/{id}/mutations` | Read immutable strength runs and explicit outcome counts | Owner; policy stays separate from gate verdict |
 | POST `/api/v1/audits/{id}/patches` | Authorized developer diff import | Disabled for arbitrary public intake; base hash validated |
 | GET `/api/v1/patches/{id}` | Normalized diff and policy result | Owner via parent audit |
 | POST `/api/v1/patches/{id}/verify` | Request fresh protected gate | Owner, approved patch/contract, budget reservation |
@@ -40,7 +42,7 @@ Use structured body arguments, not source paths in URLs. Audit, event, patch, ga
 | Action | action_id, role, tool, strategy, canonical_args_hash, source/context hash, observation IDs/fingerprints, failure category/fingerprint, usage, elapsed, remaining original limits, status |
 | Patch | patch_id, base_hash, diff_hash, approved_paths, changed_lines, targeted_constraints, policy_result, author/provider metadata |
 | CheckResult | check_id/version, patch/source/contract/image/evaluator hashes, PASS/FAIL/UNKNOWN, oracle_kind, observation refs, duration, reason |
-| MutationResult | template/version, mutant_hash, validity, KILLED/SURVIVED/INVALID/INCONCLUSIVE/SKIPPED, supporting_check_ids |
+| MutationResult | template/version/family, base and mutant hashes, validity, KILLED/SURVIVED/INVALID/SKIPPED/UNKNOWN, supporting and selected check IDs, duration/reason |
 | Artifact | artifact_id, owner/audit/attempt, relative name, MIME, byte size, sha256, visibility |
 
 Any inferred/unknown field is explicit. Prefer null plus reason over a false zero or empty-success value. Validate enum values, size limits, referential integrity and content hashes at write boundaries.
