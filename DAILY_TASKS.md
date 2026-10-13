@@ -267,10 +267,10 @@ If P0 is unstable, retain mandatory hash freshness and mark rich decision invali
 
 ### Work in order
 
-1. [ ] Implement canonical action/failure fingerprint and the two-repeat no-progress rule (45 min); normalize unstable IDs/timestamps only.
-2. [ ] Create four true-stall and four improving development traces; verify a resolving patch is not stopped because one remaining check still fails (60 min).
-3. [ ] Add one changed-strategy recovery using current context and remaining original budgets (60 min); second stall ends blocked.
-4. [ ] Run one executed recovery if feasible and label it separately from synthetic trace scoring (30 min); freeze candidate threshold proposal.
+1. [x] Implement canonical action/failure fingerprint and the two-repeat no-progress rule (45 min); normalize unstable IDs/timestamps only.
+2. [x] Create four true-stall and four improving development traces; verify a resolving patch is not stopped because one remaining check still fails (60 min).
+3. [x] Add one changed-strategy recovery using current context and remaining original budgets (60 min); second stall ends blocked.
+4. [x] Run one executed recovery if feasible and label it separately from synthetic trace scoring (30 min); freeze candidate threshold proposal.
 
 ### Deliverable and acceptance evidence
 

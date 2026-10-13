@@ -244,6 +244,7 @@ def build_current_context(
     current_contract_hash: str,
     *,
     target_symbols: list[str] | None = None,
+    remaining_budget: dict[str, int] | None = None,
     db_path: Path | None = None,
 ) -> tuple[Any, Any, Any, dict[str, Any]]:
     """Rebuild graph, impact and context from reviewed, current decisions only."""
@@ -259,6 +260,7 @@ def build_current_context(
         graph,
         impact,
         current_decision_ids=ledger["current_decision_ids"],
+        remaining_budget=remaining_budget,
         contract_hash_override=current_contract_hash,
     )
     return graph, impact, context, ledger

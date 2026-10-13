@@ -8,7 +8,7 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (12 October 2026, Days 1–10)
+## Current state (13 October 2026, Days 1–11)
 
 Implemented: curated intake; accepted executable constraints; durable owner-scoped
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
@@ -20,13 +20,17 @@ dependency-aware decision ledger. Reviewed decisions enter context only while th
 declared file/source/contract/graph hashes remain current. Changed or deleted
 dependencies become sticky `STALE`, late provider responses and old-context patches
 are rejected, and decision reasons/current versions are exported and shown in the UI.
+Two identical no-progress source/action/failure attempts now enter `STALLED`.
+One atomic recovery rebuilds current context, changes to a narrower named strategy,
+and consumes the original limits without resetting counters; a repeated recovery
+stall ends `BLOCKED`. The UI shows remaining actions and the one-recovery allowance.
 Remote cancellation stays `CANCEL_PENDING` until worker reconciliation confirms termination.
 
 Owner access currently uses a browser-generated opaque capability in the required
 `X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
 not a claim of production identity authentication. Hosted sandbox execution remains
-blocked because Nebius Sandboxes spawn permission has not been granted. P1 recovery
-and mutation-strength work remains next.
+blocked because Nebius Sandboxes spawn permission has not been granted. P1
+mutation-strength work remains next.
 
 ## Setup (Windows, PowerShell)
 
@@ -72,7 +76,7 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 132 passed, 3 Docker skips on 12 Oct
+.\venv\Scripts\python.exe -m pytest                                   # 143 passed, 3 Docker skips on 13 Oct
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
@@ -94,6 +98,7 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 | `backend/benchproof/execution` | Execution adapter contract, Docker runner, mock runner |
 | `backend/benchproof/fixtures` | Fixture registry and source hashing |
 | `backend/benchproof/providers` | Nebius Token Factory adapter |
+| `backend/benchproof/trajectory` | Frozen action/failure fingerprints, stall policy and one bounded recovery |
 | `backend/benchproof/storage` | SQLite migrations, audits, heartbeats, leases/events/immutability |
 | `backend/runner/image` | Pinned candidate runtime image |
 | `backend/runner/launcher` | Protected launcher that observes a candidate from inside its runtime |

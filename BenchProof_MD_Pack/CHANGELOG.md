@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-13 — Day 11 pulled forward: bounded trajectory stopping and recovery
+
+- Fingerprints: `trajectory-fingerprint-v1` hashes normalized action intent and failure semantics while removing only unstable request/action IDs, UUIDs and timestamps. Stable semantic check observations prevent fresh row IDs from masquerading as progress.
+- Stopping: two consecutive actions with the same source, action intent and failure and no new relevant observation transition to `STALLED`. Four true-stall and four legitimate-progress development traces are frozen in `trajectory-w8-v1`; the progress set includes a patch resolving one check while another remains failed.
+- Recovery: a STALLED audit may atomically consume one `narrow_failure_probe` recovery. It rebuilds current decision context, records the strategy change and preserves original action/patch/time counters. A repeated recovery fingerprint transitions to terminal `BLOCKED`; exhausted original budgets block without recovery.
+- API/UI/evidence: owner-scoped trajectory status and recovery endpoints expose rule version, recovery count and remaining limits. The UI presents the stopped state and single recovery action. Bundle actions and usage retain strategy, fingerprints and remaining limits. `scripts/run_trajectory_evidence.py` records synthetic classifications separately from an actually executed development recovery.
+- Verification: W8 preparation classified 8/8 development traces correctly; the executed MC-01 mock recovery progressed with counters preserved. Full regression: 143 passed, 3 Docker-dependent skipped; ruff, TypeScript/Vite build and oxlint passed. No live provider call or paid execution was made.
+- Still open: B-16 mutation strength, Nebius Sandboxes spawn access/hosted execution, production identity, deployment, frozen final evaluations and release/submission work.
+
 ## 2026-10-12 — Day 10 pulled forward: decision freshness and current-only context
 
 - Ledger: SQLite-backed PROPOSED/REVIEWED decisions now retain evidence, revisit conditions and server-computed file/source/contract/graph dependency hashes. Only CURRENT + REVIEWED IDs enter a context packet.

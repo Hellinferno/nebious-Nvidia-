@@ -148,6 +148,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - What changed in scope/decisions/docs: B-14 and Day 10 marked done; decision API/data contract, README, release checklist and bundle omission list updated. UI now displays review/freshness state, stale reason, expected/current hashes and measured refresh overhead.
 - Next earliest unmet dependency and tomorrow's realistic plan: B-15 canonical no-progress detection and one fresh-context strategy recovery, then B-16 trusted mutation sensitivity.
 
+### 2026-10-13 — Day 11 pulled forward (B-15: trajectory stopping and recovery)
+
+- Focused hours planned / actual: 3–4 planned; actual not time-tracked.
+- Commit/branch and deployment version, if any: `main`; local tested change, no deployment.
+- Tickets attempted / completed / blocked: B-15 DONE. Implemented `trajectory-fingerprint-v1`, two-repeat no-progress stopping, one atomic changed-strategy recovery and terminal blocking after a second stall.
+- Accepted source/contract/graph/evaluator hashes: runtime action records retain the current source/context hashes; accepted contract/evaluator are unchanged. Fingerprint rule version is frozen for W8 preparation as `trajectory-fingerprint-v1`, repeat threshold 2.
+- Runtime mode and actual provider/model/runner/image: deterministic mock provider and in-process development evaluator for the executed recovery; no live NVIDIA inference or paid runner execution. Docker-dependent regression checks skipped because the daemon was unavailable.
+- Observations, check IDs and artifact paths: source/labels in `backend/benchproof/trajectory/development.py`; classifications and separate executed MC-01 recovery in `artifacts/trajectory/w8_and_executed_recovery.json`. The artifact is development-only preparation, not final W8 outcomes.
+- Tests actually run; passed/failed/skipped/blocked: `backend/tests/test_trajectory.py` 11 passed; full pytest 143 passed / 0 failed / 3 Docker-dependent skipped; ruff clean; frontend production build and oxlint clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: four true stalls and four progress controls classified 8/8. A remaining failed check did not stop a trace after another check resolved. The executed recovery rebuilt current context, changed strategy, consumed action 3 without resetting limits, and remained `PROGRESSING`. Mutation strength remains NOT_RUN.
+- Model tokens, executions, retries, cost/price snapshot and remaining reserve: zero model calls or tokens; three in-process development investigation executions for the recorded recovery; one recovery maximum; no cost incurred.
+- Repeated failure/recovery event and strategy change, if any: repeated broad diagnosis entered STALLED; recovery changed `broad_diagnosis` to `narrow_failure_probe`. Automated tests additionally repeat the recovery fingerprint and confirm terminal BLOCKED with four actions used and no counter reset.
+- What changed in scope/decisions/docs: B-15 and Day 11 marked done; Action/API contracts, README, release checklist, changelog, bundle usage evidence and UI recovery state updated.
+- Next earliest unmet dependency and tomorrow's realistic plan: B-16 trusted semantic mutations, with at most three relevant branches and unchanged candidate/acceptance policy.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -177,7 +192,7 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | Complete P0 protected repair | 9 Oct | Completed 9 Oct | AC/MC repairs, clean control, invalid candidate rejection |
 | Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
 | Usable UI/error paths | 11–12 Oct | Completed in code/tests 12 Oct; screenshot NOT_RECORDED | API journey tests, owner/reconnect/cancel evidence, build/lint |
-| P1 ledger/recovery/mutations | 13–15 Oct | In progress: ledger complete 12 Oct; recovery/mutations pending | Freshness/trajectory/mutant observations |
+| P1 ledger/recovery/mutations | 13–15 Oct | In progress: ledger/recovery complete 13 Oct; mutations pending | Freshness/trajectory/mutant observations |
 | Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |
 | Frozen suite assets | 17 Oct | Pending | R12/R6 plus separate selected suites and commit |
 | Hosted release candidate | 19 Oct | Pending | Incognito journey, persistent store and restore |

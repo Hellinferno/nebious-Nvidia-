@@ -10,7 +10,7 @@ All implementation gates are pending. Feature freeze: 25 October. Internal submi
 - [ ] API/amount P0 repairs complete; any caller/idempotency P1 claims are implemented.
 - [ ] Graph/impact context shows provenance and unknown/truncated scope accurately.
 - [x] Source/contract mismatches invalidate actions; P1 stale decisions are excluded if claimed.
-- [ ] Repeated no-progress attempts stop; any P1 recovery is bounded and recorded.
+- [x] Repeated no-progress attempts stop; any P1 recovery is bounded and recorded.
 - [ ] Independent invalid candidate rejection, correct clean result and limited/blocked result work.
 - [ ] Mutation strength is separate; absent feature shows NOT_RUN, survivors/invalids stay visible.
 - [ ] Real UI reads API records; reload/cancel/errors preserve evidence without duplicate actions.

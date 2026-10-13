@@ -540,13 +540,21 @@ def diagnose_audit(
 ) -> dict[str, Any]:
     audit = _owned_audit(audit_id, owner_ref)
 
+    if audit["run_state"] == RunState.STALLED.value:
+        raise _error(409, "STALLED", "Repeated no-progress work stopped; use the single recovery")
+    if audit["run_state"] == RunState.BLOCKED.value:
+        raise _error(409, "RECOVERY_EXHAUSTED", "The audit is blocked after its recovery stalled")
+
     from benchproof.investigation import InvestigationError, run_investigation
+    from benchproof.trajectory import TrajectoryError, recovery_state
 
     try:
+        recovery = recovery_state(audit_id, _db())
         res = run_investigation(
             fixture_id=audit["fixture_id"],
             audit_id=audit_id,
             mode=audit["mode"],
+            strategy=recovery["recovery_strategy"] or "broad_diagnosis",
             db_path=_db(),
         )
         return res
@@ -555,6 +563,57 @@ def diagnose_audit(
             status_code = 503
         else:
             status_code = 409 if e.code in {"STALE_SOURCE", "CONTRACT_UNAPPROVED", "STALE_CONTEXT"} else 422
+        raise _error(status_code, e.code, e.message)
+    except TrajectoryError as e:
+        status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "RECOVERY_EXHAUSTED", "INVALID_STATE"} else 422
+        raise _error(status_code, e.code, e.message)
+
+
+@app.get("/api/v1/audits/{audit_id}/trajectory")
+def get_audit_trajectory(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
+    from benchproof.trajectory import (
+        FINGERPRINT_RULE_VERSION,
+        STALL_REPEAT_THRESHOLD,
+        recovery_state,
+    )
+
+    return {
+        "audit_id": audit_id,
+        "run_state": audit["run_state"],
+        "rule_version": FINGERPRINT_RULE_VERSION,
+        "repeat_threshold": STALL_REPEAT_THRESHOLD,
+        **recovery_state(audit_id, _db()),
+    }
+
+
+@app.post("/api/v1/audits/{audit_id}/recover")
+def recover_stalled_audit(
+    audit_id: str,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    audit = _owned_audit(audit_id, owner_ref)
+    from benchproof.investigation import InvestigationError, run_investigation
+    from benchproof.trajectory import RECOVERY_STRATEGY, TrajectoryError, reserve_recovery
+
+    try:
+        reserved = reserve_recovery(audit_id, _db())
+        result = run_investigation(
+            fixture_id=audit["fixture_id"],
+            audit_id=audit_id,
+            mode=audit["mode"],
+            strategy=RECOVERY_STRATEGY,
+            db_path=_db(),
+        )
+        return {"recovery": reserved, "result": result}
+    except TrajectoryError as e:
+        status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "RECOVERY_EXHAUSTED", "INVALID_STATE"} else 422
+        raise _error(status_code, e.code, e.message)
+    except InvestigationError as e:
+        status_code = 503 if e.code == "PROVIDER_UNAVAILABLE" else 409
         raise _error(status_code, e.code, e.message)
 
 

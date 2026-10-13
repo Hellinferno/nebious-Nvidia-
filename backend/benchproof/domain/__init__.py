@@ -199,7 +199,11 @@ class Action(BaseModel):
     source_hash: str = ""
     context_hash: str = ""
     observation_ids: list[str] = Field(default_factory=list)
+    observation_fingerprints: list[str] = Field(default_factory=list)
+    strategy: str = "broad_diagnosis"
+    failure_category: str | None = None
     failure_fingerprint: str | None = None
+    remaining_limits: dict[str, int] = Field(default_factory=dict)
     usage: dict[str, Any] = Field(default_factory=dict)
     elapsed_ms: int = 0
     status: str = "pending"

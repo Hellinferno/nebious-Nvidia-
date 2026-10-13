@@ -257,6 +257,18 @@ summary:focus-visible {
   color: var(--text-h);
 }
 
+.trajectory-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  font-size: 0.78rem;
+}
+
 .event-log {
   border-top: 1px solid var(--border);
   padding-top: 0.8rem;

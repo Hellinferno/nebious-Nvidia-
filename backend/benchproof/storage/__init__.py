@@ -120,6 +120,10 @@ def migrate(db_path: Path | None = None) -> None:
             context_hash        TEXT NOT NULL DEFAULT '',
             observation_ids     TEXT NOT NULL DEFAULT '[]',
             failure_fingerprint TEXT,
+            failure_category    TEXT,
+            strategy            TEXT NOT NULL DEFAULT 'broad_diagnosis',
+            observation_fps     TEXT NOT NULL DEFAULT '[]',
+            remaining_limits    TEXT NOT NULL DEFAULT '{}',
             usage_json          TEXT NOT NULL DEFAULT '{}',
             elapsed_ms          INTEGER NOT NULL DEFAULT 0,
             status              TEXT NOT NULL DEFAULT 'completed',
@@ -144,6 +148,16 @@ def migrate(db_path: Path | None = None) -> None:
             reviewed_at       TEXT
         );
     """)
+    action_columns = {row["name"] for row in conn.execute("PRAGMA table_info(actions)")}
+    action_migrations = {
+        "failure_category": "ALTER TABLE actions ADD COLUMN failure_category TEXT",
+        "strategy": "ALTER TABLE actions ADD COLUMN strategy TEXT NOT NULL DEFAULT 'broad_diagnosis'",
+        "observation_fps": "ALTER TABLE actions ADD COLUMN observation_fps TEXT NOT NULL DEFAULT '[]'",
+        "remaining_limits": "ALTER TABLE actions ADD COLUMN remaining_limits TEXT NOT NULL DEFAULT '{}'",
+    }
+    for column, statement in action_migrations.items():
+        if column not in action_columns:
+            conn.execute(statement)
     conn.commit()
     conn.close()
 
@@ -288,6 +302,10 @@ def save_action(
     context_hash: str = "",
     observation_ids: list[str] | None = None,
     failure_fingerprint: str | None = None,
+    failure_category: str | None = None,
+    strategy: str = "broad_diagnosis",
+    observation_fingerprints: list[str] | None = None,
+    remaining_limits: dict[str, int] | None = None,
     usage: dict[str, Any] | None = None,
     elapsed_ms: int = 0,
     status: str = "completed",
@@ -298,8 +316,9 @@ def save_action(
     conn.execute(
         """INSERT INTO actions
            (action_id, audit_id, role, tool, canonical_args_hash, source_hash,
-            context_hash, observation_ids, failure_fingerprint, usage_json, elapsed_ms, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            context_hash, observation_ids, failure_fingerprint, failure_category,
+            strategy, observation_fps, remaining_limits, usage_json, elapsed_ms, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             action_id,
             audit_id,
@@ -310,6 +329,10 @@ def save_action(
             context_hash,
             json.dumps(observation_ids or []),
             failure_fingerprint,
+            failure_category,
+            strategy,
+            json.dumps(observation_fingerprints or []),
+            json.dumps(remaining_limits or {}),
             json.dumps(usage or {}),
             elapsed_ms,
             status,
@@ -328,6 +351,8 @@ def list_actions(audit_id: str, db_path: Path | None = None) -> list[dict[str, A
     for r in rows:
         d = dict(r)
         d["observation_ids"] = json.loads(d["observation_ids"])
+        d["observation_fingerprints"] = json.loads(d.pop("observation_fps"))
+        d["remaining_limits"] = json.loads(d["remaining_limits"])
         d["usage"] = json.loads(d["usage_json"])
         out.append(d)
     return out

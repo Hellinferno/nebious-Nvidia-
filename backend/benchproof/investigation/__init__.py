@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from benchproof.baseline import run_baseline
 from benchproof.constraints import contract_hash, get_constraint
-from benchproof.domain import ContextPacket
+from benchproof.domain import ContextPacket, RunState
 from benchproof.fixtures import fixture_dir, source_hash_for_dir
 from benchproof.impact import ImpactReport
 from benchproof.providers import NebiusAdapter
@@ -248,9 +248,13 @@ def run_investigation(
     current_source_hash: str | None = None,
     current_contract_hash: str | None = None,
     mode: str = "mock",
+    strategy: str = "broad_diagnosis",
     db_path: Path | None = None,
 ) -> dict[str, Any]:
     """Execute a complete, bounded investigation cycle."""
+    from benchproof.trajectory import ensure_action_budget
+
+    remaining_before = ensure_action_budget(audit_id, db_path)
     app_dir = fixture_dir(fixture_id) / "app"
     actual_shash = source_hash_for_dir(app_dir)
     actual_chash = contract_hash()
@@ -275,6 +279,7 @@ def run_investigation(
         app_dir,
         actual_chash,
         target_symbols=target_symbols,
+        remaining_budget=remaining_before,
         db_path=db_path,
     )
     for decision_id in ledger["invalidated_decision_ids"]:
@@ -307,6 +312,7 @@ def run_investigation(
         app_dir,
         response_chash,
         target_symbols=target_symbols,
+        remaining_budget=remaining_before,
         db_path=db_path,
     )
     if (
@@ -323,6 +329,8 @@ def run_investigation(
             canonical_args_hash=context.context_hash,
             source_hash=actual_shash,
             context_hash=context.context_hash,
+            strategy=strategy,
+            remaining_limits=remaining_before,
             elapsed_ms=elapsed_ms,
             status="rejected_stale_context",
             db_path=db_path,
@@ -380,7 +388,44 @@ def run_investigation(
     elapsed_ms = int((time.perf_counter() - started_time) * 1000)
 
     # 7. Record Action and Events
-    canonical_args_hash = context.context_hash
+    from benchproof.trajectory import (
+        action_fingerprint,
+        apply_stall_policy,
+        budget_snapshot,
+        failure_fingerprint,
+        observation_fingerprints,
+    )
+
+    affected_constraints = sorted({hyp.constraint_id for hyp in proposal.hypotheses})
+    failure_category = "CHECK_FAILURE" if failed_checks else "NO_FAILURE"
+    canonical_args_hash = action_fingerprint(
+        role="investigator",
+        tool=probe_name,
+        strategy=strategy,
+        arguments={
+            "target_symbols": sorted(target_symbols or []),
+            "selected_checks": context.selected_checks,
+            "probe_args": proposal.probe_args,
+        },
+    )
+    failure_fp = failure_fingerprint(
+        category=failure_category,
+        failed_check_ids=sorted(failed_checks),
+        affected_constraints=affected_constraints,
+        salient_detail="required check set after bounded probe",
+    )
+    observation_fps = observation_fingerprints(
+        sorted(failed_checks),
+        baseline_res.get("check_results"),
+    )
+    semantic_observation_ids = [
+        f"check:{item.get('check_id')}:{getattr(item.get('outcome'), 'value', item.get('outcome'))}"
+        for item in baseline_res.get("check_results", [])
+    ]
+    remaining_after = dict(remaining_before)
+    remaining_after["max_actions"] = max(0, remaining_after["max_actions"] - 1)
+    remaining_after["used_actions"] += 1
+    remaining_after["used_elapsed_ms"] += elapsed_ms
     save_action(
         action_id=action_id,
         audit_id=audit_id,
@@ -389,8 +434,12 @@ def run_investigation(
         canonical_args_hash=canonical_args_hash,
         source_hash=actual_shash,
         context_hash=context.context_hash,
-        observation_ids=[baseline_res.get("graph_id", "")],
-        failure_fingerprint=f"failed:{','.join(sorted(failed_checks))}",
+        observation_ids=semantic_observation_ids,
+        failure_fingerprint=failure_fp,
+        failure_category=failure_category,
+        strategy=strategy,
+        observation_fingerprints=observation_fps,
+        remaining_limits=remaining_after,
         usage=provider_meta.get("usage", {}),
         elapsed_ms=elapsed_ms,
         status="completed",
@@ -405,9 +454,23 @@ def run_investigation(
             "tool": probe_name,
             "elapsed_ms": elapsed_ms,
             "hypotheses_count": len(proposal.hypotheses),
+            "strategy": strategy,
         },
         db_path=db_path,
     )
+
+    trajectory = apply_stall_policy(audit_id, db_path)
+    if trajectory["outcome"] == "PROGRESSING":
+        from benchproof.storage import get_audit, update_audit_state
+
+        current_audit = get_audit(audit_id, db_path)
+        if current_audit and current_audit["run_state"] not in {
+            RunState.COMPLETED.value,
+            RunState.BLOCKED.value,
+            RunState.CANCELLED.value,
+            RunState.TIMED_OUT.value,
+        }:
+            update_audit_state(audit_id, RunState.INVESTIGATING, db_path=db_path)
 
     append_event(
         audit_id,
@@ -440,5 +503,8 @@ def run_investigation(
         "provider_metadata": provider_meta,
         "current_decision_ids": context.current_decision_ids,
         "decision_refresh_overhead_ms": ledger["refresh_overhead_ms"],
+        "strategy": strategy,
+        "trajectory": trajectory,
+        "remaining_limits": budget_snapshot(audit_id, db_path),
         "created_at": datetime.now(UTC).isoformat(),
     }

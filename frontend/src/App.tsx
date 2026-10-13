@@ -132,6 +132,18 @@ type Diagnosis = {
   provider_metadata: { mode: string; provider: string; model_id?: string; usage?: { total_tokens?: number } }
   probe_result: { probe_name: string; elapsed_ms: number; gate_verdict: string; failed_checks: string[] }
   hypotheses_evaluation: { hypothesis_id: string; claim: string; outcome: string; detail: string }[]
+  strategy: string
+  trajectory: TrajectoryStatus
+  remaining_limits: Record<string, number>
+}
+type TrajectoryStatus = {
+  outcome?: string
+  run_state?: string
+  rule_version?: string
+  repeat_threshold?: number
+  recovery_count: number
+  recovery_strategy?: string | null
+  remaining_limits: Record<string, number>
 }
 type BundleInfo = { name: string; sha256: string; byteSize: number; verdict: string }
 type ValidationResult = { valid: boolean; total_files: number; verified_files: number; discrepancies: string[] }
@@ -210,6 +222,8 @@ function issueFrom(error: unknown): Issue {
     STALE_CONTEXT: 'Reload the current decision context before requesting another diagnosis or patch.',
     CHECK_UNKNOWN: 'Inspect the unknown check; it cannot produce a VERIFIED verdict.',
     CANCEL_PENDING: 'Wait for remote termination reconciliation; no new work will be started.',
+    STALLED: 'Use the single fresh-context recovery; repeated identical work remains stopped.',
+    RECOVERY_EXHAUSTED: 'Review preserved evidence; the second stall is terminally blocked.',
   }
   return { code, message, next: nextByCode[code] ?? 'Review the event trail, keep existing evidence, and retry only if safe.' }
 }
@@ -228,6 +242,7 @@ function App() {
   const [decisionLedger, setDecisionLedger] = useState<DecisionLedger | null>(null)
   const [decisionStatement, setDecisionStatement] = useState('Preserve the accepted contract while applying the smallest relevant repair.')
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
+  const [trajectory, setTrajectory] = useState<TrajectoryStatus | null>(null)
   const [activePatch, setActivePatch] = useState<PatchRecord | null>(null)
   const [gateResult, setGateResult] = useState<GateResult | null>(null)
   const [bundleInfo, setBundleInfo] = useState<BundleInfo | null>(null)
@@ -258,16 +273,18 @@ function App() {
       setSelectedMode(snapshot.mode)
       localStorage.setItem(ACTIVE_AUDIT_KEY, auditId)
       localStorage.setItem(ACTIVE_FIXTURE_KEY, snapshot.fixture_id)
-      const [graphResponse, impactResponse, decisionsResponse, patchesResponse, gateResponse] = await Promise.all([
+      const [graphResponse, impactResponse, decisionsResponse, trajectoryResponse, patchesResponse, gateResponse] = await Promise.all([
         api.get(`/api/v1/audits/${auditId}/graph`),
         api.get<ImpactData>(`/api/v1/audits/${auditId}/impact`),
         api.get<DecisionLedger>(`/api/v1/audits/${auditId}/decisions`),
+        api.get<TrajectoryStatus>(`/api/v1/audits/${auditId}/trajectory`),
         api.get<PatchRecord[]>(`/api/v1/audits/${auditId}/patches`),
         api.get(`/api/v1/audits/${auditId}/gate`),
       ])
       setGraph(graphResponse.data.graph ?? graphResponse.data)
       setImpact(impactResponse.data)
       setDecisionLedger(decisionsResponse.data)
+      setTrajectory(trajectoryResponse.data)
       setActivePatch(patchesResponse.data.at(-1) ?? null)
       if (gateResponse.data.checks?.length) {
         const checks: Check[] = gateResponse.data.checks
@@ -382,6 +399,7 @@ function App() {
     setEvents([])
     setDiagnosis(null)
     setDecisionLedger(null)
+    setTrajectory(null)
     setActivePatch(null)
     setGateResult(null)
     setBundleInfo(null)
@@ -419,6 +437,8 @@ function App() {
   const nextAction = useMemo(() => {
     if (issue) return issue.next
     if (!audit) return 'Choose one curated synthetic example and start an assurance run.'
+    if (audit.run_state === 'STALLED') return trajectory?.recovery_count ? 'The recovery has stalled; preserve evidence and stop.' : 'Run the single changed-strategy recovery with the remaining original budget.'
+    if (audit.run_state === 'BLOCKED') return 'No more retries are allowed; review the preserved partial evidence.'
     if (audit.run_state === 'CANCEL_PENDING') return 'Wait for remote cancellation reconciliation; do not start duplicate work.'
     if (audit.gate_verdict === 'VERIFIED') return 'Export and independently replay the evidence before accepting the repair.'
     if (audit.gate_verdict === 'REJECTED') return plan ? 'Review failed checks, start a fresh audit, propose the bounded repair, then verify.' : 'Review the failed checks; this fixture has no approved automatic repair.'
@@ -426,7 +446,7 @@ function App() {
     if (!diagnosis) return 'Run the bounded investigation, or verify directly to observe the clean/rejected path.'
     if (plan && !activePatch) return 'Review and propose the protected minimal diff.'
     return 'Run the independent acceptance gate.'
-  }, [activePatch, audit, diagnosis, gateResult, issue, plan])
+  }, [activePatch, audit, diagnosis, gateResult, issue, plan, trajectory?.recovery_count])
 
   return (
     <main className="container">
@@ -479,6 +499,7 @@ function App() {
             <div><span>Mode</span><strong>{audit.mode}</strong></div><div><span>Source</span><code>{short(audit.source_hash)}</code></div>
           </div>
           <div className="next-action"><strong>Recommended next action</strong><span>{nextAction}</span></div>
+          {trajectory && <div className="trajectory-strip"><span><strong>Actions</strong> {trajectory.remaining_limits.used_actions ?? 0} used · {trajectory.remaining_limits.max_actions ?? 0} left</span><span><strong>Recovery</strong> {trajectory.recovery_count}/1</span><span><strong>Rule</strong> {trajectory.repeat_threshold ?? 2} repeated no-progress attempts</span></div>}
           <details className="event-log" open><summary>Resumable event trail · cursor {eventCursor}</summary>
             {events.length === 0 ? <p>No new events after the saved cursor.</p> : <ol>{events.map((event) => <li key={`${event.attempt}-${event.sequence}`}><code>#{event.sequence}</code> <strong>{event.event_type.replaceAll('_', ' ')}</strong><time>{new Date(event.created_at).toLocaleTimeString()}</time></li>)}</ol>}
           </details>
@@ -497,8 +518,11 @@ function App() {
               <p className="meta">Checks: {impact?.selected_checks.join(', ') || 'not loaded'}</p>
             </article>
           </div>
-          <button type="button" className="btn btn-secondary" disabled={loading || isTerminal} onClick={() => void runAction(async () => { const response = await api.post<Diagnosis>(`/api/v1/audits/${audit.audit_id}/diagnose`); setDiagnosis(response.data) })}>{loading ? 'Working…' : 'Run bounded investigation'}</button>
+          <div className="button-group"><button type="button" className="btn btn-secondary" disabled={loading || isTerminal || audit.run_state === 'STALLED'} onClick={() => void runAction(async () => { const response = await api.post<Diagnosis>(`/api/v1/audits/${audit.audit_id}/diagnose`); setDiagnosis(response.data); setTrajectory(response.data.trajectory) })}>{loading ? 'Working…' : 'Run bounded investigation'}</button>
+            {audit.run_state === 'STALLED' && <button type="button" className="btn btn-primary" disabled={loading || (trajectory?.recovery_count ?? 0) >= 1} onClick={() => void runAction(async () => { const response = await api.post<{ result: Diagnosis }>(`/api/v1/audits/${audit.audit_id}/recover`); setDiagnosis(response.data.result); setTrajectory(response.data.result.trajectory) })}>Run one fresh-context recovery</button>}
+          </div>
           {diagnosis && <article className="card action-result"><h3>Investigation observations</h3><p className="meta">{diagnosis.provider_metadata.provider} · {diagnosis.provider_metadata.mode} · action <code>{diagnosis.action_id}</code></p>
+            <p className="meta">Strategy <code>{diagnosis.strategy}</code> · trajectory <span className={`badge badge-${badge(diagnosis.trajectory.outcome ?? 'PROGRESSING')}`}>{diagnosis.trajectory.outcome ?? 'PROGRESSING'}</span></p>
             {diagnosis.hypotheses_evaluation.map((item) => <p key={item.hypothesis_id}><span className={`badge badge-${badge(item.outcome)}`}>{item.outcome}</span> {item.claim} — {item.detail}</p>)}
           </article>}
           <article className="card decision-ledger" aria-labelledby="decisions-h">

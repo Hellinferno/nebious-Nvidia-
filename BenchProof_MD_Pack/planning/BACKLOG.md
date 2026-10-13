@@ -149,7 +149,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-15 — Trajectory stopping and one recovery · P1; hard stop/caps P0
 
-**Owner:** Ravi. **Dependencies:** B-06/B-08. **Target:** 14 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-06/B-08. **Target:** 14 Oct. **Status:** DONE (13 Oct: `trajectory-fingerprint-v1` canonical action/failure/semantic-observation fingerprints; two-repeat no-progress stop; frozen development W8 source with four stalls and four progress controls; one atomic fresh-context `narrow_failure_probe` recovery preserving original counters/limits; second recovery stall blocks; owner-scoped API/UI state; executed mock recovery recorded separately from synthetic classification).
 
 **Work:** Canonicalize action/failure fingerprints; detect two no-progress repeats. Preserve improving controls; add one fresh-context changed-strategy recovery within original limits.
 

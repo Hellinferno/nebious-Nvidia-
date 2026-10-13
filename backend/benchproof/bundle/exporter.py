@@ -201,12 +201,18 @@ def export_bundle(
     environment_json = json.dumps(env_data, indent=2, sort_keys=True)
 
     # 10. usage.json (Action counts, limits, timing)
+    from benchproof.trajectory import FINGERPRINT_RULE_VERSION, recovery_state
+
     usage_data = {
         "schema_version": "benchproof/v2",
         "audit_id": audit_id,
         "actions_count": len(actions),
         "patches_count": len(patches),
         "limits": json.loads(audit.get("limits_json", "{}")),
+        "trajectory": {
+            "fingerprint_rule_version": FINGERPRINT_RULE_VERSION,
+            **recovery_state(audit_id, db_path),
+        },
     }
     usage_json = json.dumps(usage_data, indent=2, sort_keys=True)
 
