@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "ID-2",
+  "style": "C",
+  "family": "Tenant-scoped idempotency",
+  "constraint": "C-INTEGRITY",
+  "mutation_family": "idempotency",
+  "intended_failing_checks": [
+    "idempotency-duplicate"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Replaying an identical request issues a fresh receipt id instead of the stored one",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

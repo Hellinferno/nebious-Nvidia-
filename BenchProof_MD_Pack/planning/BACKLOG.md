@@ -179,7 +179,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-18 — Freeze evaluation assets and scope · P0 reduced; P1 full
 
-**Owner:** Ravi. **Dependencies:** B-03/B-10/B-17. **Target:** 17 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-03/B-10/B-17. **Target:** 17 Oct. **Status:** DONE 14 Oct (pulled forward). `repair-r12-v1` (12 opaque held-out cases: 8 faulty, 4 clean; four source styles), `gate-v12-v1` (12 fixed candidates: 4 valid, 8 invalid, all smoke-passing), `graph-g8-v1`, `freshness-f6-v1`, `trajectory-w8-v1` and `mutants-m12-v1` manifests frozen under `backend/fixtures/heldout/`, hash-locked in `truth.lock.json` and validated externally; R6/V6 fallback subsets predeclared by id (D-027).
 
 **Work:** Validate and freeze R12/V12/G8/F6/W8/M12 assets or explicit R6/V6 subset, reference repairs, private truth and manifests. Choose based on implemented scope/budget.
 

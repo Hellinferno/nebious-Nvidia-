@@ -1,0 +1,14 @@
+{
+  "schema_version": "benchproof/v2",
+  "fixture_id": "HO-01",
+  "suite": "repair-r12-v1",
+  "family": null,
+  "constraint": null,
+  "defect": null,
+  "visibility": "held-out",
+  "candidate_editable_paths": [
+    "app/"
+  ],
+  "language": "python",
+  "synthetic": true
+}

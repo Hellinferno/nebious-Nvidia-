@@ -1,0 +1,66 @@
+{
+  "assigned_trials": {
+    "B0_visible_smoke_runs": 12,
+    "B1_same_agent_trials": 36,
+    "B2_runtime_trials": 36,
+    "clean_trials_per_system": 12,
+    "faulty_trials_per_system": 24,
+    "gate_candidates": 12
+  },
+  "budget": {
+    "development_usage_reference": "about 828 tokens across four Day 1 preflight calls without excerpts",
+    "judging_reserve_share": 0.2,
+    "price_snapshot": "not recorded; cost is reported as unknown until a dated price is captured",
+    "rule": "If measured usage after the first balanced block exceeds the usable credit minus the reserve, stop and declare the predeclared R6/V6 fallback before continuing.",
+    "runner_executions_estimate": {
+      "gate_candidates": 24,
+      "mutants_and_suites": 60,
+      "per_trial_max": 12,
+      "trials": 84
+    },
+    "worst_case_tokens_estimate": {
+      "calls_per_trial": 6,
+      "per_model_call": 4000,
+      "total": 1728000,
+      "trials_with_model": 72
+    }
+  },
+  "configuration_freeze": "B-19 on 20 October freezes runtime commit, prompts, model, image, budgets",
+  "contamination_status": "untouched holdout: assets are hash-locked and committed before any trial; the repository is public, so the holdout is untouched-by-tuning rather than secret",
+  "decision_id": "D-027",
+  "fallback": {
+    "gate": {
+      "candidate_ids": [
+        "V-01",
+        "V-02",
+        "V-05",
+        "V-06",
+        "V-09",
+        "V-12"
+      ],
+      "suite": "gate-v6-v1"
+    },
+    "repair": {
+      "case_ids": [
+        "HO-01",
+        "HO-03",
+        "HO-02",
+        "HO-04",
+        "HO-07",
+        "HO-10"
+      ],
+      "suite": "repair-r6-v1"
+    },
+    "rule": "May be selected only before the first final trial, for a stated reserve or time reason; results are then reported as R6/V6, never as R12/V12."
+  },
+  "frozen_at": "2026-10-17",
+  "schema_version": "benchproof/scope-decision-v1",
+  "selected": {
+    "freshness": "freshness-f6-v1",
+    "gate": "gate-v12-v1",
+    "graph": "graph-g8-v1",
+    "mutants": "mutants-m12-v1",
+    "repair": "repair-r12-v1",
+    "trajectory": "trajectory-w8-v1"
+  }
+}

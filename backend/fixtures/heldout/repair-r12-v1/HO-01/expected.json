@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "AC-1",
+  "style": "A",
+  "family": "API compatibility",
+  "constraint": "C-API",
+  "mutation_family": "api",
+  "intended_failing_checks": [
+    "api-field-presence"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "ReceiptResponse omits the required request_id field on both schema and builder",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

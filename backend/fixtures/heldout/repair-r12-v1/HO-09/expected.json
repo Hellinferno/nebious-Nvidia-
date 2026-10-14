@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "CI-1",
+  "style": "D",
+  "family": "Cross-module caller impact",
+  "constraint": "C-INTEGRITY",
+  "mutation_family": "caller",
+  "intended_failing_checks": [
+    "worker-caller-path"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Worker settles jobs through its own helper instead of services.process_invoice",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

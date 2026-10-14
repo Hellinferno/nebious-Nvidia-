@@ -330,11 +330,11 @@ Any failed protection blocks that public capability. Cut P1 or narrow curated in
 
 ### Work in order
 
-1. [ ] Create held-out source/input variants for R12 or explicit R6 with renamed/control-flow changes and clean distractors (90 min).
-2. [ ] Validate original faults/reference repairs/clean controls and fixed V12/V6 candidate truth externally (90 min); keep answer-bearing metadata out of prompts.
-3. [ ] Freeze selected G8/F6/W8/M12 manifests, graph truth, trace labels and mutant validity where implemented (60 min); omitted suites stay NOT_RUN.
-4. [ ] Commit suite IDs/hashes, private truth and selected counts before final measurements (30 min).
-5. [ ] Review cost/hours and document full/reduced scope with a judging reserve (30 min); do not choose scope after seeing final results.
+1. [x] Create held-out source/input variants for R12 or explicit R6 with renamed/control-flow changes and clean distractors (90 min).
+2. [x] Validate original faults/reference repairs/clean controls and fixed V12/V6 candidate truth externally (90 min); keep answer-bearing metadata out of prompts.
+3. [x] Freeze selected G8/F6/W8/M12 manifests, graph truth, trace labels and mutant validity where implemented (60 min); omitted suites stay NOT_RUN.
+4. [x] Commit suite IDs/hashes, private truth and selected counts before final measurements (30 min).
+5. [x] Review cost/hours and document full/reduced scope with a judging reserve (30 min); do not choose scope after seeing final results.
 
 ### Deliverable and acceptance evidence
 

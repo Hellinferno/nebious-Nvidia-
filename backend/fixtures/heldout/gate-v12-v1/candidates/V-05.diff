@@ -1,0 +1,9 @@
+--- a/app/money.py
++++ b/app/money.py
+@@ -13,5 +13,5 @@
+ 
+ def compute_total(lines: Iterable[str]) -> str:
+     cents = sum(int(as_decimal(text) * 100) for text in lines)
+-    total = Decimal(cents) / 100
++    total = Decimal(cents).scaleb(-2)
+     return format(total.quantize(_QUANTUM, rounding=ROUNDING), "f")

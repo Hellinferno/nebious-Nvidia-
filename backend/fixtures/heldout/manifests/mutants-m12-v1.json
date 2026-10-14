@@ -1,0 +1,180 @@
+{
+  "counts": {
+    "applicable": 12,
+    "per_family": 3,
+    "syntax_valid": 12,
+    "templates": 12
+  },
+  "execution": "validity is frozen here without execution; killed/survived counts are measured in B-21",
+  "frozen_at": "2026-10-17",
+  "schema_version": "benchproof/suite-manifest-v1",
+  "suite": "mutants-m12-v1",
+  "target": {
+    "fixture_id": "clean-service",
+    "note": "templates anchor on this accepted candidate; sensitivity measures the check set, not the agent",
+    "source_hash": "dedb7c2e1e8a9f5df45f3a7f3c21074684e40f457d438f4a23b74dd8c054ff74",
+    "suite": "development-v2"
+  },
+  "template_set_version": "development-semantic-v1",
+  "templates": [
+    {
+      "anchors_hash": "3d2b63eede3899f0df01123dddc61566a5b8bcb24ab949f90f6e52a714ff8e70",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "api",
+      "mutant_hash": "6b0c46f5fc5158f25b10c360323405dc730f5ba69f1b39540c5ae870e25bd42d",
+      "supporting_check_ids": [
+        "api-status-code"
+      ],
+      "syntax_valid": true,
+      "template_id": "api-status-201",
+      "version": 1
+    },
+    {
+      "anchors_hash": "8cf72d436b91b0cd648f5bd8de3cd7c9ef157e6a91f804de1a5ee2c9fe87c554",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "api",
+      "mutant_hash": "160a4d3035e0d20f59b9ee3d0eb8e632c6e7dd33e044fcbcfad05d9f302063f8",
+      "supporting_check_ids": [
+        "api-field-presence"
+      ],
+      "syntax_valid": true,
+      "template_id": "api-omit-status",
+      "version": 1
+    },
+    {
+      "anchors_hash": "ac14c73759ddc8b2b21bbcba282c9d629815a63e895ab4df91be3fccb508be74",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "api",
+      "mutant_hash": "8c5b265cc528e58833131d5af0b0f627f729729169e4f904ac130ba5f8732d9a",
+      "supporting_check_ids": [
+        "api-field-presence"
+      ],
+      "syntax_valid": true,
+      "template_id": "api-omit-total",
+      "version": 1
+    },
+    {
+      "anchors_hash": "221a2869196c959278fecd6a67eb7e31d793d48e9ee3c798fdbafa21491a00f7",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "amount",
+      "mutant_hash": "fd221323e52f7fa9cd1dda4575e6e7b719885ba8301910b2fbc82484b02d8fe7",
+      "supporting_check_ids": [
+        "amount-boundary"
+      ],
+      "syntax_valid": true,
+      "template_id": "amount-round-lines",
+      "version": 1
+    },
+    {
+      "anchors_hash": "9748b8144ddd298af5e2745829b495d4e284bb146990c39b1b406766148a1abf",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "amount",
+      "mutant_hash": "85c639af2713e11a7360c8a0d1406afc1b7f79c1f12abb9f708e4fa3a47db2ee",
+      "supporting_check_ids": [
+        "amount-boundary"
+      ],
+      "syntax_valid": true,
+      "template_id": "amount-coarse-quantum",
+      "version": 1
+    },
+    {
+      "anchors_hash": "5b31684a6d3e43df9b88d85c6d1951bf97754bf94ced4f9589525d6bf49f84c7",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "amount",
+      "mutant_hash": "1c30c0b088286cf630444415922dd7abfa8252b2bc669de5891d01654005d7bc",
+      "supporting_check_ids": [
+        "amount-boundary"
+      ],
+      "syntax_valid": true,
+      "template_id": "amount-add-cent",
+      "version": 1
+    },
+    {
+      "anchors_hash": "883427ef9e08c2bdd5c1a01c1ad2c68f4524a1c99b14152b46dc5bd0c618b75f",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "caller",
+      "mutant_hash": "c336cfa71318e5cc59cc7b05f48ecb48d170f96d8db88b2abbae3ec68eec74dc",
+      "supporting_check_ids": [
+        "caller-consistency"
+      ],
+      "syntax_valid": true,
+      "template_id": "caller-rewrite-request",
+      "version": 1
+    },
+    {
+      "anchors_hash": "81265e3ac5e88a52e129e2691db6feb7dca2fd6e5db198f40d7d7066f2819ad6",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "caller",
+      "mutant_hash": "595655dfb3ac85cbed6e729ce5debad5059ef87a89e618a99da8c43f9d045f0c",
+      "supporting_check_ids": [
+        "caller-consistency"
+      ],
+      "syntax_valid": true,
+      "template_id": "caller-append-amount",
+      "version": 1
+    },
+    {
+      "anchors_hash": "ef4b2fc190a17f25bcf09c847758c2d0491c92dcf91e44263494f14fe3f4252a",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "caller",
+      "mutant_hash": "68dd0279364838284e38cffc96355fd705fa6d201727c3dc8eb475a2b4f6eb5f",
+      "supporting_check_ids": [
+        "caller-consistency",
+        "worker-caller-path"
+      ],
+      "syntax_valid": true,
+      "template_id": "caller-bypass-helper",
+      "version": 1
+    },
+    {
+      "anchors_hash": "0faf5af6bc6f13584eeadc510920babb5e7ed231dde99bb111b3f9a9b7ec86c2",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "idempotency",
+      "mutant_hash": "48fc6b4a7fafcc60f0e31221a9748adbb311c300eb46e6613846b2a72135a899",
+      "supporting_check_ids": [
+        "idempotency-duplicate"
+      ],
+      "syntax_valid": true,
+      "template_id": "idempotency-disable-lookup",
+      "version": 1
+    },
+    {
+      "anchors_hash": "156d47d79a02f4c8fbd9672006d654f127b1e2b2d9ce99210f2c047b153d1046",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "idempotency",
+      "mutant_hash": "4dbb55f66936048bd9f460f29a34ee9c6b69e384779bc655d59ba2e45e7a4a87",
+      "supporting_check_ids": [
+        "idempotency-conflict"
+      ],
+      "syntax_valid": true,
+      "template_id": "idempotency-disable-conflict",
+      "version": 1
+    },
+    {
+      "anchors_hash": "f309ed95f027403f07e04f8bd523a3464db013661a2f59b2cae1b56718ba1545",
+      "applicable": true,
+      "detail": "trusted exact replacement applied",
+      "family": "idempotency",
+      "mutant_hash": "4f074729e43778abe69d6776447c89890f9ad8f39df06f6a9aacd1a5aaedc993",
+      "supporting_check_ids": [
+        "idempotency-duplicate",
+        "idempotency-conflict"
+      ],
+      "syntax_valid": true,
+      "template_id": "idempotency-drop-tenant-key",
+      "version": 1
+    }
+  ],
+  "templates_module_hash": "22cd1f20776deb2f4f502707a29160ed601b8bb75b346b536f3f2b1bad152ea5"
+}

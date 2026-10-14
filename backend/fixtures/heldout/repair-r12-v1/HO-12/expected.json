@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "ID-1",
+  "style": "B",
+  "family": "Tenant-scoped idempotency",
+  "constraint": "C-INTEGRITY",
+  "mutation_family": "idempotency",
+  "intended_failing_checks": [
+    "idempotency-conflict"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Conflict detection compares line counts instead of line amounts",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

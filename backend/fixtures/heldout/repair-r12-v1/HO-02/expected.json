@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "MC-1",
+  "style": "B",
+  "family": "Exact amount boundary",
+  "constraint": "C-AMOUNT",
+  "mutation_family": "amount",
+  "intended_failing_checks": [
+    "amount-boundary"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Lines are truncated to integer cents before summing",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

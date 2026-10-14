@@ -1,0 +1,17 @@
+--- a/app/schemas.py
++++ b/app/schemas.py
+@@ -14,4 +14,3 @@
+     tenant_id: str
+     request_id: str
+     total_amount: str
+-    status: str
+--- a/app/services.py
++++ b/app/services.py
+@@ -20,7 +20,6 @@
+         "tenant_id": req.tenant_id,
+         "request_id": req.request_id,
+         "total_amount": compute_total(req.line_amounts),
+-        "status": "processed",
+     }
+     save_receipt(req.tenant_id, req.request_id, {"line_amounts": req.line_amounts, "response": response})
+     return ReceiptResponse(**response)

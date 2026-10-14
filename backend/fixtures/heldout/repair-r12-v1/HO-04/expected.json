@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "MC-2",
+  "style": "D",
+  "family": "Exact amount boundary",
+  "constraint": "C-AMOUNT",
+  "mutation_family": "amount",
+  "intended_failing_checks": [
+    "amount-boundary"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Each line is converted to float and rounded before the Decimal sum",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

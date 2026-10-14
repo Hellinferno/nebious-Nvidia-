@@ -89,6 +89,16 @@ The initial design had no completed implementation or benchmark to migrate. Inde
 - Dependency hashes, affected documents/contracts and revisit condition: `development-semantic-v1`, B-16, API/data contract, UI and evidence bundle. Revisit O-009 only when the final release contract and M12 manifest are frozen; making mutations required is a new versioned policy, not an in-place reinterpretation.
 - Superseded ID: D-020's policy choice was previously open; its max-three trusted-template boundary remains.
 
+### D-027 — Full R12/V12 scope with predeclared R6/V6 fallback and a hash-locked, public holdout
+
+- Date, owner, status: 14 October 2026, Ravi, accepted before any final trial.
+- Trigger and observed evidence: all four repair families, the protected gate, decision freshness, trajectory stopping and trusted mutations are implemented and tested, so the full suite breadth is buildable. Twelve held-out cases and twelve fixed candidates validated externally (`artifacts/suites/freeze_20261014T080352.json`); lock `37fc5d3f5ef981d4…`.
+- Constraints and options actually investigated: (a) author only R6/V6 — saves authoring time but discards two implemented families from the headline measurement; (b) author R12/V12 and decide the fallback after seeing early results — forbidden by the evaluation plan; (c) author R12/V12 now, predeclare the R6/V6 subsets by opaque id and allow the fallback only before the first final trial for a stated reserve or time reason — selected. For truth handling: (i) keep truth outside the repository — loses tamper evidence and risks loss on one machine; (ii) encrypt truth in the repository — adds a secret and an external tool to the release path; (iii) commit truth and hash-lock it — selected.
+- Selected option, rationale and prototype/check artifacts: (c) and (iii). `backend/fixtures/heldout/` holds agent-visible sources with opaque ids and no answer-bearing text, trusted `expected.json`/`reference/` assets, twelve candidate diffs, six manifests, `scope.json` and `truth.lock.json`. `scripts/freeze_suites.py --verify` and `tests/test_suites.py` prove the committed assets match the lock and the generators.
+- Cost, security, user, schedule and coverage effects: no provider spend. The repository is public, so the holdout is "untouched by tuning since the lock commit", not secret; the model never has repository access and truth never enters prompts or candidate filesystems (tested). Worst-case model usage is estimated at about 1.7 M tokens for 72 model trials; a dated price snapshot is still missing, so cost remains unknown and 20% of any usable credit is reserved for judging.
+- Dependency hashes, affected documents/contracts and revisit condition: lock hash above; evaluation plan, data/fixtures doc, B-18/B-19/B-21, release checklist. Revisit only if a harness defect requires versioned correction; any later change to a frozen asset invalidates the lock and must be recorded as a new suite version, never an in-place edit.
+- Superseded ID: none. O-007 (final suite/scope) is resolved for suite assets; fingerprint normalization remains `trajectory-fingerprint-v1`.
+
 ## Decision entry template
 
 ### D-[number] — title

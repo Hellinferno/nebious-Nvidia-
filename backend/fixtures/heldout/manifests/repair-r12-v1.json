@@ -1,0 +1,163 @@
+{
+  "accepted_contract_hash": "6d5b95ce4dbc2dbaf49290a9764169e600df4a2fcc831907345b67a18f547ba2",
+  "cases": [
+    {
+      "case_id": "HO-01",
+      "fixture_manifest_hash": "be0a475dbd4eff98e5bf6628336fed8a74e0eb6e00a4636d15e6390c49d1f0fe",
+      "reference_repair_hash": "5429e45e54e1212e4af78b18ff1d96d938673faa7fd8a8e1b0a028b4c97359f1",
+      "source_hash": "e59e1b808bad28431fd6dd43853b0be2540507dd090e743c6ece64bb29bfe26c",
+      "trials_per_case": 3,
+      "truth_hash": "ff463e0ac0f2f4997239828a563fc06b6fdf2f2967bf7f149db4833fdeeac78f"
+    },
+    {
+      "case_id": "HO-02",
+      "fixture_manifest_hash": "c553a20e1431a7d39a2d19fad041cf99afaebc2d157c79b82436c1fae1da5cf5",
+      "reference_repair_hash": "45b9ed2553816c1f55f35c420ccf6f31e054a3dc78b1de002f13dfd077faf955",
+      "source_hash": "5204533ceececeb27d0b92c63d435ec1dea90f49fb486b562e143dbf487d4da4",
+      "trials_per_case": 3,
+      "truth_hash": "88d545fb51ddad79837b58c1571c017604b9d188e2c7e792adeb4afd21990008"
+    },
+    {
+      "case_id": "HO-03",
+      "fixture_manifest_hash": "b1cf114cc493bcfe1751065cddeac3258059c08bdc8a3c48555afb8239e2f431",
+      "reference_repair_hash": "0e0feec45281a3ac494a2308340bfdc10e339358b998411c3d050a0d522c31c5",
+      "source_hash": "e9ff678a03d4e8f70f2de281fd52f4fbb01826aace2ac29acebb8910fc9bcedc",
+      "trials_per_case": 3,
+      "truth_hash": "fd28834905d659d7d371a67ab0939fc067aa43d911a723f23fec3fa4bf801151"
+    },
+    {
+      "case_id": "HO-04",
+      "fixture_manifest_hash": "879db48d72d80a25d45747cd7c8be7f8b3a87c07f61d1c303d46e46c419e42b8",
+      "reference_repair_hash": "9c4dafc4cbc6217c5c74e6b999f6649c816346f4e1c2b3917accbaf284c0f1a4",
+      "source_hash": "989b19929a518f37e3195a7b0fbfc236eea8f62eb9ea0703414fe7e3b8677eec",
+      "trials_per_case": 3,
+      "truth_hash": "0c1e6099cd63d9536d892856a4cfafbf369148d5593b775d7f8d2738900a5ace"
+    },
+    {
+      "case_id": "HO-05",
+      "fixture_manifest_hash": "4628dff00fd39ecaf278079f62cf5be8f2728c874b6689a1a310ef85225b484e",
+      "reference_repair_hash": null,
+      "source_hash": "13959140aafbf7ca31588d39279e87766b87f96616e04f80b3bc2b1062e559fc",
+      "trials_per_case": 3,
+      "truth_hash": "c77805cafcac7f925c1056eb72a416d8adacdd3abd76dcb38f9bfedb7b03c03e"
+    },
+    {
+      "case_id": "HO-06",
+      "fixture_manifest_hash": "6f4995d8f7f957fb74bf4ec90514d921595bfd7dd13e5355c3d5ce25e8bb430a",
+      "reference_repair_hash": "1299813cfa935b173c5a446e606a3d0849dc73783e8e2b6b291a3e3a1b4f5425",
+      "source_hash": "153f59b64fdff1a72cabe03e805b0e515823e6cae2ed7709e4a7f3c18b3bc3b5",
+      "trials_per_case": 3,
+      "truth_hash": "a529e199dffbeb40e8f8c8b141a0ed900e2165b077b562afd5fff5caae92ab39"
+    },
+    {
+      "case_id": "HO-07",
+      "fixture_manifest_hash": "db2188ea29b06ea3a1a74e8002c9c9bb1b35c2aa00a6d420f7d5bd2e4cd0a456",
+      "reference_repair_hash": null,
+      "source_hash": "b6cb583ceaaee1bbaf44f136452aa6b3037d7a863718f402399b95655830f7f5",
+      "trials_per_case": 3,
+      "truth_hash": "a1f6cec2a1c435132fcaa69d5d3b74881a9c363d23588d0927fc4cf82f9b2da9"
+    },
+    {
+      "case_id": "HO-08",
+      "fixture_manifest_hash": "a98e8eedeeb2b8aa3d3ea061aacea18880791aab5b7a4fd435490d5d9230a352",
+      "reference_repair_hash": "07467d636c1bb1e4b6a4d337c2bcf3b8277fe30b32edb93a151f3b0d42ec87e2",
+      "source_hash": "c729333694e795114e3439ff225b30711ce44bdfdfcdf31d678a601e2f4771f7",
+      "trials_per_case": 3,
+      "truth_hash": "cc08880494eda7b8cfa25e88e2ab93904b54522423997ce9f44d7b1426598586"
+    },
+    {
+      "case_id": "HO-09",
+      "fixture_manifest_hash": "0d1a7b3be58261003ac17e016320e4e55ac1b22ab77eb4a96d86076eba1c3d28",
+      "reference_repair_hash": "8702cebc7ae0baab1b32e627a4f6ca87c850cad60a9f8d99bb72c903d3bbc758",
+      "source_hash": "eab31e0748183302e43709f19cc019e842daaae9bac384c36fd45c9d7312fc69",
+      "trials_per_case": 3,
+      "truth_hash": "d42d6ed94901386b5f60e860574aadf92feba7f724410ca5b77f6b3e993941f6"
+    },
+    {
+      "case_id": "HO-10",
+      "fixture_manifest_hash": "420b3f9e8e02fa1c6f35d1815b4b9d67ec7ed8626bb6b2dc2cd55b846164d75a",
+      "reference_repair_hash": null,
+      "source_hash": "d2166b2cc4db1b1f35f5276afb81453cad5feb76c67600d681aa94a5dda30e54",
+      "trials_per_case": 3,
+      "truth_hash": "96250633e3e49d658fade9c915f1a6081dc04a7759c45240b7fe25fb18846e56"
+    },
+    {
+      "case_id": "HO-11",
+      "fixture_manifest_hash": "27830f82a147fd15719ed6808ae2888ef5006cd3e6478e9c3c658d9b9c83d4f4",
+      "reference_repair_hash": null,
+      "source_hash": "412b48be08eb270a0cc9a96e14c7741f10977a12098e67163899ed6199c8024c",
+      "trials_per_case": 3,
+      "truth_hash": "b1a919ab4546db8ebd7ce1437585115517a4254c16bd5b95c95ce7ef48b648d1"
+    },
+    {
+      "case_id": "HO-12",
+      "fixture_manifest_hash": "9620a0280881d68af6468d2fd0348d323bbbc881682e70f5b920fe85aecc738b",
+      "reference_repair_hash": "c543f97e059d17ede1911896ef523fb77b0d9505dcee8b0d2de6ee2a5e4e7182",
+      "source_hash": "77857919f6b07a6f932e3a509a53fabdfd13f6b1f0a8c2a083a6e1995ea3929e",
+      "trials_per_case": 3,
+      "truth_hash": "79219355976cd2b6b97b6f7aaa50dac82ce4287bcfe32e36e03958ddf70e7130"
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C-API",
+      "hash": "ed52617d33a6a7aff823d4d5b3184363ab2f2c42603354c18578517d50ed9eec",
+      "version": 1
+    },
+    {
+      "constraint_id": "C-AMOUNT",
+      "hash": "0e0081a0be317978c77cd0736728915dd20ce68cdb145370ec4dcd1af8e147c2",
+      "version": 1
+    },
+    {
+      "constraint_id": "C-INTEGRITY",
+      "hash": "c843e4b07bff03ac99260d07ecaf45cd30aa8d656fc17c87170de53bc4136cfa",
+      "version": 1
+    }
+  ],
+  "counts": {
+    "b0_runs": 12,
+    "b1_trials": 36,
+    "b2_trials": 36,
+    "clean": 4,
+    "clean_trials": 12,
+    "faulty": 8,
+    "faulty_trials": 24,
+    "trials_per_case": 3,
+    "unique_cases": 12
+  },
+  "frozen_at": "2026-10-17",
+  "generator": "backend/scripts/author_heldout_r12.py",
+  "inputs": {
+    "boundary_lines": [
+      "0.005",
+      "0.005"
+    ],
+    "conflict_lines": [
+      "1.00",
+      "2.00"
+    ],
+    "generator": "none; the trusted oracle uses fixed boundary and conflict inputs"
+  },
+  "r6_subset": {
+    "case_ids": [
+      "HO-01",
+      "HO-03",
+      "HO-02",
+      "HO-04",
+      "HO-07",
+      "HO-10"
+    ],
+    "counts": {
+      "clean": 2,
+      "faulty": 4,
+      "trials_per_case": 3,
+      "unique_cases": 6
+    },
+    "suite": "repair-r6-v1"
+  },
+  "schema_version": "benchproof/suite-manifest-v1",
+  "shuffle_seed": "repair-r12-v1/2026-10-17",
+  "suite": "repair-r12-v1",
+  "visibility": "held-out; case ids are opaque and family labels live only in trusted truth"
+}

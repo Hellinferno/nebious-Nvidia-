@@ -1,0 +1,201 @@
+{
+  "counts": {
+    "tasks": 8
+  },
+  "frozen_at": "2026-10-17",
+  "schema_version": "benchproof/suite-manifest-v1",
+  "scoring": "entry-point and contract recall/precision per task; mandatory global checks are reported separately and never count as graph selections",
+  "suite": "graph-g8-v1",
+  "tasks": [
+    {
+      "case": "HO-07",
+      "changed_symbols": [
+        "app.money:compute_total"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-API",
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice",
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "compute_total is called by process_invoice, which both entry points call.",
+      "source_hash": "5c8365ee050cc5907bc688fc85d2420f2f76bf78e394ad63180fb0889882edc2",
+      "task_id": "G-01"
+    },
+    {
+      "case": "HO-10",
+      "changed_symbols": [
+        "app.repository:save_receipt"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-API",
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice",
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "save_receipt is called by process_invoice; the worker reaches it through InvoiceJobHandler.run.",
+      "source_hash": "e03ab956dbeee775a1564f4dbcac4744741dc0ec5d4522ef10d883b7adee56b3",
+      "task_id": "G-02"
+    },
+    {
+      "case": "HO-11",
+      "changed_symbols": [
+        "app.schemas:ReceiptResponse"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-API",
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice",
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "ReceiptResponse is constructed by process_invoice and declared for C-API.",
+      "source_hash": "807a116751b7e192fd347e7f26767e92f498ed10fe5835751247ba6d104fbfad",
+      "task_id": "G-03"
+    },
+    {
+      "case": "HO-05",
+      "changed_symbols": [
+        "app.worker:handle_invoice_job"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "The worker entry point has no callers and is declared for C-AMOUNT and C-INTEGRITY.",
+      "source_hash": "793d475616b2282dbce82ef68a54691002786e6460c8746cc1d574ca940df7ed",
+      "task_id": "G-04"
+    },
+    {
+      "case": "HO-07",
+      "changed_symbols": [
+        "app.routes:submit_invoice"
+      ],
+      "expected_contract_checks": [
+        "api-field-presence",
+        "api-status-code"
+      ],
+      "expected_contracts": [
+        "C-API"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice"
+      ],
+      "rationale": "The route entry point has no callers and is declared for C-API only.",
+      "source_hash": "5c8365ee050cc5907bc688fc85d2420f2f76bf78e394ad63180fb0889882edc2",
+      "task_id": "G-05"
+    },
+    {
+      "case": "HO-10",
+      "changed_symbols": [
+        "app.money:as_decimal"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-API",
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice",
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "A non-declared helper reaches both entry points through compute_total and process_invoice.",
+      "source_hash": "e03ab956dbeee775a1564f4dbcac4744741dc0ec5d4522ef10d883b7adee56b3",
+      "task_id": "G-06"
+    },
+    {
+      "case": "HO-11",
+      "changed_symbols": [
+        "app.repository:get_receipt"
+      ],
+      "expected_contract_checks": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "expected_contracts": [
+        "C-API",
+        "C-AMOUNT",
+        "C-INTEGRITY"
+      ],
+      "expected_entry_points": [
+        "app.routes:submit_invoice",
+        "app.worker:handle_invoice_job"
+      ],
+      "rationale": "get_receipt is called only by process_invoice, which both entry points call.",
+      "source_hash": "807a116751b7e192fd347e7f26767e92f498ed10fe5835751247ba6d104fbfad",
+      "task_id": "G-07"
+    },
+    {
+      "case": "HO-05",
+      "changed_symbols": [
+        "app.money:legacy_line_total"
+      ],
+      "expected_contract_checks": [],
+      "expected_contracts": [],
+      "expected_entry_points": [],
+      "rationale": "An uncalled helper must not select any entry point or contract beyond the mandatory global checks.",
+      "source_hash": "793d475616b2282dbce82ef68a54691002786e6460c8746cc1d574ca940df7ed",
+      "task_id": "G-08"
+    }
+  ],
+  "truth_basis": "hand-declared from the authored call graphs; symbol existence checked with the AST only, never computed with the impact tool under test"
+}

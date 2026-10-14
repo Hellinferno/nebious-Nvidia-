@@ -8,7 +8,7 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (13 October 2026, Days 1–12)
+## Current state (14 October 2026, Days 1–14)
 
 Implemented: curated intake; accepted executable constraints; durable owner-scoped
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
@@ -35,7 +35,14 @@ Owner access currently uses a browser-generated opaque capability in the require
 `X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
 not a claim of production identity authentication. Hosted sandbox execution remains
 blocked because Nebius Sandboxes spawn permission has not been granted. B-17 runtime
-hardening is recorded in `INTEGRITY_REPORT_v1.md`; B-18 final suite freeze is next.
+hardening is recorded in `INTEGRITY_REPORT_v1.md`. The final evaluation assets are
+frozen (B-18): `backend/fixtures/heldout/` holds the held-out repair suite `repair-r12-v1`
+(twelve opaque cases, eight faulty and four clean, built from four source styles), the fixed
+candidate gate suite `gate-v12-v1` (four valid and eight invalid candidates that all pass
+the visible smoke gate), and manifests for `graph-g8-v1`, `freshness-f6-v1`,
+`trajectory-w8-v1` and `mutants-m12-v1`. Every asset is pinned in `truth.lock.json`; the
+R6/V6 fallback is predeclared by id (D-027). Measured outcomes do not exist yet; the B-19
+configuration freeze and B-21 trials are next.
 
 ## Setup (Windows, PowerShell)
 
@@ -81,10 +88,11 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 165 passed, 3 Docker skips on 14 Oct
+.\venv\Scripts\python.exe -m pytest                                   # 175 passed on 14 Oct with the Docker image built (3 skips without it)
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
+.\venv\Scripts\python.exe scripts\freeze_suites.py --verify             # frozen held-out assets still match truth.lock.json
 ```
 
 The fixture validator imports candidate code in-process. That is a development
@@ -101,6 +109,8 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 | `backend/benchproof/decisions` | Reviewed/proposed ledger, dependency invalidation and current-context rebuild |
 | `backend/benchproof/evaluator` | Check registry, observation oracle, gate, development harness |
 | `backend/benchproof/mutations` | Trusted versioned semantic templates, fresh-branch execution and strength scoring |
+| `backend/benchproof/suites` | Frozen suite registry, truth-lock verification and agent-visibility leak scan |
+| `backend/benchproof/evaluator/smoke.py` | Visible smoke gate (B0), kept separate from the protected gate |
 | `backend/benchproof/execution` | Execution adapter contract, Docker runner, mock runner |
 | `backend/benchproof/fixtures` | Fixture registry and source hashing |
 | `backend/benchproof/providers` | Nebius Token Factory adapter |
@@ -110,5 +120,6 @@ hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024
 | `backend/runner/launcher` | Protected launcher that observes a candidate from inside its runtime |
 | `backend/fixtures/development/<id>/app` | Candidate-visible synthetic service |
 | `backend/fixtures/development/<id>/expected.json`, `reference/` | Trusted evaluator assets, never mounted into a candidate |
+| `backend/fixtures/heldout/` | Frozen held-out suites, candidate diffs, manifests, `scope.json` and `truth.lock.json` |
 | `backend/scripts` | Provider/runner preflight, worker, fixture validation |
 | `frontend/` | Connected React/TypeScript/Vite assurance and evidence UI |

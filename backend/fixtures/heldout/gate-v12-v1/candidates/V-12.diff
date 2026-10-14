@@ -1,0 +1,11 @@
+--- a/app/money.py
++++ b/app/money.py
+@@ -3,7 +3,7 @@
+ from decimal import ROUND_HALF_UP, Decimal
+ from typing import Sequence
+ 
+-TWO_PLACES = Decimal("0.01")
++TWO_PLACES = Decimal("0.1")
+ 
+ 
+ def _sum_lines(lines: Sequence[str]) -> Decimal:

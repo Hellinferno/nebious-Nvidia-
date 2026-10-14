@@ -178,6 +178,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - What changed in scope/decisions/docs: B-16 and Day 12 marked done; D-026 selects optional adequacy; API/data contract, README, release checklist, changelog, bundle contents and UI updated. The development harness now invokes the registered route directly instead of allocating an unnecessary Windows loopback socket; oracle logic and Docker launcher remain unchanged.
 - Next earliest unmet dependency and tomorrow's realistic plan: B-17 integrity and execution hardening, followed by B-18 suite/assets freeze.
 
+### 2026-10-14 — Day 14 pulled forward (B-18: frozen suite assets and measured scope)
+
+- Focused hours planned / actual: 5–6 planned; actual not time-tracked.
+- Commit/branch and deployment version, if any: `main`; local tested change, no deployment.
+- Tickets attempted / completed / blocked: B-18 DONE. Authored and froze `repair-r12-v1` (twelve opaque held-out cases `HO-01`…`HO-12`: two faulty variants per implemented family plus four clean controls, built from four distinct source styles with renamed helpers, different control flow and benign distractors), `gate-v12-v1` (twelve fixed candidate diffs: four trusted reference repairs and eight invalid candidates that all pass the visible smoke gate and fail the protected gate), and manifests for `graph-g8-v1` (eight hand-declared impact tasks), `freshness-f6-v1` (three stale and three fresh transitions), `trajectory-w8-v1` (eight frozen traces) and `mutants-m12-v1` (twelve templates, validity frozen without execution). Added the visible smoke gate `visible-smoke-v1` (B0) and the `benchproof.suites` lock verifier.
+- Accepted source/contract/graph/evaluator hashes: every case source tree, truth file, reference tree, candidate diff and manifest is pinned in `backend/fixtures/heldout/truth.lock.json` (`lock_hash` `37fc5d3f5ef981d4…`). The accepted contract hash is unchanged. The evaluator hash changes because `evaluator/smoke.py` joins the hashed evaluator directory; no stored verdict is reinterpreted.
+- Runtime mode and actual provider/model/runner/image: asset validation used the in-process development harness only (labeled as such in the freeze record); no model call, no paid execution. The Docker daemon was started on this machine; the candidate image is being rebuilt for later isolated runs.
+- Observations, check IDs and artifact paths: `artifacts/suites/freeze_20261014T080352.json`; every faulty case fails exactly its intended checks (plus one recorded consequential `idempotency-duplicate` failure for the 201-status case), every reference repair is VERIFIED, every clean style is VERIFIED untouched, and the agent-visible leak scan finds no fault markers, family names or check IDs in any `app/` file or public manifest. All eight frozen defects pass the visible smoke gate.
+- Tests actually run; passed/failed/skipped/blocked: `tests/test_suites.py` 10 passed; full regression 165 passed / 0 failed / 3 skipped (candidate image not yet built); ruff clean.
+- Patch/verdict plus graph coverage, freshness and mutation limits: V12 candidates go through the same strict modify-only diff rules as agent patches; G8 truth is hand-declared from the authored call graphs and only symbol existence is checked with the AST, never with the impact tool under test; M12 validity records applicability and syntax without executing mutants; smoke remains a separate visible verdict that cannot touch the protected gate.
+- Model tokens, executions, retries, cost/price snapshot and remaining reserve: zero model calls; in-process validation executions only; no price snapshot is recorded, so cost stays unknown; the scope decision reserves 20% of any usable credit for judging and predeclares the R6/V6 fallback by id.
+- Repeated failure/recovery event and strategy change, if any: none.
+- What changed in scope/decisions/docs: D-027 selects the full R12/V12 scope with named R6/V6 fallback subsets and records that the public repository makes the holdout untouched-by-tuning rather than secret; B-18 and Day 14 marked done; README, changelog, release checklist and milestone tracker updated.
+- Next earliest unmet dependency and tomorrow's realistic plan: B-22 self-review and core UI fixes (no volunteer tester is available, so no user study is claimed), then B-20 deployment preparation and the B-19 fair-baseline harness and configuration freeze.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
@@ -208,8 +223,8 @@ Link evidence, not a narrative of apparent effort. Keep rejected/unknown outcome
 | Export/fresh replay | 10 Oct | Completed 10 Oct | Bundle and independent replay record |
 | Usable UI/error paths | 11–12 Oct | Completed in code/tests 12 Oct; screenshot NOT_RECORDED | API journey tests, owner/reconnect/cancel evidence, build/lint |
 | P1 ledger/recovery/mutations | 13–15 Oct | Completed in code/development evidence 13 Oct; final selected suite outcomes still pending freeze | Freshness/trajectory/mutant observations |
-| Security gate | 16 Oct | Pending | Negative tests and actual runner denial/limits |
-| Frozen suite assets | 17 Oct | Pending | R12/R6 plus separate selected suites and commit |
+| Security gate | 16 Oct | Completed 14 Oct in code/tests (`INTEGRITY_REPORT_v1.md`); live Docker denial probes recorded only when the daemon is available | Negative tests and actual runner denial/limits |
+| Frozen suite assets | 17 Oct | Completed 14 Oct: R12/V12/G8/F6/W8/M12 manifests and `truth.lock.json` committed; R6/V6 fallback predeclared | R12/R6 plus separate selected suites and commit |
 | Hosted release candidate | 19 Oct | Pending | Incognito journey, persistent store and restore |
 | Frozen evaluation configuration | 20 Oct | Pending | Model/prompts/runtime/evaluator/image/budget plan |
 | Final measured outcomes/replay | 21–23 Oct | Pending | Complete immutable trial records and actual summaries |

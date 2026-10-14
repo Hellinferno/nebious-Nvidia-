@@ -1,0 +1,12 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "CL-D",
+  "style": "D",
+  "family": "Clean control",
+  "constraint": null,
+  "mutation_family": "idempotency",
+  "intended_failing_checks": [],
+  "expected_verdict": "VERIFIED",
+  "reference_repair": null,
+  "notes": "Clean control: every required check passes untouched; any accepted repair is an unjustified change."
+}

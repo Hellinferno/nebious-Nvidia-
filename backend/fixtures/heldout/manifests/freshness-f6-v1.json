@@ -1,0 +1,66 @@
+{
+  "counts": {
+    "fresh": 3,
+    "stale": 3
+  },
+  "execution": "each transition runs on a fresh copy of the named held-out clean case with one REVIEWED decision declaring the listed dependency; development F6 preparation is separate evidence",
+  "frozen_at": "2026-10-17",
+  "schema_version": "benchproof/suite-manifest-v1",
+  "suite": "freshness-f6-v1",
+  "transitions": [
+    {
+      "case": "HO-07",
+      "dependency": "app/money.py",
+      "expected": "STALE",
+      "expected_dependency_state": "CHANGED",
+      "kind": "changed_file",
+      "operation": "append a comment line to app/money.py",
+      "transition_id": "F-S1"
+    },
+    {
+      "case": "HO-07",
+      "dependency": "app/report.py",
+      "expected": "STALE",
+      "expected_dependency_state": "DELETED",
+      "kind": "deleted_file",
+      "operation": "delete app/report.py",
+      "transition_id": "F-S2"
+    },
+    {
+      "case": "HO-07",
+      "dependency": "accepted-contract",
+      "expected": "STALE",
+      "expected_dependency_state": "CHANGED",
+      "kind": "changed_contract",
+      "operation": "refresh against a different contract hash",
+      "transition_id": "F-S3"
+    },
+    {
+      "case": "HO-07",
+      "dependency": "app/money.py",
+      "expected": "CURRENT",
+      "expected_dependency_state": "CURRENT",
+      "kind": "unchanged",
+      "operation": "no change",
+      "transition_id": "F-F1"
+    },
+    {
+      "case": "HO-07",
+      "dependency": "app/money.py",
+      "expected": "CURRENT",
+      "expected_dependency_state": "CURRENT",
+      "kind": "unrelated_edit",
+      "operation": "append a comment line to app/routes.py",
+      "transition_id": "F-F2"
+    },
+    {
+      "case": "HO-07",
+      "dependency": "app/money.py",
+      "expected": "CURRENT",
+      "expected_dependency_state": "CURRENT",
+      "kind": "unrelated_add",
+      "operation": "add app/extra.py",
+      "transition_id": "F-F3"
+    }
+  ]
+}

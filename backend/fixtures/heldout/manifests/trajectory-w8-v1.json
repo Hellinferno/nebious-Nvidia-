@@ -1,0 +1,73 @@
+{
+  "counts": {
+    "progressing": 4,
+    "stalls": 4
+  },
+  "frozen_at": "2026-10-17",
+  "note": "synthetic trace classification; executed recovery outcomes are recorded separately",
+  "repeat_threshold": 2,
+  "rule_version": "trajectory-fingerprint-v1",
+  "schema_version": "benchproof/suite-manifest-v1",
+  "source": "backend/benchproof/trajectory/development.py",
+  "source_suite_id": "trajectory-w8-v1",
+  "suite": "trajectory-w8-v1",
+  "traces": [
+    {
+      "label": "STALLED",
+      "reason": "request IDs differ but the semantic attempt is identical",
+      "step_count": 2,
+      "steps_hash": "1cc55fa1758542f4aed775bc5df8e1afc0cd6db0ad502bff27db4307a6ce6ee3",
+      "trace_id": "W8-S1"
+    },
+    {
+      "label": "STALLED",
+      "reason": "timestamps differ but the timeout failure is identical",
+      "step_count": 2,
+      "steps_hash": "594c0df9c0636fe59603975aaa65e17f4fac6d3886e0d6d80125ba2badebaf35",
+      "trace_id": "W8-S2"
+    },
+    {
+      "label": "STALLED",
+      "reason": "same API check failure without new evidence",
+      "step_count": 2,
+      "steps_hash": "7643cd74f92c2b8eda0ba6378eb8d206d3fb9cb548226ed7544cf520243b4a23",
+      "trace_id": "W8-S3"
+    },
+    {
+      "label": "STALLED",
+      "reason": "same runner timeout without a new observation",
+      "step_count": 2,
+      "steps_hash": "c9df374b0f4d307f1b81f1228947fc9d0f98025773266ac4873ad85fb78a860b",
+      "trace_id": "W8-S4"
+    },
+    {
+      "label": "PROGRESSING",
+      "reason": "source version changed",
+      "step_count": 2,
+      "steps_hash": "4fa404ae8e7372eede024da72982e18a7650125a7b259115fc39db5488f00d56",
+      "trace_id": "W8-P1"
+    },
+    {
+      "label": "PROGRESSING",
+      "reason": "recovery uses a genuinely different named strategy",
+      "step_count": 2,
+      "steps_hash": "ee4ab59f310f993151e7ba2f14e0f321e61bbd2f035fd25684a80ceb6b18321a",
+      "trace_id": "W8-P2"
+    },
+    {
+      "label": "PROGRESSING",
+      "reason": "one check resolved even though another still fails",
+      "step_count": 2,
+      "steps_hash": "7fe8b93b866ccb9282c94a8539ede896702c80b41d5337f1a8b95d0dbd2dcb91",
+      "trace_id": "W8-P3"
+    },
+    {
+      "label": "PROGRESSING",
+      "reason": "new semantic observation was added",
+      "step_count": 2,
+      "steps_hash": "b3d090431c75a6ca77ad83ab631661995cba0d625c4b059efb949f064388947c",
+      "trace_id": "W8-P4"
+    }
+  ],
+  "traces_hash": "da0907fa2d245f19324e5a28b7355a594785c6cfb0f24b4e76d77b3d93538a66"
+}

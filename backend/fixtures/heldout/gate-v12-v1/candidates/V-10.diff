@@ -1,0 +1,9 @@
+--- a/app/services.py
++++ b/app/services.py
+@@ -29,6 +29,4 @@
+         record: StoredReceipt = {"line_amounts": list(req.line_amounts), "response": response}
+         save_receipt(req.tenant_id, req.request_id, record)
+         return ReceiptResponse(**response)
+-    if existing["line_amounts"] != req.line_amounts:
+-        raise ConflictError("payload differs from the stored request")
+     return ReceiptResponse(**existing["response"])

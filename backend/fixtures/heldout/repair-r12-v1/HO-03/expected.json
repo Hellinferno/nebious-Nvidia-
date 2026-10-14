@@ -1,0 +1,18 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "AC-2",
+  "style": "C",
+  "family": "API compatibility",
+  "constraint": "C-API",
+  "mutation_family": "api",
+  "intended_failing_checks": [
+    "api-status-code"
+  ],
+  "consequential_failing_checks": [
+    "idempotency-duplicate"
+  ],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Successful submission answers 201 instead of the declared 200",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

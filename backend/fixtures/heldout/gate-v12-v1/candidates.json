@@ -1,0 +1,127 @@
+{
+  "schema_version": "benchproof/v2",
+  "suite": "gate-v12-v1",
+  "base_suite": "repair-r12-v1",
+  "candidates": [
+    {
+      "candidate_id": "V-01",
+      "base_case": "HO-01",
+      "diff_path": "candidates/V-01.diff",
+      "diff_hash": "898a62eafbcd776737c13e666fa2892151bef7805733e521c1e0c48346c7aba0",
+      "target_files": [
+        "app/schemas.py",
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-02",
+      "base_case": "HO-02",
+      "diff_path": "candidates/V-02.diff",
+      "diff_hash": "9186ddf9d42caf62b613bfcd08c0227531aea573fee32e658469c86022b15daf",
+      "target_files": [
+        "app/money.py"
+      ]
+    },
+    {
+      "candidate_id": "V-03",
+      "base_case": "HO-09",
+      "diff_path": "candidates/V-03.diff",
+      "diff_hash": "3a35367c90322a4f74e1d34ae69ac539642e6e69d8f1475885c0c719b57cb612",
+      "target_files": [
+        "app/worker.py"
+      ]
+    },
+    {
+      "candidate_id": "V-04",
+      "base_case": "HO-12",
+      "diff_path": "candidates/V-04.diff",
+      "diff_hash": "c80dbfb129d9f8867c6dd225bdc56da06e114d5bde0f7ffa6f4c1ca25c0ff694",
+      "target_files": [
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-05",
+      "base_case": "HO-02",
+      "diff_path": "candidates/V-05.diff",
+      "diff_hash": "ff8984f621a6ad67e233267491f5ffb7b34d0b52ac3d3da8ec194c67a48ddb7c",
+      "target_files": [
+        "app/money.py"
+      ]
+    },
+    {
+      "candidate_id": "V-06",
+      "base_case": "HO-01",
+      "diff_path": "candidates/V-06.diff",
+      "diff_hash": "7f7494488814529c8c64d738740dc14d36bca31a04cf6b9d67780ff48af84809",
+      "target_files": [
+        "app/routes.py",
+        "app/schemas.py",
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-07",
+      "base_case": "HO-12",
+      "diff_path": "candidates/V-07.diff",
+      "diff_hash": "27f8a30a7582eba672b68c82394a05133489642e10f4be9bb2a9375edd6b398b",
+      "target_files": [
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-08",
+      "base_case": "HO-09",
+      "diff_path": "candidates/V-08.diff",
+      "diff_hash": "3cb52146621fbbb7803de1d00c02c7afdb00f8bcfcacbd0fc14fc82b4b753836",
+      "target_files": [
+        "app/worker.py"
+      ]
+    },
+    {
+      "candidate_id": "V-09",
+      "base_case": "HO-07",
+      "diff_path": "candidates/V-09.diff",
+      "diff_hash": "c4b058f84c5f84284e2228b4938f8f89b586a2584497af9fc13b4048a1314bf3",
+      "target_files": [
+        "app/money.py"
+      ]
+    },
+    {
+      "candidate_id": "V-10",
+      "base_case": "HO-10",
+      "diff_path": "candidates/V-10.diff",
+      "diff_hash": "d9036b7e4589394f3b19f19c1ab1a22ed9326891ae2a830158800b986ea0b67b",
+      "target_files": [
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-11",
+      "base_case": "HO-11",
+      "diff_path": "candidates/V-11.diff",
+      "diff_hash": "f779be6bdc1eace8b870b4adad76df100765ea8e53426dea22f36cd051c4a0ee",
+      "target_files": [
+        "app/schemas.py",
+        "app/services.py"
+      ]
+    },
+    {
+      "candidate_id": "V-12",
+      "base_case": "HO-05",
+      "diff_path": "candidates/V-12.diff",
+      "diff_hash": "5756dffee7ac307192b8aef784b05c60b143d2116b341f4416fe7e6cab70e416",
+      "target_files": [
+        "app/money.py"
+      ]
+    }
+  ],
+  "v6_subset": [
+    "V-01",
+    "V-02",
+    "V-05",
+    "V-06",
+    "V-09",
+    "V-12"
+  ]
+}

@@ -1,0 +1,20 @@
+--- a/app/schemas.py
++++ b/app/schemas.py
+@@ -12,6 +12,7 @@
+ class ReceiptResponse(BaseModel):
+     receipt_id: str
+     tenant_id: str
++    request_id: str
+     total_amount: str
+     status: str
+ 
+--- a/app/services.py
++++ b/app/services.py
+@@ -19,6 +19,7 @@
+     return {
+         "receipt_id": str(uuid.uuid4()),
+         "tenant_id": req.tenant_id,
++        "request_id": req.request_id,
+         "total_amount": total,
+         "status": "processed",
+     }

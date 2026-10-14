@@ -1,0 +1,16 @@
+{
+  "suite": "repair-r12-v1",
+  "slot": "CI-2",
+  "style": "A",
+  "family": "Cross-module caller impact",
+  "constraint": "C-INTEGRITY",
+  "mutation_family": "caller",
+  "intended_failing_checks": [
+    "caller-consistency"
+  ],
+  "consequential_failing_checks": [],
+  "expected_verdict": "REJECTED",
+  "reference_repair": "reference/app",
+  "defect": "Worker pre-rounds each line before delegating, so route and worker totals diverge",
+  "notes": "Trusted evaluator asset; never mounted into a candidate or placed in a prompt."
+}

@@ -1,0 +1,11 @@
+--- a/app/money.py
++++ b/app/money.py
+@@ -16,7 +16,7 @@
+     amounts = [Decimal(text) for text in lines]
+     if not amounts:
+         return "0.00"
+-    total = reduce(lambda acc, amount: acc + amount, amounts, Decimal("0"))
++    total = reduce(lambda acc, amount: acc + _quantize(amount), amounts, Decimal("0"))
+     return str(_quantize(total))
+ 
+ 

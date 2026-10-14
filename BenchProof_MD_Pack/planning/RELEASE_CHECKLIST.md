@@ -30,7 +30,7 @@ All implementation gates are pending. Feature freeze: 25 October. Internal submi
 
 ## Evidence and claims gate
 
-- [ ] Selected suites/versioned truth/configuration are frozen before final measurement.
+- [x] Selected suites/versioned truth are frozen before final measurement (B-18, `truth.lock.json`); runtime configuration freeze remains B-19.
 - [ ] R12/R6 trials and V12/V6/G8/F6/W8/M12 counts are kept separate.
 - [ ] Every assigned failure/timeout/invalid output remains in the appropriate denominator.
 - [ ] Same-model baseline uses fair information/budgets and common final evaluator.

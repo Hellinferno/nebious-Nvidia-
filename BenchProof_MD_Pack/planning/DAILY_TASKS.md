@@ -154,18 +154,18 @@ If tool calling is unsupported, use server-validated action JSON with one format
 **Next:** B-09 repair requires a concrete confirmed constraint failure and a current base hash.
 
 ## Day 6 — Friday, 9 October · 3–4 hours
-
+ 
 **Goal:** Complete the first protected P0 repair loop. **Tickets:** B-09, B-10.
-
+ 
 ### Work in order
-
+ 
 1. [x] Generate a minimal AC or MC repair diff and validate paths/base/hash/size (45 min); reject evaluator/contract/launcher edits.
 2. [x] Execute fresh candidate verification and compute required expectations outside it (75 min); store results before display.
 3. [x] Complete the second P0 repair family and an untouched clean run (60 min); test a shallow candidate that passes smoke but fails protected behavior.
 4. [x] Test forged PASS, missing required result and simple repeated-failure stopping (30–45 min); save all successful/rejected/unknown artifacts.
-
+ 
 ### Deliverable and acceptance evidence
-
+ 
 AC and MC complete repair examples, clean acceptance, inadequate candidate rejection, and no unsupported VERIFIED result. Save run/diff/check/image/model hashes.
 
 
@@ -309,10 +309,10 @@ If limits/credits are tight, omit optional mutation execution with NOT_RUN and n
 
 ### Work in order
 
-1. [ ] Run prompt injection, evaluator/contract edit, forged PASS and stale-context negatives (60 min); all are controlled outside model intent.
-2. [ ] Test intake/diff limits, traversal/file modes, unsafe output/archive names and cross-owner access (60 min).
-3. [ ] Verify actual network/metadata denial, timeout/memory/output caps and remote cancellation reconciliation (45 min).
-4. [ ] Scan prompts/logs/build/export for secrets or hidden truth; fix failing exposed capability and record controls (30 min).
+1. [x] Run prompt injection, evaluator/contract edit, forged PASS and stale-context negatives (60 min); all are controlled outside model intent.
+2. [x] Test intake/diff limits, traversal/file modes, unsafe output/archive names and cross-owner access (60 min).
+3. [x] Verify actual network/metadata denial, timeout/memory/output caps and remote cancellation reconciliation (45 min).
+4. [x] Scan prompts/logs/build/export for secrets or hidden truth; fix failing exposed capability and record controls (30 min).
 
 ### Deliverable and acceptance evidence
 
@@ -330,11 +330,11 @@ Any failed protection blocks that public capability. Cut P1 or narrow curated in
 
 ### Work in order
 
-1. [ ] Create held-out source/input variants for R12 or explicit R6 with renamed/control-flow changes and clean distractors (90 min).
-2. [ ] Validate original faults/reference repairs/clean controls and fixed V12/V6 candidate truth externally (90 min); keep answer-bearing metadata out of prompts.
-3. [ ] Freeze selected G8/F6/W8/M12 manifests, graph truth, trace labels and mutant validity where implemented (60 min); omitted suites stay NOT_RUN.
-4. [ ] Commit suite IDs/hashes, private truth and selected counts before final measurements (30 min).
-5. [ ] Review cost/hours and document full/reduced scope with a judging reserve (30 min); do not choose scope after seeing final results.
+1. [x] Create held-out source/input variants for R12 or explicit R6 with renamed/control-flow changes and clean distractors (90 min).
+2. [x] Validate original faults/reference repairs/clean controls and fixed V12/V6 candidate truth externally (90 min); keep answer-bearing metadata out of prompts.
+3. [x] Freeze selected G8/F6/W8/M12 manifests, graph truth, trace labels and mutant validity where implemented (60 min); omitted suites stay NOT_RUN.
+4. [x] Commit suite IDs/hashes, private truth and selected counts before final measurements (30 min).
+5. [x] Review cost/hours and document full/reduced scope with a judging reserve (30 min); do not choose scope after seeing final results.
 
 ### Deliverable and acceptance evidence
 

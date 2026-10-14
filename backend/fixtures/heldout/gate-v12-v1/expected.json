@@ -1,0 +1,272 @@
+{
+  "suite": "gate-v12-v1",
+  "counts": {
+    "total": 12,
+    "valid": 4,
+    "invalid": 8
+  },
+  "v6_subset": [
+    "V-01",
+    "V-02",
+    "V-05",
+    "V-06",
+    "V-09",
+    "V-12"
+  ],
+  "labels": [
+    {
+      "candidate_id": "V-01",
+      "base_case": "HO-01",
+      "base_source_hash": "e59e1b808bad28431fd6dd43853b0be2540507dd090e743c6ece64bb29bfe26c",
+      "candidate_source_hash": "39f29a426acfadd3cb7e7e8ca9e654b0c47004e2ec48179be40c4d58ec46d573",
+      "diff_hash": "898a62eafbcd776737c13e666fa2892151bef7805733e521c1e0c48346c7aba0",
+      "target_files": [
+        "app/schemas.py",
+        "app/services.py"
+      ],
+      "kind": "reference_repair",
+      "validity": "valid",
+      "expected_protected_verdict": "VERIFIED",
+      "expected_failing_checks": [],
+      "observed_protected_verdict_at_freeze": "VERIFIED",
+      "observed_failing_checks_at_freeze": [],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Trusted repair restoring the omitted required response field."
+    },
+    {
+      "candidate_id": "V-02",
+      "base_case": "HO-02",
+      "base_source_hash": "5204533ceececeb27d0b92c63d435ec1dea90f49fb486b562e143dbf487d4da4",
+      "candidate_source_hash": "a3618360cfdd923c048ee25baf49709264d5b68199e76b625ffbed467bd5f46e",
+      "diff_hash": "9186ddf9d42caf62b613bfcd08c0227531aea573fee32e658469c86022b15daf",
+      "target_files": [
+        "app/money.py"
+      ],
+      "kind": "reference_repair",
+      "validity": "valid",
+      "expected_protected_verdict": "VERIFIED",
+      "expected_failing_checks": [],
+      "observed_protected_verdict_at_freeze": "VERIFIED",
+      "observed_failing_checks_at_freeze": [],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Trusted repair restoring the unrounded Decimal sum."
+    },
+    {
+      "candidate_id": "V-03",
+      "base_case": "HO-09",
+      "base_source_hash": "eab31e0748183302e43709f19cc019e842daaae9bac384c36fd45c9d7312fc69",
+      "candidate_source_hash": "3cfbafcff0fb0ca78f74d004cbd4cf4ae78a59da42d12136720143198eedc8ab",
+      "diff_hash": "3a35367c90322a4f74e1d34ae69ac539642e6e69d8f1475885c0c719b57cb612",
+      "target_files": [
+        "app/worker.py"
+      ],
+      "kind": "reference_repair",
+      "validity": "valid",
+      "expected_protected_verdict": "VERIFIED",
+      "expected_failing_checks": [],
+      "observed_protected_verdict_at_freeze": "VERIFIED",
+      "observed_failing_checks_at_freeze": [],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Trusted repair routing the worker through the shared service helper."
+    },
+    {
+      "candidate_id": "V-04",
+      "base_case": "HO-12",
+      "base_source_hash": "77857919f6b07a6f932e3a509a53fabdfd13f6b1f0a8c2a083a6e1995ea3929e",
+      "candidate_source_hash": "2a2c6c57a3943e7616b334217c6449eb9b23c22e9f0e9665923117e031910341",
+      "diff_hash": "c80dbfb129d9f8867c6dd225bdc56da06e114d5bde0f7ffa6f4c1ca25c0ff694",
+      "target_files": [
+        "app/services.py"
+      ],
+      "kind": "reference_repair",
+      "validity": "valid",
+      "expected_protected_verdict": "VERIFIED",
+      "expected_failing_checks": [],
+      "observed_protected_verdict_at_freeze": "VERIFIED",
+      "observed_failing_checks_at_freeze": [],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Trusted repair comparing stored and submitted line amounts."
+    },
+    {
+      "candidate_id": "V-05",
+      "base_case": "HO-02",
+      "base_source_hash": "5204533ceececeb27d0b92c63d435ec1dea90f49fb486b562e143dbf487d4da4",
+      "candidate_source_hash": "a9242cfa3db9a7222cd8491998739632261c288042b04a9f24085b901f812c42",
+      "diff_hash": "ff8984f621a6ad67e233267491f5ffb7b34d0b52ac3d3da8ec194c67a48ddb7c",
+      "target_files": [
+        "app/money.py"
+      ],
+      "kind": "shallow_repair",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "amount-boundary"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "amount-boundary"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Rewrites the cents arithmetic but still truncates each line before summing."
+    },
+    {
+      "candidate_id": "V-06",
+      "base_case": "HO-01",
+      "base_source_hash": "e59e1b808bad28431fd6dd43853b0be2540507dd090e743c6ece64bb29bfe26c",
+      "candidate_source_hash": "67f74a5516479ba4c03a6edddcefbab1e672c8fc381f0032821fd9b0de700aa2",
+      "diff_hash": "7f7494488814529c8c64d738740dc14d36bca31a04cf6b9d67780ff48af84809",
+      "target_files": [
+        "app/routes.py",
+        "app/schemas.py",
+        "app/services.py"
+      ],
+      "kind": "shallow_repair",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "api-status-code"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "api-status-code",
+        "idempotency-duplicate"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Restores the response field but changes the success status to 202."
+    },
+    {
+      "candidate_id": "V-07",
+      "base_case": "HO-12",
+      "base_source_hash": "77857919f6b07a6f932e3a509a53fabdfd13f6b1f0a8c2a083a6e1995ea3929e",
+      "candidate_source_hash": "eac8e4f1fdd28c6c8b011c4e818f3e5b531ac27709fbc46aab45159b2645a6f3",
+      "diff_hash": "27f8a30a7582eba672b68c82394a05133489642e10f4be9bb2a9375edd6b398b",
+      "target_files": [
+        "app/services.py"
+      ],
+      "kind": "shallow_repair",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "idempotency-conflict"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "idempotency-conflict"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Removes the length comparison and replays the stored receipt for any reuse of the id."
+    },
+    {
+      "candidate_id": "V-08",
+      "base_case": "HO-09",
+      "base_source_hash": "eab31e0748183302e43709f19cc019e842daaae9bac384c36fd45c9d7312fc69",
+      "candidate_source_hash": "584993f4849dd5a55832547e9989a273f8e4738064edf5e9de410197db51f39f",
+      "diff_hash": "3cb52146621fbbb7803de1d00c02c7afdb00f8bcfcacbd0fc14fc82b4b753836",
+      "target_files": [
+        "app/worker.py"
+      ],
+      "kind": "shallow_repair",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "worker-caller-path"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "worker-caller-path"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Adds an idempotency lookup to the worker's private settle path but still bypasses the service."
+    },
+    {
+      "candidate_id": "V-09",
+      "base_case": "HO-07",
+      "base_source_hash": "b6cb583ceaaee1bbaf44f136452aa6b3037d7a863718f402399b95655830f7f5",
+      "candidate_source_hash": "5ba8870784c7716956a9238d20c044c7b40945d279986ceb15af3a60a9fb4023",
+      "diff_hash": "c4b058f84c5f84284e2228b4938f8f89b586a2584497af9fc13b4048a1314bf3",
+      "target_files": [
+        "app/money.py"
+      ],
+      "kind": "harmful_clean_edit",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "amount-boundary"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "amount-boundary"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Quantizes each amount inside the reduction of a clean control."
+    },
+    {
+      "candidate_id": "V-10",
+      "base_case": "HO-10",
+      "base_source_hash": "d2166b2cc4db1b1f35f5276afb81453cad5feb76c67600d681aa94a5dda30e54",
+      "candidate_source_hash": "e2318db3e272dc1bcc5086b2197f9ac7f3404a9714b7e7c1014c14256dc46467",
+      "diff_hash": "d9036b7e4589394f3b19f19c1ab1a22ed9326891ae2a830158800b986ea0b67b",
+      "target_files": [
+        "app/services.py"
+      ],
+      "kind": "harmful_clean_edit",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "idempotency-conflict"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "idempotency-conflict"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Drops the conflict signal from a clean control so a reused id silently replays."
+    },
+    {
+      "candidate_id": "V-11",
+      "base_case": "HO-11",
+      "base_source_hash": "412b48be08eb270a0cc9a96e14c7741f10977a12098e67163899ed6199c8024c",
+      "candidate_source_hash": "1a0a4fecdcd547512f3f7fc3cdc7efe34aa63922ace1971fdc66eb49b98b0cb6",
+      "diff_hash": "f779be6bdc1eace8b870b4adad76df100765ea8e53426dea22f36cd051c4a0ee",
+      "target_files": [
+        "app/schemas.py",
+        "app/services.py"
+      ],
+      "kind": "harmful_clean_edit",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "api-field-presence"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "api-field-presence"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Removes the status field from a clean control's public receipt."
+    },
+    {
+      "candidate_id": "V-12",
+      "base_case": "HO-05",
+      "base_source_hash": "13959140aafbf7ca31588d39279e87766b87f96616e04f80b3bc2b1062e559fc",
+      "candidate_source_hash": "286bf25651583676df02d85397eb2b4683b6026303b6f20fd01252be6e28d586",
+      "diff_hash": "5756dffee7ac307192b8aef784b05c60b143d2116b341f4416fe7e6cab70e416",
+      "target_files": [
+        "app/money.py"
+      ],
+      "kind": "harmful_clean_edit",
+      "validity": "invalid",
+      "expected_protected_verdict": "REJECTED",
+      "expected_failing_checks": [
+        "amount-boundary"
+      ],
+      "observed_protected_verdict_at_freeze": "REJECTED",
+      "observed_failing_checks_at_freeze": [
+        "amount-boundary"
+      ],
+      "observed_smoke_verdict_at_freeze": "PASS",
+      "note": "Coarsens the rounding quantum of a clean control to one decimal place."
+    }
+  ],
+  "notes": "Trusted labels; validated at freeze with the in-process development harness, to be re-measured through the isolated runner during B-21."
+}

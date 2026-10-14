@@ -154,6 +154,21 @@ _FIXTURE_FAMILIES = {
 }
 
 
+def _fixture_family(fixture_id: str) -> str | None:
+    """Development fixtures are mapped statically; held-out cases declare the family in trusted truth."""
+    family = _FIXTURE_FAMILIES.get(fixture_id)
+    if family is not None:
+        return family
+    from benchproof.fixtures import load_expected
+
+    try:
+        declared = load_expected(fixture_id).get("mutation_family")
+    except (FileNotFoundError, ValueError):
+        return None
+    valid = {item.family for item in TEMPLATES}
+    return declared if declared in valid else None
+
+
 def template_registry() -> list[dict[str, Any]]:
     return [
         {
@@ -363,7 +378,7 @@ def run_mutation_assessment(
     audit = get_audit(audit_id, db_path=db_path)
     if audit is None:
         raise MutationError("AUDIT_NOT_FOUND", f"Audit {audit_id} not found")
-    family = _FIXTURE_FAMILIES.get(audit["fixture_id"])
+    family = _fixture_family(audit["fixture_id"])
     if family is None:
         raise MutationError("NO_RELEVANT_TEMPLATES", "No mutation family is mapped to this fixture")
     templates = [item for item in TEMPLATES if item.family == family][:max_mutants]
