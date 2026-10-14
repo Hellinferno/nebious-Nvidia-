@@ -71,7 +71,11 @@ def _create_verified_audit(db: Path, fixture_id: str = "mc-01") -> str:
         base_hash=shash,
         diff_hash="test-diff-hash",
         diff_text=diff,
-        approved_paths=["app/services.py"],
+        approved_paths=(
+            ["app/money.py"]
+            if fixture_id.casefold() == "mc-01"
+            else ["app/schemas.py", "app/services.py"]
+        ),
         changed_lines=5,
         policy_result="APPROVED",
         db_path=db,
@@ -181,7 +185,7 @@ def test_replay_bundle_verified_candidate(bundle_db: Path, tmp_path: Path) -> No
     audit_id = _create_verified_audit(bundle_db, "mc-01")
     zip_path, _ = export_bundle(audit_id, output_path=tmp_path / "test_bundle.zip", db_path=bundle_db)
 
-    record = replay_bundle(zip_path)
+    record = replay_bundle(zip_path, use_docker=False)
     assert record.tampered is False
     assert record.verdict_matches is True
     assert record.checks_matched is True
@@ -212,6 +216,7 @@ def test_replay_bundle_detects_tampered_bundle(bundle_db: Path, tmp_path: Path) 
 
 def test_api_bundle_and_replay_endpoints(bundle_db: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("benchproof.api.main._db", lambda: bundle_db)
+    monkeypatch.setattr("benchproof.api.main.settings.benchproof_runner", "mock")
     client = TestClient(app)
     client.headers.update({"X-BenchProof-Owner": "test-owner"})
 
@@ -242,10 +247,7 @@ def test_api_bundle_and_replay_endpoints(bundle_db: Path, monkeypatch: pytest.Mo
     val_data = res.json()
     assert val_data["valid"] is True
 
-    # 5. POST /replay
+    # 5. Public replay blocks when no isolated runner is configured.
     res = client.post(f"/api/v1/audits/{audit_id}/replay")
-    assert res.status_code == 200
-    rep_data = res.json()
-    assert rep_data["replayed_verdict"] == "VERIFIED"
-    assert rep_data["verdict_matches"] is True
-    assert rep_data["checks_matched"] is True
+    assert res.status_code == 503
+    assert res.json()["detail"]["code"] == "RUNNER_UNAVAILABLE"

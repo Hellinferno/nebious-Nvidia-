@@ -21,6 +21,20 @@ from benchproof.fixtures import source_hash_for_dir
 
 MAX_DIFF_LINES = 100
 MAX_DIFF_BYTES = 10_000
+MAX_TARGET_FILES = 3
+FORBIDDEN_DIFF_METADATA = (
+    "diff --git ",
+    "new file mode ",
+    "deleted file mode ",
+    "old mode ",
+    "new mode ",
+    "rename from ",
+    "rename to ",
+    "copy from ",
+    "copy to ",
+    "GIT binary patch",
+    "Binary files ",
+)
 PROTECTED_PATTERNS = [
     "expected.json",
     "fixture.json",
@@ -54,19 +68,50 @@ def compute_diff_hash(diff_text: str) -> str:
     return hashlib.sha256(diff_text.strip().encode("utf-8")).hexdigest()
 
 
+def _header_path(line: str) -> str:
+    raw = line[4:].strip()
+    if not raw or raw == "/dev/null" or "\t" in raw or " " in raw:
+        raise PatchValidationError("MALFORMED_DIFF", f"Unsafe or missing diff header path: {raw!r}")
+    return re.sub(r"^[ab]/", "", raw).replace("\\", "/")
+
+
+def _split_file_diffs(diff_text: str) -> dict[str, list[str]]:
+    """Parse strict modify-only unified diffs and pair old/new paths."""
+    lines = diff_text.splitlines(keepends=True)
+    file_diffs: dict[str, list[str]] = {}
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if not line.strip():
+            index += 1
+            continue
+        if not line.startswith("--- ") or index + 1 >= len(lines) or not lines[index + 1].startswith("+++ "):
+            raise PatchValidationError("MALFORMED_DIFF", "Expected paired ---/+++ file headers")
+        old_path = _header_path(line)
+        new_path = _header_path(lines[index + 1])
+        if old_path != new_path:
+            raise PatchValidationError(
+                "PROTECTED_FILE_VIOLATION",
+                f"Rename, creation, or deletion is forbidden: {old_path} -> {new_path}",
+            )
+        if old_path in file_diffs:
+            raise PatchValidationError("MALFORMED_DIFF", f"Duplicate file section: {old_path}")
+        section = [line, lines[index + 1]]
+        index += 2
+        while index < len(lines) and not lines[index].startswith("--- "):
+            section.append(lines[index])
+            index += 1
+        if not any(item.startswith("@@ ") for item in section):
+            raise PatchValidationError("MALFORMED_DIFF", f"No hunk found for {old_path}")
+        file_diffs[old_path] = section
+    if not file_diffs:
+        raise PatchValidationError("MALFORMED_DIFF", "No file diff sections found")
+    return file_diffs
+
+
 def extract_diff_paths(diff_text: str) -> list[str]:
-    """Extract affected relative file paths from a unified diff."""
-    paths: set[str] = set()
-    for line in diff_text.splitlines():
-        if line.startswith(("--- ", "+++ ")):
-            parts = line.split(maxsplit=1)
-            if len(parts) == 2:
-                raw_path = parts[1].strip()
-                # strip common diff prefixes like a/ or b/
-                cleaned = re.sub(r"^[ab]/", "", raw_path)
-                if cleaned and cleaned != "/dev/null":
-                    paths.add(cleaned)
-    return sorted(paths)
+    """Extract affected paths from a strict, modify-only unified diff."""
+    return sorted(_split_file_diffs(diff_text))
 
 
 
@@ -101,14 +146,25 @@ def validate_patch(
             f"Patch exceeds byte ceiling: {diff_bytes} bytes > {MAX_DIFF_BYTES}",
         )
 
+    if "\x00" in proposal.diff or any(
+        line.startswith(FORBIDDEN_DIFF_METADATA) for line in diff_lines
+    ):
+        raise PatchValidationError(
+            "PROTECTED_FILE_VIOLATION",
+            "File creation, deletion, rename, mode changes, binary patches, and git metadata are forbidden",
+        )
+
     # 4. Extract and validate touched paths
     affected_paths = extract_diff_paths(proposal.diff)
-    all_paths = set(affected_paths) | set(proposal.target_files)
-    if not all_paths:
-        raise PatchValidationError("NO_TARGET_FILES", "No valid target files found in patch diff")
+    declared_paths = {p.replace("\\", "/").strip() for p in proposal.target_files}
+    if len(affected_paths) > MAX_TARGET_FILES:
+        raise PatchValidationError(
+            "PATCH_TOO_LARGE",
+            f"Patch touches {len(affected_paths)} files; maximum is {MAX_TARGET_FILES}",
+        )
 
     approved_paths: list[str] = []
-    for p in all_paths:
+    for p in affected_paths:
         norm_p = p.replace("\\", "/").strip()
         # Traversal check
         if ".." in norm_p.split("/") or norm_p.startswith("/") or ":" in norm_p:
@@ -117,16 +173,19 @@ def validate_patch(
                 f"Path traversal or absolute path detected: {norm_p}",
             )
 
-        # Allowlist check: Must target app/ tree
-        # Note: diff might be "app/money.py" or "money.py" if relative to app
-        if norm_p.startswith("app/"):
-            rel_within_app = norm_p[4:]
-        else:
-            rel_within_app = norm_p
+        if not norm_p.startswith("app/"):
+            raise PatchValidationError(
+                "PROTECTED_FILE_VIOLATION",
+                f"Patch path must be rooted under app/: {norm_p}",
+            )
+        rel_within_app = norm_p[4:]
+        if not rel_within_app or rel_within_app.startswith("/"):
+            raise PatchValidationError("PROTECTED_FILE_VIOLATION", f"Invalid app path: {norm_p}")
 
         # Check for protected files
+        path_parts = {part.casefold() for part in norm_p.split("/")}
         for protected in PROTECTED_PATTERNS:
-            if protected in norm_p.split("/"):
+            if protected.casefold() in path_parts:
                 raise PatchValidationError(
                     "PROTECTED_FILE_VIOLATION",
                     f"Modification of protected resource denied: {norm_p}",
@@ -140,60 +199,68 @@ def validate_patch(
 
         approved_paths.append(norm_p)
 
+    if declared_paths and declared_paths != set(approved_paths):
+        raise PatchValidationError(
+            "TARGET_MISMATCH",
+            "Declared target_files must exactly match the diff header paths",
+        )
+
     return True, sorted(approved_paths)
 
 
 def apply_patch_to_file(original_content: str, patch_diff: str) -> str:
-    """Apply a unified diff hunk to single file content."""
+    """Apply a strict unified diff, rejecting stale or forged hunk context."""
     lines = original_content.splitlines(keepends=True)
-    # Parse diff lines
     diff_lines = patch_diff.splitlines(keepends=True)
-    
-    # Simple, reliable hunk application for clean patches
-    # If standard patch tools are unavailable, perform precise block replacement
-    # by matching unified diff hunks
     hunk_regex = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-    
     current_line = 0
     result: list[str] = []
-    hunk_started = False
-    
     i = 0
     while i < len(diff_lines):
         dline = diff_lines[i]
         match = hunk_regex.match(dline)
-        if match:
-            hunk_started = True
-            orig_start = int(match.group(1)) - 1
-            # copy unchanged lines up to hunk start
-            while current_line < orig_start and current_line < len(lines):
-                result.append(lines[current_line])
-                current_line += 1
+        if not match:
             i += 1
             continue
-            
-        if hunk_started:
-            if dline.startswith(" "):
-                # Context line: verify and advance
-                if current_line < len(lines):
+
+        orig_start = int(match.group(1)) - 1
+        expected_old = int(match.group(2) or "1")
+        expected_new = int(match.group(4) or "1")
+        if orig_start < current_line or orig_start > len(lines):
+            raise PatchValidationError("PATCH_APPLICATION_FAILED", "Overlapping or out-of-range hunk")
+        result.extend(lines[current_line:orig_start])
+        current_line = orig_start
+        old_seen = new_seen = 0
+        i += 1
+        while i < len(diff_lines) and not hunk_regex.match(diff_lines[i]):
+            item = diff_lines[i]
+            if item.startswith(("--- ", "+++ ")):
+                break
+            if item.startswith("\\"):
+                i += 1
+                continue
+            if not item or item[0] not in " +-":
+                raise PatchValidationError("MALFORMED_DIFF", f"Invalid hunk line: {item!r}")
+            if item[0] in " -":
+                if current_line >= len(lines) or lines[current_line].rstrip("\r\n") != item[1:].rstrip("\r\n"):
+                    raise PatchValidationError(
+                        "PATCH_APPLICATION_FAILED",
+                        "Patch hunk context does not match the pinned source",
+                    )
+                if item[0] == " ":
                     result.append(lines[current_line])
-                    current_line += 1
-                i += 1
-            elif dline.startswith("-"):
-                # Deleted line: skip in original
+                    new_seen += 1
                 current_line += 1
-                i += 1
-            elif dline.startswith("+"):
-                # Added line: insert
-                result.append(dline[1:])
-                i += 1
-            elif dline.startswith("\\"):
-                # "\ No newline at end of file"
-                i += 1
+                old_seen += 1
             else:
-                i += 1
-        else:
+                result.append(item[1:])
+                new_seen += 1
             i += 1
+        if old_seen != expected_old or new_seen != expected_new:
+            raise PatchValidationError(
+                "MALFORMED_DIFF",
+                f"Hunk line counts do not match header: old {old_seen}/{expected_old}, new {new_seen}/{expected_new}",
+            )
 
     # Append any remaining lines after all hunks
     while current_line < len(lines):
@@ -209,41 +276,26 @@ def apply_patch_to_dir(
     dest_dir: Path,
 ) -> tuple[Path, str]:
     """Apply validated patch proposal to a copy of base_app_dir in dest_dir."""
+    current_hash = source_hash_for_dir(base_app_dir)
+    validate_patch(proposal, current_hash)
+
     # Ensure fresh copy of base_app_dir into dest_dir
     if dest_dir.exists():
         shutil.rmtree(dest_dir)
     shutil.copytree(base_app_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-    # Split diff by file
-    file_diffs: dict[str, list[str]] = {}
-    current_file: str | None = None
-    
-    for line in proposal.diff.splitlines(keepends=True):
-        if line.startswith("--- "):
-            raw = line.split(maxsplit=1)[1].strip()
-            clean = re.sub(r"^[ab]/", "", raw)
-            clean = clean.removeprefix("app/")
-            current_file = clean
-            file_diffs[current_file] = [line]
-        elif line.startswith("+++ "):
-            raw = line.split(maxsplit=1)[1].strip()
-            clean = re.sub(r"^[ab]/", "", raw)
-            clean = clean.removeprefix("app/")
-            current_file = clean
-            if current_file in file_diffs:
-                file_diffs[current_file].append(line)
-            else:
-                file_diffs[current_file] = [line]
-
-        elif current_file:
-            file_diffs[current_file].append(line)
-
-    if not file_diffs:
-        raise PatchValidationError("MALFORMED_DIFF", "No file diff hunks could be parsed")
+    file_diffs = {
+        path.removeprefix("app/"): section
+        for path, section in _split_file_diffs(proposal.diff).items()
+    }
 
     for rel_file, dlines in file_diffs.items():
         target_file = dest_dir / rel_file
-        if not target_file.exists():
+        if (
+            not target_file.exists()
+            or target_file.is_symlink()
+            or not target_file.resolve().is_relative_to(dest_dir.resolve())
+        ):
             raise PatchValidationError(
                 "PATCH_APPLICATION_FAILED",
                 f"Target file does not exist in candidate directory: {rel_file}",
@@ -284,17 +336,18 @@ def get_canonical_ac01_repair_diff() -> str:
     """Minimal canonical repair diff for AC-01 (schemas.py and services.py)."""
     return """--- a/app/schemas.py
 +++ b/app/schemas.py
-@@ -13,3 +13,2 @@
+@@ -13,2 +13,2 @@
 -    amount: str  # Fault: renamed from total_amount
 -    # Fault: status field is missing
 +    total_amount: str
 +    status: str
 --- a/app/services.py
 +++ b/app/services.py
-@@ -24,2 +24,2 @@
+@@ -24,2 +24,3 @@
 -        "amount": total, # Fault applied here
 +        "total_amount": total,
 +        "status": "processed"
+     }
 """
 
 
@@ -307,9 +360,10 @@ def get_shallow_mc01_repair_diff() -> str:
 -    \"\"\"Faulty: premature rounding of each line.\"\"\"
 +    \"\"\"Shallow fix: rounds to 2 decimals using float.\"\"\"
      if not lines:
-@@ -9,4 +9,4 @@
+@@ -9,5 +9,5 @@
      total = Decimal("0")
      for line in lines:
+         # Fault: Rounding each line individually before summing
 -        val = Decimal(line).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 +        val = Decimal(str(round(float(line), 2)))
          total += val

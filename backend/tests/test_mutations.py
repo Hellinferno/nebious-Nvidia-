@@ -143,17 +143,25 @@ def test_mutation_api_is_owner_scoped_and_bundle_exports_real_results(
     )
     assert created.status_code == 201
     audit_id = created.json()["audit_id"]
-    assert client.post(
-        f"/api/v1/audits/{audit_id}/verify",
-        json={"patch_id": None, "use_docker": False},
-    ).json()["verdict"] == "VERIFIED"
+    from benchproof.gate import execute_acceptance_gate
 
-    response = client.post(
+    assert execute_acceptance_gate(
+        audit_id,
+        db_path=Path(api_main.settings.database_path),
+    )["verdict"] == "VERIFIED"
+
+    blocked = client.post(
         f"/api/v1/audits/{audit_id}/mutations",
         json={"patch_id": None, "max_mutants": 3},
     )
-    assert response.status_code == 200
-    assert response.json()["strength_status"] == "WEAK"
+    assert blocked.status_code == 503
+    assert blocked.json()["detail"]["code"] == "RUNNER_UNAVAILABLE"
+    response = run_mutation_assessment(
+        audit_id,
+        max_mutants=3,
+        db_path=Path(api_main.settings.database_path),
+    )
+    assert response["strength_status"] == "WEAK"
     ledger = client.get(f"/api/v1/audits/{audit_id}/mutations")
     assert ledger.json()["status"] == "WEAK"
     denied = client.get(

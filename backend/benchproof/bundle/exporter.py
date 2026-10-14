@@ -43,7 +43,17 @@ from benchproof.storage.lifecycle import (
 SECRET_PATTERNS = [
     re.compile(r"nvapi-[A-Za-z0-9_\-]{20,}", re.IGNORECASE),
     re.compile(r"Bearer\s+[A-Za-z0-9_\-\.]{20,}", re.IGNORECASE),
-    re.compile(r"(?:api[_-]?key|secret|token)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]", re.IGNORECASE),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    re.compile(
+        r"(?:api[_-]?key|secret|token|password)\s*[:=]\s*['\"]?[A-Za-z0-9_\-\./+=]{16,}['\"]?",
+        re.IGNORECASE,
+    ),
+]
+HIDDEN_TRUTH_PATTERNS = [
+    re.compile(r"(?:^|[/\\])expected\.json(?:$|\s|[/\\])", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"(?:^|[/\\])reference(?:_repair)?(?:$|\s|[/\\])", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"\bintended_failing_checks\b", re.IGNORECASE),
 ]
 
 SAFE_FILENAME_PATTERN = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
@@ -58,13 +68,16 @@ class SafeArchivePathError(Exception):
 
 
 def scan_for_secrets(content: str, filename: str) -> None:
-    """Scan content and raise SecurityExclusionError if credentials are found."""
+    """Reject credentials and hidden evaluator truth from exported content."""
     for pattern in SECRET_PATTERNS:
         match = pattern.search(content)
         if match:
             raise SecurityExclusionError(
                 f"Credential or secret pattern matched in {filename}: {match.group(0)[:8]}..."
             )
+    for pattern in HIDDEN_TRUTH_PATTERNS:
+        if pattern.search(content):
+            raise SecurityExclusionError(f"Hidden evaluator truth reference matched in {filename}")
 
 
 def assert_safe_archive_name(filename: str) -> None:
@@ -73,6 +86,13 @@ def assert_safe_archive_name(filename: str) -> None:
         raise SafeArchivePathError(f"Unsafe archive filename: {filename}")
     if ".." in filename or filename.startswith(("/", "\\")):
         raise SafeArchivePathError(f"Traversal forbidden: {filename}")
+
+
+def assert_safe_output_path(output_path: Path) -> None:
+    """Validate the caller-selected output filename while allowing a trusted parent directory."""
+    assert_safe_archive_name(output_path.name)
+    if output_path.suffix.casefold() != ".zip":
+        raise SafeArchivePathError(f"Bundle output must use a .zip filename: {output_path.name}")
 
 
 # ── Exporter Implementation ──────────────────────────────────────────────
@@ -334,10 +354,9 @@ python scripts/replay_bundle.py --bundle benchproof-audit-{audit_id}.zip
     # Determine destination ZIP path
     if output_path is None:
         bundles_dir = Path("artifacts") / "bundles"
-        bundles_dir.mkdir(parents=True, exist_ok=True)
         output_path = bundles_dir / f"benchproof-audit-{audit_id}.zip"
-    else:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    assert_safe_output_path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write ZIP archive atomically via temp file
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:

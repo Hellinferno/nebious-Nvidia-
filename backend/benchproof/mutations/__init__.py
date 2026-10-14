@@ -252,6 +252,8 @@ def execute_mutant(
     accepted_candidate: Path,
     template: MutationTemplate,
     baseline_checks: dict[str, str],
+    *,
+    use_docker: bool = False,
 ) -> MutationResult:
     started = time.perf_counter()
     _RUNTIME_TEMP_ROOT.mkdir(parents=True, exist_ok=True)
@@ -301,7 +303,7 @@ def execute_mutant(
                 reason="one or more supporting checks did not pass on the accepted baseline",
                 duration_ms=int((time.perf_counter() - started) * 1000),
             )
-        result = verify_candidate_app(mutant_dir)
+        result = verify_candidate_app(mutant_dir, use_docker=use_docker)
         outcomes = {item["check_id"]: item["outcome"] for item in result["checks"]}
         reasons = {item["check_id"]: item["reason"] for item in result["checks"]}
         selected_outcomes = [outcomes.get(check_id, "UNKNOWN") for check_id in selected]
@@ -352,6 +354,8 @@ def run_mutation_assessment(
     patch_id: str | None = None,
     max_mutants: int = MAX_MUTANTS_PER_RUN,
     db_path: Path | None = None,
+    *,
+    use_docker: bool = False,
 ) -> dict[str, Any]:
     """Run at most three relevant fresh mutants without modifying the accepted candidate."""
     if not 1 <= max_mutants <= MAX_MUTANTS_PER_RUN:
@@ -370,14 +374,26 @@ def run_mutation_assessment(
     with tempfile.TemporaryDirectory(prefix="bp-mutation-run-", dir=_RUNTIME_TEMP_ROOT) as tmp:
         accepted_dir = Path(tmp) / "accepted" / "app"
         base_hash, patch_hash = _prepare_candidate(audit, patch_id, accepted_dir, db_path)
-        baseline = verify_candidate_app(accepted_dir, patch_hash=patch_hash)
+        baseline = verify_candidate_app(
+            accepted_dir,
+            patch_hash=patch_hash,
+            use_docker=use_docker,
+        )
         if baseline["verdict"] != "VERIFIED":
             raise MutationError(
                 "CANDIDATE_NOT_VERIFIED",
                 "Mutation strength is assessed only for a candidate that passes the protected gate",
             )
         baseline_checks = {item["check_id"]: item["outcome"] for item in baseline["checks"]}
-        results = [execute_mutant(accepted_dir, template, baseline_checks) for template in templates]
+        results = [
+            execute_mutant(
+                accepted_dir,
+                template,
+                baseline_checks,
+                use_docker=use_docker,
+            )
+            for template in templates
+        ]
         final_hash = source_hash_for_dir(accepted_dir)
     counts = {name: 0 for name in ("killed", "survived", "invalid", "skipped", "unknown")}
     for result in results:

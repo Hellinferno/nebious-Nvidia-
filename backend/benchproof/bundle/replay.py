@@ -17,12 +17,14 @@ from benchproof.bundle.validator import validate_bundle_nonexecuting
 from benchproof.domain import ReplayRecord
 from benchproof.fixtures import CANDIDATE_DIR, fixture_dir
 from benchproof.gate import verify_candidate_app
-from benchproof.patch import PatchProposal, apply_patch_to_dir
+from benchproof.patch import PatchProposal, apply_patch_to_dir, extract_diff_paths
 
 
 def replay_bundle(
     bundle_zip_path: Path,
     work_dir: Path | None = None,
+    *,
+    use_docker: bool = True,
 ) -> ReplayRecord:
     """Perform independent isolated replay of an exported evidence bundle.
 
@@ -56,6 +58,7 @@ def replay_bundle(
         manifest_data = json.loads(zf.read("manifest.json").decode("utf-8"))
         candidate_diff = zf.read("candidate.diff").decode("utf-8")
         checks_data = json.loads(zf.read("checks.json").decode("utf-8"))
+        source_manifest_data = json.loads(zf.read("source-manifest.json").decode("utf-8"))
 
     audit_id = manifest_data["audit_id"]
     fixture_id = manifest_data["fixture_id"]
@@ -84,7 +87,8 @@ def replay_bundle(
             proposal = PatchProposal(
                 patch_id=f"rep-patch-{audit_id}",
                 audit_id=audit_id,
-                base_source_hash=manifest_data.get("base_source_hash", ""),
+                base_source_hash=source_manifest_data.get("base_source_hash", ""),
+                target_files=extract_diff_paths(candidate_diff),
                 diff=candidate_diff,
             )
             apply_patch_to_dir(base_fixture, proposal, candidate_app)
@@ -92,7 +96,7 @@ def replay_bundle(
             shutil.copytree(base_fixture, candidate_app)
 
         # Step 5 & 6 & 7: Fresh isolated candidate execution & external evaluator
-        verif = verify_candidate_app(candidate_app)
+        verif = verify_candidate_app(candidate_app, use_docker=use_docker)
         replayed_verdict = verif["verdict"]
         replayed_checks_data = verif["checks"]
 
@@ -141,7 +145,7 @@ def replay_bundle(
             environment={
                 "python_version": sys.version.split()[0],
                 "platform": platform.platform(),
-                "runner": "local_isolated_runner",
+                "runner": "docker-isolated" if use_docker else "development-in-process",
             },
             created_at=datetime.now(UTC).isoformat(),
         )

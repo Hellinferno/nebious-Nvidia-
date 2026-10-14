@@ -10,6 +10,7 @@ from benchproof.api import main as api_main
 from benchproof.constraints import contract_hash
 from benchproof.domain import AuditRecord
 from benchproof.fixtures import fixture_dir, source_hash_for_dir
+from benchproof.gate import execute_acceptance_gate
 from benchproof.patch import (
     get_canonical_mc01_repair_diff,
 )
@@ -66,18 +67,27 @@ def test_api_patch_and_verify_cycle(client: TestClient) -> None:
     assert len(plist) == 1
     assert plist[0]["patch_id"] == patch_id
 
-    # 5. Execute acceptance gate verification
-    verify_res = client.post(
+    # 5. Public verification refuses the in-process development harness.
+    blocked = client.post(
         f"/api/v1/audits/{aid}/verify",
         json={"patch_id": patch_id, "use_docker": False},
     )
-    assert verify_res.status_code == 200
-    gate_data = verify_res.json()
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"]["code"] == "ISOLATION_REQUIRED"
+    unavailable = client.post(
+        f"/api/v1/audits/{aid}/verify",
+        json={"patch_id": patch_id, "use_docker": True},
+    )
+    assert unavailable.status_code == 503
+    assert unavailable.json()["detail"]["code"] == "RUNNER_UNAVAILABLE"
+
+    # The explicit development-only library harness remains testable.
+    gate_data = execute_acceptance_gate(aid, patch_id=patch_id, db_path=db)
     assert gate_data["verdict"] == "VERIFIED"
     assert gate_data["failing_checks"] == []
     assert "amount-boundary" in gate_data["passing_checks"]
 
-    # 6. Check gate status endpoint
+    # 6. Check gate status endpoint after trusted development setup.
     status_res = client.get(f"/api/v1/audits/{aid}/gate").json()
     assert status_res["gate_verdict"] == "VERIFIED"
     assert status_res["run_state"] == "COMPLETED"

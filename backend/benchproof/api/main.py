@@ -767,7 +767,7 @@ def get_patch_by_id(
 
 class VerifyCandidateRequest(BaseModel):
     patch_id: str | None = None
-    use_docker: bool = False
+    use_docker: bool = True
 
 
 @app.post("/api/v1/audits/{audit_id}/verify")
@@ -785,6 +785,19 @@ def verify_audit_candidate(
         if patch is None or patch["audit_id"] != audit_id:
             raise _error(409, "PATCH_NOT_FOUND", "Patch does not belong to this audit")
 
+    if not req.use_docker:
+        raise _error(
+            409,
+            "ISOLATION_REQUIRED",
+            "Public verification requires the isolated Docker runner; in-process execution is disabled",
+        )
+    if settings.benchproof_runner != "docker":
+        raise _error(
+            503,
+            "RUNNER_UNAVAILABLE",
+            "Verification is blocked until BENCHPROOF_RUNNER=docker is configured and ready",
+        )
+
     from benchproof.gate import GateError, execute_acceptance_gate
 
     try:
@@ -796,7 +809,10 @@ def verify_audit_candidate(
         )
         return result
     except GateError as e:
-        status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "PATCH_NOT_FOUND"} else 422
+        if e.code == "RUNNER_UNAVAILABLE":
+            status_code = 503
+        else:
+            status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "PATCH_NOT_FOUND"} else 422
         raise _error(status_code, e.code, e.message)
 
 
@@ -832,6 +848,13 @@ def run_audit_mutations(
     owner_ref: str = Depends(_request_owner),
 ) -> dict[str, Any]:
     _owned_audit(audit_id, owner_ref)
+    if settings.benchproof_runner != "docker":
+        raise _error(
+            503,
+            "RUNNER_UNAVAILABLE",
+            "Mutation assessment is blocked until the isolated Docker runner is configured and ready",
+        )
+    from benchproof.gate import GateError
     from benchproof.mutations import MutationError, run_mutation_assessment
     from benchproof.patch import PatchValidationError
 
@@ -841,6 +864,7 @@ def run_audit_mutations(
             patch_id=req.patch_id,
             max_mutants=req.max_mutants,
             db_path=_db(),
+            use_docker=True,
         )
     except MutationError as exc:
         status = 409 if exc.code in {
@@ -850,6 +874,9 @@ def run_audit_mutations(
         raise _error(status, exc.code, exc.message) from exc
     except PatchValidationError as exc:
         raise _error(409, exc.code, exc.message) from exc
+    except GateError as exc:
+        status = 503 if exc.code == "RUNNER_UNAVAILABLE" else 422
+        raise _error(status, exc.code, exc.message) from exc
 
 
 @app.get("/api/v1/audits/{audit_id}/mutations")
@@ -972,6 +999,13 @@ def replay_audit_bundle(
 ) -> dict[str, Any]:
     _owned_audit(audit_id, owner_ref)
 
+    if settings.benchproof_runner != "docker":
+        raise _error(
+            503,
+            "RUNNER_UNAVAILABLE",
+            "Replay is blocked until BENCHPROOF_RUNNER=docker is configured and ready",
+        )
+
     from benchproof.bundle import export_bundle, replay_bundle
 
     bundles_dir = Path("artifacts") / "bundles"
@@ -979,7 +1013,13 @@ def replay_audit_bundle(
     if not bundle_path.exists():
         bundle_path, _ = export_bundle(audit_id, db_path=_db())
 
-    replay_rec = replay_bundle(bundle_path)
-    return replay_rec.model_dump()
+    from benchproof.gate import GateError
+
+    try:
+        replay_rec = replay_bundle(bundle_path, use_docker=True)
+        return replay_rec.model_dump()
+    except GateError as exc:
+        status = 503 if exc.code == "RUNNER_UNAVAILABLE" else 422
+        raise _error(status, exc.code, exc.message) from exc
 
 

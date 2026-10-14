@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from benchproof.baseline import run_baseline
 from benchproof.constraints import contract_hash, get_constraint
@@ -34,11 +34,13 @@ ALLOWED_PROBES = {"observe_invoice", "amount_boundary_probe", "api_schema_probe"
 
 
 class Hypothesis(BaseModel):
-    hypothesis_id: str
-    constraint_id: str
-    source_location: str
-    claim: str
-    refutation_condition: str
+    model_config = ConfigDict(extra="forbid")
+
+    hypothesis_id: str = Field(min_length=1, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
+    constraint_id: str = Field(min_length=1, max_length=64)
+    source_location: str = Field(min_length=1, max_length=240)
+    claim: str = Field(min_length=1, max_length=1_000)
+    refutation_condition: str = Field(min_length=1, max_length=1_000)
     proposed_probe: str = "observe_invoice"
 
     @field_validator("constraint_id")
@@ -59,10 +61,12 @@ class Hypothesis(BaseModel):
 
 
 class DiagnosisProposal(BaseModel):
-    hypotheses: list[Hypothesis] = Field(max_length=2)
+    model_config = ConfigDict(extra="forbid")
+
+    hypotheses: list[Hypothesis] = Field(min_length=1, max_length=2)
     selected_probe: str = "observe_invoice"
     probe_args: dict[str, Any] = Field(default_factory=dict)
-    risk_reasons: list[str] = Field(default_factory=list)
+    risk_reasons: list[str] = Field(default_factory=list, max_length=10)
 
     @field_validator("selected_probe")
     @classmethod
@@ -70,6 +74,22 @@ class DiagnosisProposal(BaseModel):
         if v not in ALLOWED_PROBES:
             raise ValueError(f"Disallowed or unknown probe: {v}")
         return v
+
+    @field_validator("probe_args")
+    @classmethod
+    def validate_probe_args(cls, value: dict[str, Any]) -> dict[str, Any]:
+        # No current probe consumes model-selected arguments. Reject instead of
+        # persisting an apparently authoritative but unenforced instruction.
+        if value:
+            raise ValueError("probe_args must be empty for the approved probes")
+        return {}
+
+    @field_validator("risk_reasons")
+    @classmethod
+    def bound_risk_reasons(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() or len(item) > 500 for item in value):
+            raise ValueError("risk reasons must be non-empty and at most 500 characters")
+        return value
 
 
 class InvestigationError(Exception):

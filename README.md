@@ -34,8 +34,8 @@ Remote cancellation stays `CANCEL_PENDING` until worker reconciliation confirms 
 Owner access currently uses a browser-generated opaque capability in the required
 `X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
 not a claim of production identity authentication. Hosted sandbox execution remains
-blocked because Nebius Sandboxes spawn permission has not been granted. B-17
-security hardening and the final suite freeze remain next.
+blocked because Nebius Sandboxes spawn permission has not been granted. B-17 runtime
+hardening is recorded in `INTEGRITY_REPORT_v1.md`; B-18 final suite freeze is next.
 
 ## Setup (Windows, PowerShell)
 
@@ -81,7 +81,7 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 159 passed, 3 Docker skips on 13 Oct
+.\venv\Scripts\python.exe -m pytest                                   # 165 passed, 3 Docker skips on 14 Oct
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative

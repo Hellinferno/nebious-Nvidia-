@@ -24,6 +24,7 @@ from benchproof.evaluator.harness import (
     required_check_ids,
 )
 from benchproof.evaluator.observations import evaluate_observations
+from benchproof.execution.base import RunnerUnavailable, prepare_snapshot
 from benchproof.execution.docker_runner import DockerRunner
 from benchproof.fixtures import fixture_dir, source_hash_for_dir
 from benchproof.patch import (
@@ -56,19 +57,34 @@ def verify_candidate_app(
     ehash = evaluator_hash()
     image_hash = "local-in-process"
 
-    # 1. Collect Observations in isolated runner
+    # 1. Collect observations. In-process execution is retained only for
+    # explicit development/library calls; public API entry points require the
+    # Docker branch and must never fall back to this path.
     obs: dict[str, Any]
+    isolation: dict[str, Any]
     if use_docker:
         runner = DockerRunner()
-        avail, _ = runner.available()
-        if avail:
-            res = runner.run_candidate(candidate_app_dir, timeout_s=30)
-            obs = res.observations or {"error": res.logs, "route": {}, "worker": {}}
-            image_hash = res.image_digest
-        else:
-            obs = collect_observations_in_process(candidate_app_dir)
+        available, detail = runner.available()
+        if not available:
+            raise GateError("RUNNER_UNAVAILABLE", f"Isolated Docker runner unavailable: {detail}")
+        snapshot = prepare_snapshot(candidate_app_dir)
+        try:
+            try:
+                res = runner.run_observation(snapshot, timeout_s=30)
+            except RunnerUnavailable as exc:
+                raise GateError("RUNNER_UNAVAILABLE", str(exc)) from exc
+            obs = res.observations or {
+                "error": res.error or "isolated runner produced no observations",
+                "route": {},
+                "worker": {},
+            }
+            image_hash = res.image_ref or runner.image_ref()
+            isolation = res.isolation
+        finally:
+            snapshot.cleanup()
     else:
         obs = collect_observations_in_process(candidate_app_dir)
+        isolation = {"enforced": False, "mode": "development-in-process"}
 
     # 2. Trusted external evaluation (computed outside candidate)
     worker_file = candidate_app_dir / "worker.py"
@@ -110,6 +126,7 @@ def verify_candidate_app(
         "unknown_checks": unknown,
         "checks": [cr.model_dump() for cr in check_results],
         "forged_pass_prevented": forged_pass_prevented,
+        "isolation": isolation,
     }
 
 

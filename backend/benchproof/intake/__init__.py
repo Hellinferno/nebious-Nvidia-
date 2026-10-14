@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -63,16 +64,35 @@ def inspect_source_tree(app_dir: Path) -> dict[str, Any]:
     manifest: dict[str, str] = {}
 
     for root, dirs, filenames in os.walk(app_dir):
+        root_path = Path(root)
+        if root_path.is_symlink():
+            raise IntakeError(f"Symbolic-link directory forbidden: {root_path}")
         # Filter out disallowed dirs in-place
-        dirs[:] = [d for d in dirs if d not in DISALLOWED_DIRS]
+        allowed_dirs: list[str] = []
+        for dirname in dirs:
+            child = root_path / dirname
+            if child.is_symlink():
+                raise IntakeError(f"Symbolic-link directory forbidden: {child}")
+            if dirname not in DISALLOWED_DIRS:
+                allowed_dirs.append(dirname)
+        dirs[:] = allowed_dirs
         for fname in filenames:
             if fname in DISALLOWED_NAMES or fname.endswith(".pyc"):
                 continue
             fpath = Path(root) / fname
             rel = fpath.relative_to(app_dir.parent).as_posix()
             validate_relative_path(rel)
+
+            file_stat = fpath.lstat()
+            if fpath.is_symlink() or not stat.S_ISREG(file_stat.st_mode):
+                raise IntakeError(f"Only regular, non-linked files are allowed: {rel}")
+
+            if len(files) >= MAX_FILE_COUNT:
+                raise IntakeError(
+                    f"File count exceeds maximum ({len(files) + 1} > {MAX_FILE_COUNT})"
+                )
             
-            size = fpath.stat().st_size
+            size = file_stat.st_size
             if size > MAX_FILE_BYTES:
                 raise IntakeError(f"File exceeds maximum size ({size} > {MAX_FILE_BYTES}): {rel}")
             total_bytes += size
@@ -81,9 +101,6 @@ def inspect_source_tree(app_dir: Path) -> dict[str, Any]:
             
             files.append(fpath)
             manifest[rel] = hashlib.sha256(fpath.read_bytes()).hexdigest()
-
-    if len(files) > MAX_FILE_COUNT:
-        raise IntakeError(f"File count exceeds maximum ({len(files)} > {MAX_FILE_COUNT})")
 
     canonical_manifest = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
     source_hash = hashlib.sha256(canonical_manifest.encode("utf-8")).hexdigest()

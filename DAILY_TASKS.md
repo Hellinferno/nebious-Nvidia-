@@ -309,10 +309,10 @@ If limits/credits are tight, omit optional mutation execution with NOT_RUN and n
 
 ### Work in order
 
-1. [ ] Run prompt injection, evaluator/contract edit, forged PASS and stale-context negatives (60 min); all are controlled outside model intent.
-2. [ ] Test intake/diff limits, traversal/file modes, unsafe output/archive names and cross-owner access (60 min).
-3. [ ] Verify actual network/metadata denial, timeout/memory/output caps and remote cancellation reconciliation (45 min).
-4. [ ] Scan prompts/logs/build/export for secrets or hidden truth; fix failing exposed capability and record controls (30 min).
+1. [x] Run prompt injection, evaluator/contract edit, forged PASS and stale-context negatives (60 min); all are controlled outside model intent.
+2. [x] Test intake/diff limits, traversal/file modes, unsafe output/archive names and cross-owner access (60 min).
+3. [x] Verify actual network/metadata denial, timeout/memory/output caps and remote cancellation reconciliation (45 min).
+4. [x] Scan prompts/logs/build/export for secrets or hidden truth; fix failing exposed capability and record controls (30 min).
 
 ### Deliverable and acceptance evidence
 
