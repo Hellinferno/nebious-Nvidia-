@@ -42,7 +42,7 @@ candidate gate suite `gate-v12-v1` (four valid and eight invalid candidates that
 the visible smoke gate), and manifests for `graph-g8-v1`, `freshness-f6-v1`,
 `trajectory-w8-v1` and `mutants-m12-v1`. Every asset is pinned in `truth.lock.json`; the
 R6/V6 fallback is predeclared by id (D-027). Measured outcomes do not exist yet; the B-19
-configuration freeze and B-21 trials are next.
+configuration freeze (harness implemented, see below) and B-21 trials are next.
 
 Day 15 (B-22, self-review; no volunteer tester, so no user study is claimed) added a bounded
 skill catalog: twelve slash skills (`/start` … `/cancel`) that map to existing endpoints and
@@ -55,6 +55,17 @@ v2 (live delegation plus observed worker idempotency), commits state changes wit
 guards state writes on inactive audits, and computes every source, intake, dependency and
 suite-lock hash over LF-normalized bytes; the held-out lock was re-frozen for that hashing with
 unchanged assets (D-028).
+
+The B-19 fair-baseline harness (`backend/benchproof/trials/`) runs B0 (visible smoke gate),
+B1 (the NVIDIA repair agent with visible tests and the raw probe only) and B2 (the same agent
+plus graph context, protected feedback, evidence-based confirmation, the protected gate and
+repeated-candidate stopping) under one set of hard limits. Each trial writes a sealed,
+write-once record and is judged afterwards by a fresh run of the frozen protected evaluator;
+`scripts/summarize_trials.py` scores records against trusted truth. The evaluation
+configuration `backend/evaluation/eval-config-v1.json` is still a **candidate**: it becomes
+`frozen` only after the runtime is committed (`python scripts/freeze_eval_config.py`), and a
+`--final` run refuses to start until then. Only development dry runs exist; no measured
+outcome is claimed (D-029).
 
 ## Setup (Windows, PowerShell)
 

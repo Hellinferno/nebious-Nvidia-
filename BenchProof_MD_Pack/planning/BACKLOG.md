@@ -169,7 +169,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-17 — Integrity and execution hardening · P0
 
-**Owner:** Ravi. **Dependencies:** B-09/B-10/B-13. **Target:** 16 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-09/B-10/B-13. **Target:** 16 Oct. **Status:** DONE 14 Oct (pulled forward; commit `093353e`, second pass in the Day 15 change). `INTEGRITY_REPORT_v1.md` with its addendum, `backend/tests/test_security_day13.py` and `test_hardening_day15.py`; `artifacts/integrity/day13_integrity.json` records forged-PASS, missing-output, hidden-truth, secret-exclusion and live Docker runtime-isolation controls as PASS. Limitations kept open: hosted Nebius remote termination is untested (no sandbox access) and the owner header is not production identity.
 
 **Work:** Run prompt-injection, protected-edit, fake-PASS, stale-graph, secret, traversal/ownership and actual network/resource/termination negatives.
 
@@ -189,7 +189,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-19 — Fair baseline harness and configuration freeze · P0 reduced; P1 full
 
-**Owner:** Ravi. **Dependencies:** B-18/B-04/B-10. **Target:** 20 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-18/B-04/B-10. **Target:** 20 Oct. **Status:** IN_PROGRESS (15 Oct, pulled forward). Implemented in `benchproof.trials`: B0 visible gate, one NVIDIA repair agent shared by B1 (visible tests and raw probe only) and B2 (plus graph context, protected feedback, evidence-based confirmation, gate acceptance and repeated-candidate stop), shared hard limits, balanced predetermined R12/R6 plans, sealed write-once trial records with INTERRUPTED handling, a fresh frozen-evaluator final run per trial, and the truth-based summary (`scripts/run_trials.py`, `scripts/summarize_trials.py`); a hand-counted artificial record set matches the script (`tests/test_trials.py`). `backend/evaluation/eval-config-v1.json` is a **candidate** configuration (`210affd887e92863…`): it cannot be `frozen` until the runtime source is committed, and the plan sequences the final freeze after the B-20 deployment path. Pinned model present in the live catalog 15 Oct (listing only); the official price page could not be read, so the price snapshot stays `NOT_RECORDED` and cost unknown. No live repair trial has been run.
 
 **Work:** Implement B0 smoke, B1 same agent minus assurance and B2, shared final evaluator and immutable trial/summary records. Freeze model/prompts/thresholds/image/budgets.
 

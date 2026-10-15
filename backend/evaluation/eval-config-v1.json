@@ -1,0 +1,207 @@
+{
+  "config_hash": "210affd887e92863543e4a2d2749534ba98e2c8a57203c5e0402016600d0460e",
+  "config_id": "eval-config-v1",
+  "created_at": "2026-10-15T08:28:05.856020+00:00",
+  "freeze_blockers": [
+    "runtime source has uncommitted changes; commit it, then refreeze"
+  ],
+  "freeze_status": "candidate",
+  "identity": {
+    "budgets": {
+      "execution_timeout_s": 30,
+      "max_executions": 12,
+      "max_model_calls": 6,
+      "max_output_tokens_per_call": 1536,
+      "max_patches": 2,
+      "max_prompt_chars": 24000,
+      "max_total_tokens": 24000,
+      "max_wall_s": 300
+    },
+    "evaluator": {
+      "contract_hash": "6d5b95ce4dbc2dbaf49290a9764169e600df4a2fcc831907345b67a18f547ba2",
+      "evaluator_hash": "279684675b8c44e3e6a63acd7e5143a6b16a1bd9421c94fd457cc41d772036df",
+      "required_check_ids": [
+        "amount-boundary",
+        "api-field-presence",
+        "api-status-code",
+        "caller-consistency",
+        "idempotency-conflict",
+        "idempotency-duplicate",
+        "worker-caller-path"
+      ],
+      "smoke_version": "visible-smoke-v1",
+      "worker_caller_path_version": 2
+    },
+    "graph": {
+      "builder_hash": "9fda4c93cdbae434c40e2cc834935e237e001d7ed2717b714e0dd06706f8ecb5"
+    },
+    "model": {
+      "format_repairs_per_call": 1,
+      "max_output_tokens": 1536,
+      "model_id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "provider": "nebius-token-factory",
+      "response_format": "json_object",
+      "temperature": 0.0
+    },
+    "patch_limits": {
+      "max_diff_bytes": 10000,
+      "max_diff_lines": 100,
+      "max_target_files": 3
+    },
+    "prompts": {
+      "diagnose_system": "413145dffb2279db5f6fe9b0a80bf53621dac97e5253464d2cbd0aff2f98bf6c",
+      "diagnosis_shape": "8e9b119fa45d564d1a636aab46dfff01e192eeb357de40ec0495183cd6334eaf",
+      "edit_rules": "c55e9f7c9e8c4d39ea58d14a7141c89ec61228c879ab764b08da0a9f7c35a485",
+      "no_patch_shape": "826c89b9c3f0f6ddee065c044d71c859b3ea8e3872d777cb7d3c7f1e4e07a533",
+      "patch_shape": "4cc60c204097e93247b7e2c30f57347259e1dfddd047aecd6921e908e6eece1c",
+      "probe_description": "664fbc03fdfc5b51657385204703ae22a01cdd9865eabf1dd6e61b21b5649928",
+      "repair_system": "9c2595acc3527cf2914ee7b35a5ddce4bc9d0093b4abfa6bc11a2027784cdb73",
+      "task_statement": "7aa61fd7ad37ec2730a661a0880e8477aee82e1848b766b6eafa8b5d052e3a93",
+      "visible_tests_description": "081916831b73b2478a2ee57147b757e0f40a09c78bf058bada50cfdaf230572d"
+    },
+    "runner": {
+      "executor": "docker-local",
+      "image": "benchproof-candidate:dev",
+      "image_ref": "benchproof-candidate:dev@sha256:fbe0b348a6ad781e739a639889a82a4a0d5ec9ce3907a7cfef95694ed0e9f4e9"
+    },
+    "runtime_code_hash": "d18668cc5066633f9de81e898837a7d408f001d98122801d4ebe99db6b86ee20",
+    "schemas": {
+      "diagnosis": "fecab530e3470f9e4eaed84f5d305360712fb6880835233fade0df2ed19a4183",
+      "repair": "9a0c77beba097aa0bf2dffdeea85042b23dae0105d88cf090be1432aa98fde74"
+    },
+    "suites": {
+      "fallback": "repair-r6-v1",
+      "lock_hash": "efe61ad8c4b0df56e1f188c1a369ba81cc3bd7b109bc0d353056e47b2b1d0886",
+      "plans": {
+        "repair-r12-v1": {
+          "case_ids": [
+            "HO-01",
+            "HO-02",
+            "HO-03",
+            "HO-04",
+            "HO-05",
+            "HO-06",
+            "HO-07",
+            "HO-08",
+            "HO-09",
+            "HO-10",
+            "HO-11",
+            "HO-12"
+          ],
+          "plan_hash": "2032ca8123998e685a06e48cecbf83090c4eb5c510e9e69cbfc6a7579172124a",
+          "trials": {
+            "B0": 12,
+            "B1": 36,
+            "B2": 36
+          }
+        },
+        "repair-r6-v1": {
+          "case_ids": [
+            "HO-01",
+            "HO-02",
+            "HO-03",
+            "HO-04",
+            "HO-07",
+            "HO-10"
+          ],
+          "plan_hash": "2dc1e005e02c0d7bcc574cd006ddd77fb76275a2fdd4eddf1c56f7edaaea5dbb",
+          "trials": {
+            "B0": 6,
+            "B1": 18,
+            "B2": 18
+          }
+        }
+      },
+      "selected": "repair-r12-v1"
+    },
+    "trajectory": {
+      "fingerprint_rule": "trajectory-fingerprint-v1",
+      "repeat_threshold": 2
+    }
+  },
+  "price_snapshot": {
+    "reason": "no dated Token Factory price was captured; cost is reported as unknown",
+    "status": "NOT_RECORDED"
+  },
+  "runtime": {
+    "git_head": "08866509a510def009e860d066e2e5df94b59d2b",
+    "runtime_paths": [
+      "backend/benchproof",
+      "backend/runner/launcher"
+    ],
+    "runtime_paths_clean": false
+  },
+  "schema_version": "benchproof/eval-config-v1",
+  "systems": {
+    "B0": {
+      "actions": [
+        "one visible run"
+      ],
+      "excluded": [
+        "model",
+        "repair"
+      ],
+      "information": [
+        "original source",
+        "visible-smoke-v1 results"
+      ],
+      "name": "visible smoke gate"
+    },
+    "B1": {
+      "actions": [
+        "diagnose",
+        "up to two full-file patches",
+        "submit or withdraw"
+      ],
+      "excluded": [
+        "graph context",
+        "protected check outcomes",
+        "protected gate",
+        "trajectory stopping",
+        "decision ledger"
+      ],
+      "final_candidate": "latest applied patch unless the agent withdrew; the agent cannot judge success",
+      "information": [
+        "task statement",
+        "accepted constraints",
+        "full app source",
+        "probe description",
+        "visible smoke results",
+        "raw probe observation"
+      ],
+      "name": "same NVIDIA repair agent without assurance orchestration"
+    },
+    "B2": {
+      "actions": [
+        "diagnose",
+        "up to two full-file patches",
+        "BLOCKED"
+      ],
+      "final_candidate": "gate-verified candidate, otherwise the unchanged source",
+      "information": [
+        "everything B1 receives",
+        "engineering-state graph context",
+        "protected check observations (contract-level)"
+      ],
+      "name": "BenchProof runtime",
+      "not_exercised": [
+        "decision ledger (a fresh trial has no decisions)",
+        "recovery replan"
+      ],
+      "policy": [
+        "a finding is CONFIRMED only by a failing protected check",
+        "repair only after a protected failure",
+        "the protected gate alone accepts a candidate",
+        "an identical rejected candidate stops as STALLED before execution"
+      ]
+    }
+  },
+  "worst_case_usage": {
+    "basis": "hard per-trial limits; actual use is reconciled in every trial record",
+    "final_evaluator_executions": 72,
+    "model_calls": 432,
+    "model_trials": 72,
+    "system_executions": 876,
+    "total_tokens": 1728000
+  }
+}

@@ -395,10 +395,10 @@ If a host is ephemeral or background workers fail, use the recorded tested alter
 
 ### Work in order
 
-1. [ ] Implement B0 visible gate and B1 same NVIDIA agent without assurance; share source/task/constraints and hard limits with B2 (60 min).
-2. [ ] Implement immutable trial records/common final evaluator/summary script; manually verify a tiny artificial record set (60 min).
-3. [ ] Freeze runtime commit, prompts/model, contract/evaluator/image, graph/fingerprint rules, budgets and selected suite plan (30–45 min).
-4. [ ] Recheck event rules, catalog/access/prices and worst-case benchmark usage versus reserves (30 min); prepare balanced trial order.
+1. [x] Implement B0 visible gate and B1 same NVIDIA agent without assurance; share source/task/constraints and hard limits with B2 (60 min). — 15 Oct (pulled forward): `benchproof.trials.systems`; B1 and B2 share prompts, schemas, model parameters and limits, and B2 adds only the assurance treatment.
+2. [x] Implement immutable trial records/common final evaluator/summary script; manually verify a tiny artificial record set (60 min). — 15 Oct: sealed write-once records, fresh frozen-evaluator final run, `scripts/summarize_trials.py`; a nine-trial hand-counted set matches the script. Development dry runs only (mock provider; in-process and Docker), no measurement.
+3. [ ] Freeze runtime commit, prompts/model, contract/evaluator/image, graph/fingerprint rules, budgets and selected suite plan (30–45 min). — 15 Oct: tooling done and `backend/evaluation/eval-config-v1.json` written as a **candidate** (`210affd887e92863…`); it becomes `frozen` only after the runtime is committed and refrozen, and the plan puts the final freeze after the B-20 deployment path.
+4. [ ] Recheck event rules, catalog/access/prices and worst-case benchmark usage versus reserves (30 min); prepare balanced trial order. — 15 Oct: balanced R12/R6 order and worst-case usage (72 model trials × 24,000 tokens) done; pinned model present in the live catalog (listing only, no inference). Not done: the official price page was unreadable (price `NOT_RECORDED`, cost unknown), event rules not rechecked, credit balance still unconfirmed.
 
 ### Deliverable and acceptance evidence
 

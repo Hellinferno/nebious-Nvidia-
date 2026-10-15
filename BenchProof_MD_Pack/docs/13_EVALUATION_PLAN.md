@@ -74,6 +74,8 @@ If targets fail, report actual outcomes and narrow claims. Do not discard a seed
 
 An ambiguous submission or failed action cannot disappear into an undocumented retry. Recovery is within the original trial and budget; a new independent trial is explicitly numbered and counted.
 
+Implemented protocol (B-19, D-029): `scripts/run_trials.py` executes the predetermined plan from `benchproof.trials` and `scripts/summarize_trials.py` computes the tables below from the sealed records. Shared hard limits per B1/B2 trial are 6 model calls including format repairs, 1,536 output tokens per call, 24,000 prompt characters per call, 24,000 tokens, 12 executions, 2 patches and 300 s. Diagnosis is scored at the accepted-constraint level and is correct only with an executed probe whose trusted re-judgment shows an intended failure; a correct constraint named without that evidence is reported as claim-only. B0's diagnosis column is detection by a failing visible check. The harmful-clean-change count is automatic (any changed final candidate on a clean case) and still requires the manual source review above.
+
 ## Release changes and uncertainty
 
 Functional changes to prompts, graph/context selection, policy, check/oracle, model or runner require affected versioned reruns. UI/docs-only changes need appropriate checks, not an automatic full benchmark. If final outcomes were used to tune, call later runs regression evaluation or obtain fresh held-out variants.
