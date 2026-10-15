@@ -16,8 +16,13 @@ from benchproof.domain import (
     DecisionReviewStatus,
     DecisionStatus,
 )
-from benchproof.fixtures import source_hash_for_dir
-from benchproof.storage import list_decisions, save_decision, update_decision_freshness
+from benchproof.fixtures import canonical_source_bytes, source_hash_for_dir
+from benchproof.storage import (
+    get_decision,
+    list_decisions,
+    save_decision,
+    update_decision_freshness,
+)
 
 
 class DecisionError(ValueError):
@@ -42,7 +47,8 @@ def _candidate_path(app_dir: Path, requested: str) -> tuple[str, Path]:
 
 
 def _file_hash(path: Path) -> str | None:
-    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+    # LF-normalized so a declared dependency stays CURRENT across CRLF/LF checkouts.
+    return hashlib.sha256(canonical_source_bytes(path)).hexdigest() if path.is_file() else None
 
 
 def create_decision(
@@ -135,6 +141,17 @@ def create_decision(
         reviewed_at=now if review_status == DecisionReviewStatus.REVIEWED else None,
     )
     save_decision(audit_id, decision, db_path)
+    if supersedes:
+        prior = get_decision(supersedes, db_path)
+        if prior is not None and prior["status"] != DecisionStatus.SUPERSEDED.value:
+            update_decision_freshness(
+                prior["decision_id"],
+                DecisionStatus.SUPERSEDED.value,
+                prior["dependencies"],
+                prior["current_versions"],
+                prior.get("stale_reason") or f"Superseded by {decision.decision_id}",
+                db_path,
+            )
     return decision
 
 
@@ -196,7 +213,10 @@ def refresh_decisions(
             dependencies.append(updated)
 
         was_current = decision["status"] == DecisionStatus.CURRENT.value
-        if decision["status"] == DecisionStatus.STALE.value:
+        if decision["status"] == DecisionStatus.SUPERSEDED.value:
+            status = DecisionStatus.SUPERSEDED.value
+            stale_reason = decision["stale_reason"]
+        elif decision["status"] == DecisionStatus.STALE.value:
             status = DecisionStatus.STALE.value
             stale_reason = decision["stale_reason"] or "Previously invalidated; re-review required"
         elif reasons:

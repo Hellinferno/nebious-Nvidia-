@@ -12,6 +12,7 @@ oracle in `benchproof.evaluator.observations`.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib
 import importlib.util
@@ -47,7 +48,7 @@ def evaluator_hash() -> str:
     h = hashlib.sha256()
     for p in [*sorted(here.glob("*.py")), *([launcher] if launcher.exists() else [])]:
         h.update(p.name.encode())
-        h.update(p.read_bytes())
+        h.update(p.read_bytes().replace(b"\r\n", b"\n"))  # platform-independent
     return h.hexdigest()
 
 
@@ -111,11 +112,17 @@ def collect_observations_in_process(app_dir: Path) -> dict[str, Any]:
         obs["route"]["first"] = call(BOUNDARY_LINES)
         obs["route"]["second"] = call(BOUNDARY_LINES)
         obs["route"]["conflict"] = call(CONFLICT_LINES)
-        try:
-            worker.handle_invoice_job("t2", "r2", BOUNDARY_LINES)
-            obs["worker"] = {"stored_receipt": repository.get_receipt("t2", "r2"), "error": None}
-        except Exception as e:  # noqa: BLE001 — candidate failure is data
-            obs["worker"] = {"stored_receipt": None, "error": f"{type(e).__name__}: {e}"[:200]}
+
+        def worker_job(lines: list[str]) -> dict[str, Any]:
+            try:
+                worker.handle_invoice_job("t2", "r2", lines)
+                return {"stored_receipt": copy.deepcopy(repository.get_receipt("t2", "r2")), "error": None}
+            except Exception as e:  # noqa: BLE001 — candidate failure is data
+                return {"stored_receipt": None, "error": f"{type(e).__name__}: {e}"[:200]}
+
+        obs["worker"] = worker_job(BOUNDARY_LINES)
+        obs["worker"]["repeat"] = worker_job(BOUNDARY_LINES)
+        obs["worker"]["conflict"] = worker_job(CONFLICT_LINES)
     except Exception as e:  # noqa: BLE001 — candidate crash is data
         obs["error"] = f"{type(e).__name__}: {e}"[:300]
     finally:

@@ -213,6 +213,29 @@ def _reserve_executions(audit_id: str, requested: int, db_path: Path | None) -> 
         conn.close()
 
 
+def _release_executions(audit_id: str, count: int, db_path: Path | None) -> None:
+    """Give back reserved executions that were never spent (validation or baseline failure)."""
+    if count <= 0:
+        return
+    conn = _connect(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT reservations FROM audits WHERE audit_id=?", (audit_id,)).fetchone()
+        if row is None:
+            conn.execute("ROLLBACK")
+            return
+        reservations = json.loads(row["reservations"] or "{}")
+        used = int(reservations.get("mutation_executions", 0))
+        reservations["mutation_executions"] = max(0, used - count)
+        conn.execute(
+            "UPDATE audits SET reservations=? WHERE audit_id=?",
+            (json.dumps(reservations, sort_keys=True), audit_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _prepare_candidate(
     audit: dict[str, Any], patch_id: str | None, destination: Path, db_path: Path | None
 ) -> tuple[str, str | None]:
@@ -382,19 +405,33 @@ def run_mutation_assessment(
     if family is None:
         raise MutationError("NO_RELEVANT_TEMPLATES", "No mutation family is mapped to this fixture")
     templates = [item for item in TEMPLATES if item.family == family][:max_mutants]
-    # One baseline plus each selected fresh branch consumes the shared execution budget.
-    _reserve_executions(audit_id, len(templates) + 1, db_path)
+    if use_docker:
+        from benchproof.execution.docker_runner import DockerRunner
+        from benchproof.gate import GateError
+
+        available, detail = DockerRunner().available()
+        if not available:
+            raise GateError("RUNNER_UNAVAILABLE", f"Isolated Docker runner unavailable: {detail}")
     started = time.perf_counter()
     _RUNTIME_TEMP_ROOT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="bp-mutation-run-", dir=_RUNTIME_TEMP_ROOT) as tmp:
         accepted_dir = Path(tmp) / "accepted" / "app"
+        # Validate and materialize the candidate before any budget is charged.
         base_hash, patch_hash = _prepare_candidate(audit, patch_id, accepted_dir, db_path)
-        baseline = verify_candidate_app(
-            accepted_dir,
-            patch_hash=patch_hash,
-            use_docker=use_docker,
-        )
+        # One baseline plus each selected fresh branch consumes the shared execution budget.
+        _reserve_executions(audit_id, len(templates) + 1, db_path)
+        try:
+            baseline = verify_candidate_app(
+                accepted_dir,
+                patch_hash=patch_hash,
+                use_docker=use_docker,
+            )
+        except Exception:
+            _release_executions(audit_id, len(templates) + 1, db_path)
+            raise
         if baseline["verdict"] != "VERIFIED":
+            # The baseline execution was spent; the unused mutant branches are returned.
+            _release_executions(audit_id, len(templates), db_path)
             raise MutationError(
                 "CANDIDATE_NOT_VERIFIED",
                 "Mutation strength is assessed only for a candidate that passes the protected gate",

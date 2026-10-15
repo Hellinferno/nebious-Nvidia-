@@ -33,6 +33,7 @@ from benchproof.storage import (
 from benchproof.storage.lifecycle import (
     ImmutableRecordError,
     append_event,
+    latest_check_attempt,
     list_check_results,
     list_events,
     record_artifact,
@@ -185,13 +186,17 @@ def export_bundle(
     }
     source_manifest_json = json.dumps(source_manifest_data, indent=2, sort_keys=True)
 
-    # 7. checks.json (Actual evaluator check results)
+    # 7. checks.json (Actual evaluator check results of the latest verification attempt;
+    #    earlier attempts stay immutable in storage and are counted here, never rewritten)
+    verification_attempts = latest_check_attempt(audit_id, db_path=db_path)
     check_results = list_check_results(audit_id, db_path=db_path)
     checks_data = {
         "schema_version": "benchproof/v2",
         "audit_id": audit_id,
         "fixture_id": fixture_id,
         "gate_verdict": audit["gate_verdict"],
+        "attempt": verification_attempts,
+        "verification_attempts": verification_attempts,
         "total_checks": len(check_results),
         "passing_checks": sum(1 for c in check_results if c.get("outcome") == "PASS"),
         "failing_checks": sum(1 for c in check_results if c.get("outcome") == "FAIL"),

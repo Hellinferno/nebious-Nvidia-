@@ -209,9 +209,13 @@ def validate_patch(
 
 
 def apply_patch_to_file(original_content: str, patch_diff: str) -> str:
-    """Apply a strict unified diff, rejecting stale or forged hunk context."""
-    lines = original_content.splitlines(keepends=True)
-    diff_lines = patch_diff.splitlines(keepends=True)
+    """Apply a strict unified diff, rejecting stale or forged hunk context.
+
+    Line endings are normalized to LF on both sides so a CRLF checkout or a
+    CRLF diff cannot produce mixed endings or a platform-dependent candidate.
+    """
+    lines = original_content.replace("\r\n", "\n").splitlines(keepends=True)
+    diff_lines = patch_diff.replace("\r\n", "\n").splitlines(keepends=True)
     hunk_regex = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
     current_line = 0
     result: list[str] = []
@@ -223,9 +227,10 @@ def apply_patch_to_file(original_content: str, patch_diff: str) -> str:
             i += 1
             continue
 
-        orig_start = int(match.group(1)) - 1
-        expected_old = int(match.group(2) or "1")
-        expected_new = int(match.group(4) or "1")
+        expected_old = int(match.group(2) if match.group(2) is not None else "1")
+        expected_new = int(match.group(4) if match.group(4) is not None else "1")
+        # A zero-length old range (`-N,0`) is an insertion *after* line N, as GNU patch applies it.
+        orig_start = int(match.group(1)) if expected_old == 0 else int(match.group(1)) - 1
         if orig_start < current_line or orig_start > len(lines):
             raise PatchValidationError("PATCH_APPLICATION_FAILED", "Overlapping or out-of-range hunk")
         result.extend(lines[current_line:orig_start])
@@ -302,7 +307,9 @@ def apply_patch_to_dir(
             )
         original_text = target_file.read_text(encoding="utf-8")
         patched_text = apply_patch_to_file(original_text, "".join(dlines))
-        target_file.write_text(patched_text, encoding="utf-8")
+        # Write LF explicitly: the default newline translation on Windows would turn an
+        # already-CRLF line into "\r\r\n" and change the candidate hash per platform.
+        target_file.write_text(patched_text, encoding="utf-8", newline="\n")
 
     candidate_hash = source_hash_for_dir(dest_dir)
     return dest_dir, candidate_hash

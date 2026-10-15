@@ -481,16 +481,10 @@ def run_investigation(
 
     trajectory = apply_stall_policy(audit_id, db_path)
     if trajectory["outcome"] == "PROGRESSING":
-        from benchproof.storage import get_audit, update_audit_state
+        from benchproof.storage import update_audit_state
 
-        current_audit = get_audit(audit_id, db_path)
-        if current_audit and current_audit["run_state"] not in {
-            RunState.COMPLETED.value,
-            RunState.BLOCKED.value,
-            RunState.CANCELLED.value,
-            RunState.TIMED_OUT.value,
-        }:
-            update_audit_state(audit_id, RunState.INVESTIGATING, db_path=db_path)
+        # Guarded write: a terminal or cancel-pending audit is never moved back to INVESTIGATING.
+        update_audit_state(audit_id, RunState.INVESTIGATING, db_path=db_path, only_if_active=True)
 
     append_event(
         audit_id,

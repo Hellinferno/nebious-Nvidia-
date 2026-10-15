@@ -13,7 +13,8 @@ CHECK_REGISTRY: dict[str, dict[str, object]] = {
     "caller-consistency": {"version": 1, "oracle_kind": "deterministic", "constraint": "C-AMOUNT"},
     "idempotency-duplicate": {"version": 1, "oracle_kind": "deterministic", "constraint": "C-INTEGRITY"},
     "idempotency-conflict": {"version": 1, "oracle_kind": "deterministic", "constraint": "C-INTEGRITY"},
-    "worker-caller-path": {"version": 1, "oracle_kind": "deterministic", "constraint": "C-INTEGRITY"},
+    # v2: static reachability (dead-code calls ignored) AND observed worker idempotency.
+    "worker-caller-path": {"version": 2, "oracle_kind": "deterministic", "constraint": "C-INTEGRITY"},
 }
 
 

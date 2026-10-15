@@ -33,7 +33,12 @@ from benchproof.patch import (
     validate_patch,
 )
 from benchproof.storage import get_audit, get_patch, list_patches, save_patch
-from benchproof.storage.lifecycle import TRUSTED_EVALUATOR, append_event, record_check_result
+from benchproof.storage.lifecycle import (
+    TRUSTED_EVALUATOR,
+    append_event,
+    next_check_attempt,
+    record_check_results,
+)
 
 
 class GateError(Exception):
@@ -47,6 +52,7 @@ def verify_candidate_app(
     candidate_app_dir: Path,
     patch_hash: str | None = None,
     use_docker: bool = False,
+    patch_id: str | None = None,
 ) -> dict[str, Any]:
     """Execute candidate app fresh and evaluate with trusted external oracle."""
     candidate_app_dir = Path(candidate_app_dir)
@@ -98,6 +104,7 @@ def verify_candidate_app(
         cr.evaluator_hash = ehash
         cr.image_hash = image_hash
         cr.patch_hash = patch_hash
+        cr.patch_id = patch_id
 
     # 3. Deterministic Gate Computation
     req_ids = required_check_ids()
@@ -119,6 +126,7 @@ def verify_candidate_app(
         "evaluator_hash": ehash,
         "image_hash": image_hash,
         "patch_hash": patch_hash or "",
+        "patch_id": patch_id,
         "verdict": gate_verdict,
         "required_check_ids": sorted(req_ids),
         "passing_checks": passing,
@@ -190,23 +198,38 @@ def execute_acceptance_gate(
 
 
         # Execute candidate verification
-        result = verify_candidate_app(candidate_dir, patch_hash=patch_hash, use_docker=use_docker)
-
-    # Record check results in database
-    for cr_data in result["checks"]:
-        from benchproof.domain import CheckResult
-        cr = CheckResult.model_validate(cr_data)
-        record_check_result(
-            audit_id=audit_id,
-            result=cr,
-            author=TRUSTED_EVALUATOR,
-            db_path=db_path,
+        result = verify_candidate_app(
+            candidate_dir, patch_hash=patch_hash, use_docker=use_docker, patch_id=patch_id
         )
 
+    # Record the attempt's complete check set atomically. Results are immutable, so a
+    # re-verification (new patch, or the same candidate after a runner change) becomes
+    # the next attempt instead of overwriting or colliding with the earlier record.
+    from benchproof.domain import CheckResult
+
+    attempt = next_check_attempt(audit_id, db_path)
+    record_check_results(
+        audit_id,
+        [CheckResult.model_validate(cr_data) for cr_data in result["checks"]],
+        author=TRUSTED_EVALUATOR,
+        attempt=attempt,
+        db_path=db_path,
+    )
+    result["attempt"] = attempt
 
     # Determine verdict and update audit state
     verdict = result["verdict"]
     is_verified = (verdict == "VERIFIED")
+
+    # A cancelled, timed-out, failed or blocked audit keeps its state: the evidence above is
+    # preserved, but the run never silently resurrects as COMPLETED/INVESTIGATING.
+    from benchproof.storage import update_audit_state
+
+    new_state = RunState.COMPLETED if is_verified else RunState.INVESTIGATING
+    state_updated = update_audit_state(
+        audit_id, new_state, GateVerdict(verdict), db_path=db_path, only_if_active=True
+    )
+    result["state_updated"] = state_updated
 
     append_event(
         audit_id=audit_id,
@@ -214,9 +237,11 @@ def execute_acceptance_gate(
         payload={
             "verdict": verdict,
             "patch_id": patch_id,
+            "attempt": attempt,
             "candidate_source_hash": result["candidate_source_hash"],
             "failing_checks": result["failing_checks"],
             "passing_checks": result["passing_checks"],
+            "state_updated": state_updated,
         },
         db_path=db_path,
     )
@@ -237,10 +262,6 @@ def execute_acceptance_gate(
             provider_meta=patch_dict.get("provider_meta"),
             db_path=db_path,
         )
-
-    # Update audit record
-    from benchproof.storage import update_audit_state
-    new_state = RunState.COMPLETED if is_verified else RunState.INVESTIGATING
-    update_audit_state(audit_id, new_state, GateVerdict(verdict), db_path=db_path)
+        result["policy_result"] = policy_res
 
     return result

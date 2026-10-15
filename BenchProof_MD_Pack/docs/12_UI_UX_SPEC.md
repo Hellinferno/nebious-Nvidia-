@@ -15,6 +15,8 @@ The research changes the main decision from “trust this ML score” to “acce
 
 Use one connected journey with tabs/panels, not six unrelated dashboards. Public mode selects curated examples; no tempting arbitrary-repository upload appears in v1.
 
+Every action is also a named skill (`/start` … `/cancel`) in a palette opened with Ctrl+K or `/`. The palette lists the server-computed availability, cost class and plain-sentence blocked reason for each skill, the recommended next action names the skill it maps to, and the panel buttons call the same endpoints, so a developer can drive the whole journey by slash command without learning the layout. A proposed diff is shown as `PENDING` until the protected gate approves or rejects it; the gate result names its verification attempt.
+
 ## Hero layout
 
 The header shows task, source version, accepted contract and actual runtime mode. The first result explains: “The candidate passed visible smoke tests but failed C-AMOUNT on invoice-total rounding.” Show the small input and expected/actual behavior only when safe and available from the trusted result.

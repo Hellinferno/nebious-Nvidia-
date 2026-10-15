@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import stat
 import subprocess
 import threading
 import time
@@ -54,6 +55,43 @@ def _captured_text(data: bytearray, seen: int) -> str:
     if seen > len(data):
         text += f"\n[output truncated: retained {len(data)} of {seen} bytes]"
     return text
+
+
+OBSERVATION_SCHEMA = "benchproof/observations-v1"
+
+
+def _last_record(stdout: str) -> dict[str, Any] | None:
+    """The launcher parent prints the observation record as its final stdout line."""
+    for line in reversed(stdout.splitlines()):
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            parsed = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(parsed, dict) and parsed.get("schema") == OBSERVATION_SCHEMA:
+            return parsed
+    return None
+
+
+def reconcile_records(
+    file_record: dict[str, Any] | None, stdout_record: dict[str, Any] | None
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Accept observations only when the launcher's stdout record equals the file it wrote.
+
+    Candidate code runs in the launcher's child process and shares the writable
+    `/out` mount, so the file alone could be rewritten after the fact. The
+    parent's final stdout line is written after the child has exited; any
+    difference means the file was altered and nothing is accepted.
+    """
+    if file_record is None:
+        return None, None
+    if stdout_record is None:
+        return None, "launcher stdout carried no final observation record; the file alone is not trusted"
+    if stdout_record != file_record:
+        return None, "observation record on stdout differs from /out/observations.json (tampering suspected)"
+    return file_record, None
 
 
 class DockerRunner:
@@ -190,20 +228,22 @@ class DockerRunner:
         error: str | None = None
         obs_file = snapshot.out_dir / "observations.json"
         if obs_file.exists():
-            if obs_file.is_symlink() or obs_file.stat().st_size > MAX_OBSERVATION_BYTES:
-                error = "observations.json is linked or exceeds the output size limit"
+            info = obs_file.lstat()
+            if obs_file.is_symlink() or not stat.S_ISREG(info.st_mode) or info.st_size > MAX_OBSERVATION_BYTES:
+                error = "observations.json is linked, not a regular file, or exceeds the output size limit"
             else:
                 try:
                     parsed = json.loads(obs_file.read_text(encoding="utf-8"))
-                    if not isinstance(parsed, dict) or parsed.get("schema") != "benchproof/observations-v1":
+                    if not isinstance(parsed, dict) or parsed.get("schema") != OBSERVATION_SCHEMA:
                         error = "observations.json has an unapproved schema"
                     else:
-                        observations = parsed
+                        observations, error = reconcile_records(parsed, _last_record(stdout))
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
                     error = f"observations.json malformed: {type(e).__name__}"
         elif not timed_out:
             error = "launcher produced no observations.json"
         if timed_out:
+            observations = None
             error = f"timed out after {timeout_s}s; container killed"
 
         artifacts = self.collect_artifacts(snapshot)

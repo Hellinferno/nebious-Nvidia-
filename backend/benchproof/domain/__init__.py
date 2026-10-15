@@ -230,6 +230,7 @@ class Patch(BaseModel):
 class CheckResult(BaseModel):
     check_id: str
     check_version: int = 1
+    patch_id: str | None = None
     patch_hash: str | None = None
     source_hash: str = ""
     contract_hash: str = ""

@@ -40,10 +40,10 @@ from benchproof.storage import (
 from benchproof.storage.heartbeat import latest_heartbeat
 from benchproof.storage.lifecycle import (
     TERMINAL_STATES,
+    IdempotencyConflict,
     append_event,
     body_hash,
-    idempotency_get,
-    idempotency_put,
+    create_audit_idempotent,
     list_events,
     migrate_lifecycle,
 )
@@ -150,18 +150,11 @@ def health_check() -> dict[str, str]:
     return {"status": "ok", "version": __version__, "runner": settings.benchproof_runner}
 
 
-@app.get("/api/v1/ready")
-def readiness_check(request: Request, refresh: bool = Query(False)) -> dict[str, Any]:
-    """Configuration readiness. Never bills a model call."""
-    if refresh:
-        request.app.state.runner = runner_status()
+def _runtime_snapshot(request: Request) -> dict[str, Any]:
+    """Provider/runner/worker readiness from cached probes; shared by /ready and /skills."""
     hb = latest_heartbeat(_db())
     worker_alive = bool(hb and hb["age_s"] <= settings.heartbeat_stale_s)
     return {
-        "status": "ok",
-        "version": __version__,
-        "database": _db().exists(),
-        "contract_hash": contract_hash(),
         "provider": {
             "name": "nebius-token-factory",
             "configured": settings.provider_configured,
@@ -169,6 +162,20 @@ def readiness_check(request: Request, refresh: bool = Query(False)) -> dict[str,
         },
         "runner": request.app.state.runner,
         "worker": {"alive": worker_alive, "heartbeat": hb},
+    }
+
+
+@app.get("/api/v1/ready")
+def readiness_check(request: Request, refresh: bool = Query(False)) -> dict[str, Any]:
+    """Configuration readiness. Never bills a model call."""
+    if refresh:
+        request.app.state.runner = runner_status()
+    return {
+        "status": "ok",
+        "version": __version__,
+        "database": _db().exists(),
+        "contract_hash": contract_hash(),
+        **_runtime_snapshot(request),
         "fixtures": len(list_fixture_ids()),
     }
 
@@ -215,12 +222,6 @@ def create_audit(
     owner_ref: str = Depends(_request_owner),
 ) -> JSONResponse:
     bhash = body_hash(body.model_dump())
-    if idempotency_key:
-        prior = idempotency_get(owner_ref, _ENDPOINT_CREATE, idempotency_key, _db())
-        if prior is not None:
-            if prior["body_hash"] != bhash:
-                raise _error(409, "IDEMPOTENCY_CONFLICT", "Idempotency-Key reused with a different body")
-            return JSONResponse(prior["response"], status_code=201, headers={"Idempotent-Replay": "true"})
 
     try:
         example = public_example(body.fixture_id)
@@ -248,17 +249,24 @@ def create_audit(
         contract_hash=contract_hash(),
         mode=body.mode,
     )
-    save_audit(audit, _db())
-    append_event(
-        audit.audit_id,
-        "audit_created",
-        {"fixture_id": audit.fixture_id, "source_hash": audit.source_hash,
-         "contract_hash": audit.contract_hash, "mode": audit.mode},
-        db_path=_db(),
-    )
+    created_payload = {
+        "fixture_id": audit.fixture_id, "source_hash": audit.source_hash,
+        "contract_hash": audit.contract_hash, "mode": audit.mode,
+    }
     response = audit.model_dump(mode="json")
     if idempotency_key:
-        idempotency_put(owner_ref, _ENDPOINT_CREATE, idempotency_key, bhash, audit.audit_id, response, _db())
+        # Audit row, idempotency record and audit_created event commit in one serialized
+        # transaction, so a duplicate submit (double click, reconnect) can never create two audits.
+        try:
+            response, replayed = create_audit_idempotent(
+                owner_ref, _ENDPOINT_CREATE, idempotency_key, bhash, audit, response, _db()
+            )
+        except IdempotencyConflict as exc:
+            raise _error(409, "IDEMPOTENCY_CONFLICT", str(exc)) from exc
+        headers = {"Idempotent-Replay": "true"} if replayed else {}
+        return JSONResponse(response, status_code=201, headers=headers)
+    save_audit(audit, _db())
+    append_event(audit.audit_id, "audit_created", created_payload, db_path=_db())
     return JSONResponse(response, status_code=201)
 
 
@@ -711,7 +719,9 @@ def propose_patch(
         diff_text=req.diff,
         approved_paths=approved_paths,
         changed_lines=changed_lines,
-        policy_result="APPROVED",
+        # Validated against the patch rules, but not judged: only the protected gate may
+        # write APPROVED or REJECTED, after an isolated verification.
+        policy_result="PENDING",
         author=req.author,
         provider_meta={"explanation": req.explanation},
         db_path=_db(),
@@ -725,6 +735,7 @@ def propose_patch(
             "diff_hash": diff_hash,
             "approved_paths": approved_paths,
             "changed_lines": changed_lines,
+            "policy_result": "PENDING",
         },
         db_path=_db(),
     )
@@ -732,7 +743,7 @@ def propose_patch(
     return {
         "patch_id": patch_id,
         "audit_id": audit_id,
-        "policy_result": "APPROVED",
+        "policy_result": "PENDING",
         "diff_hash": diff_hash,
         "approved_paths": approved_paths,
         "changed_lines": changed_lines,
@@ -823,13 +834,14 @@ def get_audit_gate_status(
 ) -> dict[str, Any]:
     audit = _owned_audit(audit_id, owner_ref)
 
-    from benchproof.storage.lifecycle import list_check_results
+    from benchproof.storage.lifecycle import latest_check_attempt, list_check_results
 
     checks = list_check_results(audit_id, db_path=_db())
     return {
         "audit_id": audit_id,
         "gate_verdict": audit.get("gate_verdict", "PENDING"),
         "run_state": audit.get("run_state", "QUEUED"),
+        "attempt": latest_check_attempt(audit_id, db_path=_db()),
         "checks": checks,
     }
 
@@ -1021,5 +1033,58 @@ def replay_audit_bundle(
     except GateError as exc:
         status = 503 if exc.code == "RUNNER_UNAVAILABLE" else 422
         raise _error(status, exc.code, exc.message) from exc
+
+
+# ── Bounded skill catalog (Day 15 / B-22) ────────────────────────────────
+
+def _skill_inputs(audit_id: str | None) -> dict[str, Any]:
+    """Server-side facts the catalog needs: counts, recovery state and bundle presence."""
+    if audit_id is None:
+        return {}
+    from benchproof.storage import list_patches
+    from benchproof.trajectory import recovery_state
+
+    bundle_path = Path("artifacts") / "bundles" / f"benchproof-audit-{audit_id}.zip"
+    return {
+        "recovery": recovery_state(audit_id, _db()),
+        "action_count": len(list_actions(audit_id, db_path=_db())),
+        "patch_count": len(list_patches(audit_id, db_path=_db())),
+        "has_bundle": bundle_path.exists(),
+    }
+
+
+@app.get("/api/v1/skills")
+def get_skills(request: Request) -> dict[str, Any]:
+    """Catalog of bounded skills with session-level availability (no audit context)."""
+    from benchproof.skills import SKILLS_VERSION, describe
+
+    return {
+        "version": SKILLS_VERSION,
+        "audit_id": None,
+        "skills": describe(audit=None, runtime=_runtime_snapshot(request)),
+    }
+
+
+@app.get("/api/v1/audits/{audit_id}/skills")
+def get_audit_skills(
+    audit_id: str,
+    request: Request,
+    owner_ref: str = Depends(_request_owner),
+) -> dict[str, Any]:
+    """Catalog with availability computed from this audit's record, budgets and runtime.
+
+    Each entry names the endpoint it maps to; invoking a skill is just calling that
+    endpoint, which repeats every check. The catalog never grants anything.
+    """
+    audit = _owned_audit(audit_id, owner_ref)
+    from benchproof.skills import SKILLS_VERSION, describe
+
+    return {
+        "version": SKILLS_VERSION,
+        "audit_id": audit_id,
+        "run_state": audit["run_state"],
+        "gate_verdict": audit["gate_verdict"],
+        "skills": describe(audit=audit, runtime=_runtime_snapshot(request), **_skill_inputs(audit_id)),
+    }
 
 

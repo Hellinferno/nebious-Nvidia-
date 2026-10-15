@@ -9,12 +9,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
 CANDIDATE_DIR = "app"
 TRUSTED_FILES = {"expected.json"}
 TRUSTED_DIRS = {"reference"}
+_FIXTURE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
 def fixtures_root() -> Path:
@@ -25,9 +27,18 @@ def fixtures_root() -> Path:
 
 
 def fixture_dir(fixture_id: str) -> Path:
-    if not fixture_id or "/" in fixture_id or "\\" in fixture_id or ".." in fixture_id:
+    """Resolve a fixture id strictly inside the fixtures root.
+
+    The id must be a plain token: no separators, no `..`, and no drive or
+    scheme characters (`C:x` would otherwise escape the root on Windows).
+    """
+    if not fixture_id or ".." in fixture_id or not _FIXTURE_ID.fullmatch(fixture_id):
         raise ValueError("INVALID_INPUT: unsafe fixture id")
-    return fixtures_root() / fixture_id
+    root = fixtures_root()
+    candidate = root / fixture_id
+    if candidate.resolve().parent != root.resolve():
+        raise ValueError("INVALID_INPUT: unsafe fixture id")
+    return candidate
 
 
 def list_fixture_ids() -> list[str]:
@@ -54,12 +65,17 @@ def candidate_files(app_dir: Path) -> list[Path]:
     return sorted(p for p in app_dir.rglob("*.py") if "__pycache__" not in p.parts)
 
 
+def canonical_source_bytes(path: Path) -> bytes:
+    """File bytes with CRLF normalized to LF, so hashes do not depend on the checkout platform."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def source_manifest(app_dir: Path) -> dict[str, str]:
-    """Relative path -> sha256 of file bytes, for every candidate-visible file."""
+    """Relative path -> sha256 of LF-normalized file bytes, for every candidate-visible file."""
     out: dict[str, str] = {}
     for p in candidate_files(app_dir):
         rel = p.relative_to(app_dir.parent).as_posix()
-        out[rel] = hashlib.sha256(p.read_bytes()).hexdigest()
+        out[rel] = hashlib.sha256(canonical_source_bytes(p)).hexdigest()
     return out
 
 

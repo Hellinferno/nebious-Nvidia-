@@ -32,6 +32,24 @@ BenchProof now fails closed at every public candidate-execution entry point. Pub
 - The in-process evaluator remains available only as an explicit development/library harness for curated fixtures and tests; it is not a public API execution mode.
 - Output retention is bounded, but the host bind-mounted artifact directory has no filesystem quota. The container timeout and post-run artifact limits reduce exposure; production deployment should use a quota-backed scratch volume.
 
+## Addendum — 14 October, second hardening pass (Day 15 pulled forward)
+
+| Surface | Backend enforcement | Negative evidence |
+| --- | --- | --- |
+| Observation authorship | The launcher parent never imports candidate code: the candidate runs in a child process (`python -I`, cleared environment) that prints one record and exits with `os._exit`; the parent writes `/out/observations.json`, prints the same record last and exits without atexit hooks. The host accepts observations only when the parent's stdout record equals the file. | A file-only record, an altered file and a missing stdout record are each rejected (`test_hardening_day15.py`). |
+| Output file identity | `observations.json` must be a regular, non-linked file under the size cap (`lstat`); a timeout discards any partial observations. | Linked or oversized files and timeouts produce no evaluator input. |
+| Worker delegation | `worker-caller-path` v2 requires a live call to `services.process_invoice` inside a function (dead-code and module-level calls do not count) and observed idempotency across a repeated and a conflicting worker job. | Dead-code delegation, a replaced receipt on repeat and a replaced receipt on conflict all FAIL; missing dynamic observation is UNKNOWN. |
+| Fixture resolution | Fixture ids must match `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` and resolve directly under the fixtures root. | `C:x`, separators, `..` and hidden names are rejected. |
+| Patch application | Zero-length old ranges insert after the named line as GNU patch does; CRLF sources and diffs are normalized and patched files are written with LF. | CRLF inputs produce LF output; applied trees hash identically on any platform. |
+| Record atomicity | A state transition and its `state_changed` event commit together; a gate run stores its complete check set as the next attempt in one transaction; audit creation under an `Idempotency-Key` writes the audit, the key and the event in one serialized transaction. | A duplicate inside a batch stores nothing; a rejected CAS leaves no event; a replayed key never creates a second audit. |
+| State guarding | Writes that follow verification or investigation touch only active audits. | A cancelled audit keeps `CANCELLED` and `PENDING` after a gate run while its checks are still recorded. |
+| Patch policy authority | Proposals are stored `PENDING`; only the acceptance gate writes `APPROVED`/`REJECTED`. | The API returns `PENDING` on proposal; the gate flips it after an isolated verification. |
+| Budget accounting | Mutation reservations are taken only after candidate validation and returned when the baseline is not VERIFIED. | An unverified baseline leaves exactly the spent baseline charged. |
+
+The Docker daemon (29.7.2) and the pinned candidate image became available during the pass, so the three isolated-runner tests executed the new parent/child launcher inside the container: the clean control was judged VERIFIED, MC-01 REJECTED, and a stalled launcher was killed at the timeout with no observations accepted. `scripts/run_integrity_evidence.py` then recorded `runtime_isolation` as PASS for the first time (it was BLOCKED in the B-17 record): internet and metadata probes denied, no secret environment names, no trusted assets in the candidate tree, candidate mount not writable, image `benchproof-candidate:dev@sha256:fbe0b348a6ad…`.
+
+Known flake: on this Windows host `docker info` took about 32 seconds, just over the runner's 30-second readiness probe. The first evidence run therefore failed closed with `RUNNER_UNAVAILABLE` and the retry passed. Nothing is accepted when the probe times out, but a slow daemon can make readiness and verification intermittently unavailable.
+
 ## Reproduction
 
 Run from `backend/`:

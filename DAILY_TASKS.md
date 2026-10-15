@@ -352,11 +352,11 @@ Use R6/V6 if breadth/budget is insufficient. No hidden case replacement, mixed d
 
 ### Work in order
 
-1. [ ] Run a voluntary task session if someone is available (45 min); Ravi arranges contact and records consent without coaching.
-2. [ ] Observe whether the tester identifies constraint failure, graph limit and accept/reject meaning (30 min); record actual task completion/confusion.
-3. [ ] Fix highest-value navigation/evidence/diff/error issues (90 min); functional changes need appropriate checks.
-4. [ ] Test clean, rejected and limited paths with final public examples and revisit deployment readiness (75 min).
-5. [ ] Review remaining P0 blockers and update actual scope in progress/requirements (30 min).
+1. [ ] Run a voluntary task session if someone is available (45 min); Ravi arranges contact and records consent without coaching. — Not done on 14 Oct: no volunteer was available; a self-review is disclosed instead and no user study is claimed.
+2. [ ] Observe whether the tester identifies constraint failure, graph limit and accept/reject meaning (30 min); record actual task completion/confusion. — Not done (same reason); the self-review found that a proposed diff read `APPROVED` before any gate ran.
+3. [x] Fix highest-value navigation/evidence/diff/error issues (90 min); functional changes need appropriate checks. — 14 Oct (pulled forward): patch proposals are `PENDING` until the gate judges them, the gate result names its attempt, and a bounded skill catalog with a Ctrl+K/`/` palette exposes every action with its server-computed availability, cost and blocked reason.
+4. [x] Test clean, rejected and limited paths with final public examples and revisit deployment readiness (75 min). — 14 Oct: covered by the API and gate tests (clean control, rejected candidate, cancelled audit, exhausted budgets); the Docker daemon and pinned image came up during the session, so the three isolated-runner tests executed the new launcher inside the container; hosted readiness (B-20) is unchanged.
+5. [x] Review remaining P0 blockers and update actual scope in progress/requirements (30 min). — 14 Oct: progress log, backlog, changelog, API/UI docs, D-028 and the integrity addendum updated.
 
 ### Deliverable and acceptance evidence
 

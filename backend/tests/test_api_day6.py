@@ -46,7 +46,7 @@ def test_api_patch_and_verify_cycle(client: TestClient) -> None:
     assert bad_res.json()["detail"]["code"] == "PATCH_BASE_MISMATCH"
 
 
-    # 3. Propose valid canonical patch -> 200 APPROVED
+    # 3. Propose valid canonical patch -> 200, validated but PENDING until the gate judges it
     good_diff = get_canonical_mc01_repair_diff()
     good_res = client.post(
         f"/api/v1/audits/{aid}/patch",
@@ -59,7 +59,7 @@ def test_api_patch_and_verify_cycle(client: TestClient) -> None:
     )
     assert good_res.status_code == 200
     patch_data = good_res.json()
-    assert patch_data["policy_result"] == "APPROVED"
+    assert patch_data["policy_result"] == "PENDING"
     patch_id = patch_data["patch_id"]
 
     # 4. List patches

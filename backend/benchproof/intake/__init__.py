@@ -17,6 +17,8 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from benchproof.fixtures import canonical_source_bytes
+
 MAX_FILE_BYTES = 64 * 1024  # 64 KB per file
 MAX_TOTAL_BYTES = 512 * 1024  # 512 KB total
 MAX_FILE_COUNT = 30
@@ -100,7 +102,9 @@ def inspect_source_tree(app_dir: Path) -> dict[str, Any]:
                 raise IntakeError(f"Total source exceeds maximum size ({total_bytes} > {MAX_TOTAL_BYTES})")
             
             files.append(fpath)
-            manifest[rel] = hashlib.sha256(fpath.read_bytes()).hexdigest()
+            # Size limits apply to the raw bytes; the hash is line-ending independent so the
+            # same tree hashes identically on a CRLF and an LF checkout (see fixtures.source_manifest).
+            manifest[rel] = hashlib.sha256(canonical_source_bytes(fpath)).hexdigest()
 
     canonical_manifest = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
     source_hash = hashlib.sha256(canonical_manifest.encode("utf-8")).hexdigest()

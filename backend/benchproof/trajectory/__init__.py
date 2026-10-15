@@ -200,7 +200,11 @@ def ensure_action_budget(audit_id: str, db_path: Path | None = None) -> dict[str
     remaining = budget_snapshot(audit_id, db_path)
     if remaining["max_actions"] <= 0 or remaining["audit_deadline_s"] <= 0:
         audit = get_audit(audit_id, db_path)
-        if audit and audit["run_state"] not in TERMINAL_STATES:
+        if (
+            audit
+            and audit["run_state"] not in TERMINAL_STATES
+            and audit["run_state"] != RunState.CANCEL_PENDING.value
+        ):
             transition(
                 audit_id,
                 {audit["run_state"]},
@@ -295,7 +299,8 @@ def apply_stall_policy(audit_id: str, db_path: Path | None = None) -> dict[str, 
     audit = get_audit(audit_id, db_path)
     if audit is None:
         raise TrajectoryError("INVALID_INPUT", "Audit not found")
-    if audit["run_state"] in TERMINAL_STATES:
+    if audit["run_state"] in TERMINAL_STATES or audit["run_state"] == RunState.CANCEL_PENDING.value:
+        # A cancelled or cancel-pending audit keeps its state; the stall is still visible in actions.
         return {"outcome": audit["run_state"], **state}
     append_event(
         audit_id,

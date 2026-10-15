@@ -8,7 +8,7 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (14 October 2026, Days 1–14)
+## Current state (14 October 2026, Days 1–15)
 
 Implemented: curated intake; accepted executable constraints; durable owner-scoped
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
@@ -43,6 +43,18 @@ the visible smoke gate), and manifests for `graph-g8-v1`, `freshness-f6-v1`,
 `trajectory-w8-v1` and `mutants-m12-v1`. Every asset is pinned in `truth.lock.json`; the
 R6/V6 fallback is predeclared by id (D-027). Measured outcomes do not exist yet; the B-19
 configuration freeze and B-21 trials are next.
+
+Day 15 (B-22, self-review; no volunteer tester, so no user study is claimed) added a bounded
+skill catalog: twelve slash skills (`/start` … `/cancel`) that map to existing endpoints and
+report server-computed availability, cost class and blocked reason at `GET /api/v1/skills`
+and `GET /api/v1/audits/{id}/skills`, with a Ctrl+K/`/` palette in the UI. Proposed diffs are
+now `PENDING` until the protected gate approves or rejects them, and each gate run records its
+check set as a numbered attempt. A second hardening pass makes the launcher run the candidate
+in a child process whose record must match the written file, versions `worker-caller-path` to
+v2 (live delegation plus observed worker idempotency), commits state changes with their events,
+guards state writes on inactive audits, and computes every source, intake, dependency and
+suite-lock hash over LF-normalized bytes; the held-out lock was re-frozen for that hashing with
+unchanged assets (D-028).
 
 ## Setup (Windows, PowerShell)
 

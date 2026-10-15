@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import axios, { AxiosError } from 'axios'
 import './App.css'
 
@@ -126,6 +127,9 @@ type GateResult = {
   failing_checks: string[]
   unknown_checks: string[]
   checks: Check[]
+  attempt?: number
+  policy_result?: string
+  state_updated?: boolean
 }
 type MutationResult = {
   template_id: string
@@ -167,6 +171,7 @@ type TrajectoryStatus = {
   remaining_limits: Record<string, number>
 }
 type BundleInfo = { name: string; sha256: string; byteSize: number; verdict: string }
+type BundleResponse = { bundle_name: string; sha256: string; byte_size: number; manifest: { gate_verdict: string } }
 type ValidationResult = { valid: boolean; total_files: number; verified_files: number; discrepancies: string[] }
 type ReplayResult = {
   replay_id: string
@@ -177,8 +182,25 @@ type ReplayResult = {
   tampered: boolean
 }
 type Issue = { code: string; message: string; next: string }
+type Skill = {
+  skill_id: string
+  slash: string
+  title: string
+  description: string
+  category: string
+  method: string
+  endpoint: string
+  needs_audit: boolean
+  costs: string[]
+  keywords: string[]
+  shortcut: string | null
+  available: boolean
+  blocked_reason: string | null
+}
+type SkillCatalog = { version: string; audit_id: string | null; skills: Skill[] }
 
 const TERMINAL = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT', 'BLOCKED'])
+const COST_LABELS: Record<string, string> = { 'model-call': 'model call', 'isolated-execution': 'isolated run', none: 'no cost' }
 const CANONICAL_DIFFS: Record<string, { diff: string; targetFiles: string[]; explanation: string }> = {
   'MC-01': {
     diff: `--- a/app/money.py
@@ -222,10 +244,10 @@ function short(value?: string) {
 
 function badge(value: string) {
   const normalized = value.toUpperCase()
-  if (['PASS', 'VERIFIED', 'COMPLETED', 'AUTHENTIC', 'MATCH', 'FULL', 'KILLED', 'ADEQUATE_FOR_DECLARED_MUTANTS'].includes(normalized)) return 'success'
+  if (['PASS', 'VERIFIED', 'COMPLETED', 'AUTHENTIC', 'MATCH', 'FULL', 'KILLED', 'ADEQUATE_FOR_DECLARED_MUTANTS', 'APPROVED'].includes(normalized)) return 'success'
   if (['FAIL', 'REJECTED', 'FAILED', 'TIMED_OUT', 'TAMPERED', 'MISMATCH', 'STALE', 'CHANGED', 'DELETED', 'SURVIVED'].includes(normalized)) return 'danger'
   if (['CURRENT', 'REVIEWED'].includes(normalized)) return 'success'
-  if (['BLOCKED', 'CANCEL_PENDING', 'INCONCLUSIVE', 'UNKNOWN', 'WEAK'].includes(normalized)) return 'warning'
+  if (['BLOCKED', 'CANCEL_PENDING', 'INCONCLUSIVE', 'UNKNOWN', 'WEAK', 'PENDING'].includes(normalized)) return 'warning'
   return 'neutral'
 }
 
@@ -245,6 +267,7 @@ function issueFrom(error: unknown): Issue {
     CANCEL_PENDING: 'Wait for remote termination reconciliation; no new work will be started.',
     STALLED: 'Use the single fresh-context recovery; repeated identical work remains stopped.',
     RECOVERY_EXHAUSTED: 'Review preserved evidence; the second stall is terminally blocked.',
+    IDEMPOTENCY_CONFLICT: 'The same request key was reused with a different body; start a new request.',
   }
   return { code, message, next: nextByCode[code] ?? 'Review the event trail, keep existing evidence, and retry only if safe.' }
 }
@@ -274,7 +297,13 @@ function App() {
   const [restoring, setRestoring] = useState(false)
   const [issue, setIssue] = useState<Issue | null>(null)
   const [eventCursor, setEventCursor] = useState(0)
+  const [skills, setSkills] = useState<Skill[]>([])
+  const [skillsVersion, setSkillsVersion] = useState('')
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [paletteQuery, setPaletteQuery] = useState('')
+  const [paletteIndex, setPaletteIndex] = useState(0)
   const cursorRef = useRef(0)
+  const paletteInput = useRef<HTMLInputElement | null>(null)
 
   const activeAuditId = audit?.audit_id ?? null
   const plan = CANONICAL_DIFFS[selectedFixture]
@@ -284,6 +313,16 @@ function App() {
     const response = await api.get<Audit>(`/api/v1/audits/${auditId}`)
     setAudit(response.data)
     return response.data
+  }, [])
+
+  const loadSkills = useCallback(async (auditId: string | null) => {
+    try {
+      const response = await api.get<SkillCatalog>(auditId ? `/api/v1/audits/${auditId}/skills` : '/api/v1/skills')
+      setSkills(response.data.skills)
+      setSkillsVersion(response.data.version)
+    } catch {
+      setSkills([]) // the buttons then fall back to their local rules
+    }
   }, [])
 
   const loadConnectedAudit = useCallback(async (auditId: string, restoringSession = false) => {
@@ -320,8 +359,10 @@ function App() {
           failing_checks: checks.filter((item) => item.outcome === 'FAIL').map((item) => item.check_id),
           unknown_checks: checks.filter((item) => item.outcome === 'UNKNOWN').map((item) => item.check_id),
           checks,
+          attempt: gateResponse.data.attempt,
         })
       }
+      await loadSkills(auditId)
     } catch (error) {
       const nextIssue = issueFrom(error)
       setIssue(nextIssue)
@@ -329,7 +370,7 @@ function App() {
     } finally {
       setRestoring(false)
     }
-  }, [refreshAudit])
+  }, [loadSkills, refreshAudit])
 
   useEffect(() => {
     async function boot() {
@@ -348,12 +389,13 @@ function App() {
         if (savedFixture) setSelectedFixture(savedFixture)
         const savedAudit = localStorage.getItem(ACTIVE_AUDIT_KEY)
         if (savedAudit) await loadConnectedAudit(savedAudit, true)
+        else await loadSkills(null)
       } catch (error) {
         setIssue(issueFrom(error))
       }
     }
     void boot()
-  }, [loadConnectedAudit])
+  }, [loadConnectedAudit, loadSkills])
 
   useEffect(() => {
     if (!activeAuditId) return
@@ -372,6 +414,7 @@ function App() {
       setEvents((current) => [...current.filter((item) => item.sequence !== event.sequence), event].slice(-30))
       if (event.event_type === 'state_changed' && typeof event.payload.to === 'string') {
         setAudit((current) => current ? { ...current, run_state: String(event.payload.to) } : current)
+        void loadSkills(activeAuditId)
       }
       if (event.event_type === 'verification_completed' && typeof event.payload.gate_verdict === 'string') {
         setAudit((current) => current ? { ...current, gate_verdict: String(event.payload.gate_verdict) } : current)
@@ -415,7 +458,7 @@ function App() {
       controller?.abort()
       if (retryTimer) window.clearTimeout(retryTimer)
     }
-  }, [activeAuditId, audit?.run_state])
+  }, [activeAuditId, audit?.run_state, loadSkills])
 
   async function startAudit(fixtureId: string) {
     setLoading(true)
@@ -446,6 +489,17 @@ function App() {
     }
   }
 
+  async function refreshReadiness() {
+    setIssue(null)
+    try {
+      const response = await api.get<Ready>('/api/v1/ready?refresh=true')
+      setReady(response.data)
+      await loadSkills(activeAuditId)
+    } catch (error) {
+      setIssue(issueFrom(error))
+    }
+  }
+
   async function runAction(action: () => Promise<void>) {
     setLoading(true)
     setIssue(null)
@@ -456,22 +510,192 @@ function App() {
       setIssue(issueFrom(error))
     } finally {
       setLoading(false)
+      void loadSkills(activeAuditId)
     }
   }
 
-  const nextAction = useMemo(() => {
-    if (issue) return issue.next
-    if (!audit) return 'Choose one curated synthetic example and start an assurance run.'
-    if (audit.run_state === 'STALLED') return trajectory?.recovery_count ? 'The recovery has stalled; preserve evidence and stop.' : 'Run the single changed-strategy recovery with the remaining original budget.'
-    if (audit.run_state === 'BLOCKED') return 'No more retries are allowed; review the preserved partial evidence.'
-    if (audit.run_state === 'CANCEL_PENDING') return 'Wait for remote cancellation reconciliation; do not start duplicate work.'
-    if (audit.gate_verdict === 'VERIFIED') return 'Export and independently replay the evidence before accepting the repair.'
-    if (audit.gate_verdict === 'REJECTED') return plan ? 'Review failed checks, start a fresh audit, propose the bounded repair, then verify.' : 'Review the failed checks; this fixture has no approved automatic repair.'
-    if (gateResult?.unknown_checks.length) return 'Resolve the UNKNOWN required checks; completion does not mean VERIFIED.'
-    if (!diagnosis) return 'Run the bounded investigation, or verify directly to observe the clean/rejected path.'
-    if (plan && !activePatch) return 'Review and propose the protected minimal diff.'
-    return 'Run the independent acceptance gate.'
-  }, [activePatch, audit, diagnosis, gateResult, issue, plan, trajectory?.recovery_count])
+  // Every skill maps to one owner-scoped endpoint; the server repeats every check on invocation.
+  const skillActions: Record<string, () => Promise<void>> = {
+    start: () => startAudit(selectedFixture),
+    'refresh-readiness': refreshReadiness,
+    diagnose: async () => {
+      if (!audit) return
+      const response = await api.post<Diagnosis>(`/api/v1/audits/${audit.audit_id}/diagnose`)
+      setDiagnosis(response.data)
+      setTrajectory(response.data.trajectory)
+    },
+    recover: async () => {
+      if (!audit) return
+      const response = await api.post<{ result: Diagnosis }>(`/api/v1/audits/${audit.audit_id}/recover`)
+      setDiagnosis(response.data.result)
+      setTrajectory(response.data.result.trajectory)
+    },
+    decision: async () => {
+      if (!audit || !decisionStatement.trim()) return
+      await api.post(`/api/v1/audits/${audit.audit_id}/decisions`, {
+        statement: decisionStatement,
+        review_status: 'REVIEWED',
+        dependency_paths: plan?.targetFiles ?? [],
+        include_contract: true,
+        include_source: !plan,
+        evidence_ids: graph ? [graph.graph_hash] : [],
+        revisit_condition: 'Re-review when a declared dependency changes or is deleted.',
+      })
+      const [ledgerResponse, impactResponse] = await Promise.all([
+        api.get<DecisionLedger>(`/api/v1/audits/${audit.audit_id}/decisions`),
+        api.get<ImpactData>(`/api/v1/audits/${audit.audit_id}/impact`),
+      ])
+      setDecisionLedger(ledgerResponse.data)
+      setImpact(impactResponse.data)
+    },
+    repair: async () => {
+      if (!audit || !plan || !graph) return
+      const response = await api.post<PatchRecord>(`/api/v1/audits/${audit.audit_id}/patch`, {
+        diff: plan.diff,
+        base_source_hash: graph.source_hash,
+        target_files: plan.targetFiles,
+        explanation: plan.explanation,
+        context_hash: impact?.context_hash,
+      })
+      setActivePatch({ ...response.data, diff_text: plan.diff })
+    },
+    verify: async () => {
+      if (!audit) return
+      const response = await api.post<GateResult>(`/api/v1/audits/${audit.audit_id}/verify`, { patch_id: activePatch?.patch_id ?? null, use_docker: true })
+      setGateResult(response.data)
+      const patches = await api.get<PatchRecord[]>(`/api/v1/audits/${audit.audit_id}/patches`)
+      setActivePatch((current) => {
+        const judged = patches.data.find((item) => item.patch_id === current?.patch_id)
+        return current && judged ? { ...current, policy_result: judged.policy_result } : current
+      })
+    },
+    strength: async () => {
+      if (!audit) return
+      const response = await api.post<MutationRun>(`/api/v1/audits/${audit.audit_id}/mutations`, { patch_id: activePatch?.patch_id ?? null, max_mutants: 3 })
+      setMutationRun(response.data)
+    },
+    export: async () => {
+      if (!audit) return
+      const response = await api.post<BundleResponse>(`/api/v1/audits/${audit.audit_id}/bundle`)
+      setBundleInfo({ name: response.data.bundle_name, sha256: response.data.sha256, byteSize: response.data.byte_size, verdict: response.data.manifest.gate_verdict })
+    },
+    validate: async () => {
+      if (!audit) return
+      const response = await api.post<ValidationResult>(`/api/v1/audits/${audit.audit_id}/bundle/validate`)
+      setValidationResult(response.data)
+    },
+    replay: async () => {
+      if (!audit) return
+      const response = await api.post<ReplayResult>(`/api/v1/audits/${audit.audit_id}/replay`)
+      setReplayResult(response.data)
+    },
+    cancel: async () => {
+      if (!audit) return
+      await api.post(`/api/v1/audits/${audit.audit_id}/cancel`)
+    },
+  }
+
+  const skillById = useMemo(() => new Map(skills.map((skill) => [skill.skill_id, skill])), [skills])
+  const can = (skillId: string, fallback: boolean) => skillById.get(skillId)?.available ?? fallback
+  const why = (skillId: string, fallback?: string) => {
+    const skill = skillById.get(skillId)
+    return skill && !skill.available ? skill.blocked_reason ?? undefined : fallback
+  }
+
+  async function runSkill(skillId: string) {
+    const skill = skillById.get(skillId)
+    setPaletteOpen(false)
+    setPaletteQuery('')
+    if (skill && !skill.available) {
+      setIssue({
+        code: 'SKILL_BLOCKED',
+        message: `${skill.slash} is not available: ${skill.blocked_reason ?? 'no reason recorded'}`,
+        next: 'Pick an available skill; reasons come from the audit record, the budgets and runtime readiness.',
+      })
+      return
+    }
+    const action = skillActions[skillId]
+    if (!action) return
+    if (skillId === 'start' || skillId === 'refresh-readiness') {
+      await action()
+      return
+    }
+    await runAction(action)
+  }
+
+  const runSkillRef = useRef(runSkill)
+  useEffect(() => {
+    runSkillRef.current = runSkill
+  })
+
+  const normalizedQuery = paletteQuery.trim().replace(/^\//, '').toLowerCase()
+  const filteredSkills = useMemo(() => {
+    const matches = skills.filter((skill) => !normalizedQuery || [skill.slash, skill.skill_id, skill.title, skill.category, ...skill.keywords].some((term) => term.toLowerCase().includes(normalizedQuery)))
+    const exact = `/${normalizedQuery}`
+    return matches.sort((a, b) => Number(b.slash === exact) - Number(a.slash === exact))
+  }, [normalizedQuery, skills])
+
+  useEffect(() => {
+    if (paletteOpen) paletteInput.current?.focus()
+  }, [paletteOpen])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null
+      const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteIndex(0)
+        setPaletteOpen((open) => !open)
+      } else if (event.key === '/' && !typing && !paletteOpen) {
+        event.preventDefault()
+        setPaletteIndex(0)
+        setPaletteOpen(true)
+      } else if (event.key === 'Escape' && paletteOpen) {
+        setPaletteOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [paletteOpen])
+
+  function onPaletteKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setPaletteIndex((index) => Math.min(index + 1, Math.max(filteredSkills.length - 1, 0)))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setPaletteIndex((index) => Math.max(index - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const chosen = filteredSkills[paletteIndex]
+      if (chosen) void runSkillRef.current(chosen.skill_id)
+    }
+  }
+
+  const nextAction = useMemo((): { text: string; skill: string | null } => {
+    if (issue) return { text: issue.next, skill: null }
+    if (!audit) return { text: 'Choose one curated synthetic example and start an assurance run.', skill: 'start' }
+    if (audit.run_state === 'STALLED') {
+      return trajectory?.recovery_count
+        ? { text: 'The recovery has stalled; preserve evidence and stop.', skill: 'export' }
+        : { text: 'Run the single changed-strategy recovery with the remaining original budget.', skill: 'recover' }
+    }
+    if (audit.run_state === 'BLOCKED') return { text: 'No more retries are allowed; review the preserved partial evidence.', skill: 'export' }
+    if (audit.run_state === 'CANCEL_PENDING') return { text: 'Wait for remote cancellation reconciliation; do not start duplicate work.', skill: null }
+    if (audit.gate_verdict === 'VERIFIED') return { text: 'Export and independently replay the evidence before accepting the repair.', skill: bundleInfo ? 'replay' : 'export' }
+    if (audit.gate_verdict === 'REJECTED') {
+      return plan
+        ? { text: 'Review the failed checks, propose the bounded repair, then verify again.', skill: activePatch ? 'verify' : 'repair' }
+        : { text: 'Review the failed checks; this fixture has no approved automatic repair.', skill: 'export' }
+    }
+    if (gateResult?.unknown_checks.length) return { text: 'Resolve the UNKNOWN required checks; completion does not mean VERIFIED.', skill: 'refresh-readiness' }
+    if (!diagnosis) return { text: 'Run the bounded investigation, or verify directly to observe the clean/rejected path.', skill: 'diagnose' }
+    if (plan && !activePatch) return { text: 'Review and propose the protected minimal diff.', skill: 'repair' }
+    return { text: 'Run the independent acceptance gate.', skill: 'verify' }
+  }, [activePatch, audit, bundleInfo, diagnosis, gateResult, issue, plan, trajectory?.recovery_count])
+  const suggestedSkill = nextAction.skill ? skillById.get(nextAction.skill) : undefined
+  const availableCount = skills.filter((skill) => skill.available).length
 
   return (
     <main className="container">
@@ -484,8 +708,13 @@ function App() {
       <section className="status-strip" aria-label="Runtime status">
         <span><strong>API</strong> {health ? `v${health.version}` : 'connecting'}</span>
         <span><strong>Provider</strong> {ready?.provider.configured ? 'live ready' : 'mock only'}</span>
-        <span><strong>Runner</strong> {ready?.runner.mode ?? 'unknown'}</span>
+        <span><strong>Runner</strong> {ready?.runner.mode ?? 'unknown'}{ready && !ready.runner.isolated_execution_available ? ' · isolation unavailable' : ''}</span>
         <span><strong>Worker</strong> {ready?.worker.alive ? 'alive' : 'offline'}</span>
+      </section>
+
+      <section className="skill-bar" aria-label="Skills">
+        <button type="button" className="btn btn-secondary" aria-haspopup="dialog" aria-expanded={paletteOpen} onClick={() => { setPaletteIndex(0); setPaletteOpen(true) }}>Skills · Ctrl+K or /</button>
+        <span className="meta">{skills.length ? `${availableCount} of ${skills.length} skills available now · ${skillsVersion}` : 'Skill catalog not loaded; buttons use local rules.'}</span>
       </section>
 
       {issue && <section className="alert" role="alert" aria-live="assertive"><strong>{issue.code}</strong><span>{issue.message}</span><small>Next: {issue.next}</small></section>}
@@ -512,18 +741,22 @@ function App() {
 
       {restoring && <p className="restore-note" role="status">Restoring the saved audit without creating a new run…</p>}
 
+      {!audit && <div className="next-action"><strong>Recommended next action</strong><span>{nextAction.text}</span></div>}
+
       {audit && <>
         <section className="panel run-panel" aria-labelledby="run-h">
           <div className="section-head">
             <div><p className="eyebrow">2 · Follow the run</p><h2 id="run-h">{audit.fixture_id} <code>{audit.audit_id}</code></h2></div>
-            <button type="button" className="btn btn-danger" disabled={loading || isTerminal || audit.run_state === 'CANCEL_PENDING'} onClick={() => void runAction(async () => { await api.post(`/api/v1/audits/${audit.audit_id}/cancel`) })}>{audit.run_state === 'CANCEL_PENDING' ? 'Cancel pending' : 'Cancel run'}</button>
+            <button type="button" className="btn btn-danger" disabled={loading || !can('cancel', !isTerminal && audit.run_state !== 'CANCEL_PENDING')} title={why('cancel')} onClick={() => void runSkill('cancel')}>{audit.run_state === 'CANCEL_PENDING' ? 'Cancel pending' : 'Cancel run'}</button>
           </div>
           <div className="verdict-grid">
             <div><span>Lifecycle</span><strong className={`badge badge-${badge(audit.run_state)}`}>{audit.run_state}</strong></div>
             <div><span>Gate verdict</span><strong className={`badge badge-${badge(audit.gate_verdict)}`}>{audit.gate_verdict}</strong></div>
             <div><span>Mode</span><strong>{audit.mode}</strong></div><div><span>Source</span><code>{short(audit.source_hash)}</code></div>
           </div>
-          <div className="next-action"><strong>Recommended next action</strong><span>{nextAction}</span></div>
+          <div className="next-action"><strong>Recommended next action</strong><span>{nextAction.text}</span>
+            {suggestedSkill && <button type="button" className="btn btn-secondary next-action-btn" disabled={loading || !suggestedSkill.available} title={suggestedSkill.blocked_reason ?? undefined} onClick={() => void runSkill(suggestedSkill.skill_id)}>Run {suggestedSkill.slash}</button>}
+          </div>
           {trajectory && <div className="trajectory-strip"><span><strong>Actions</strong> {trajectory.remaining_limits.used_actions ?? 0} used · {trajectory.remaining_limits.max_actions ?? 0} left</span><span><strong>Recovery</strong> {trajectory.recovery_count}/1</span><span><strong>Rule</strong> {trajectory.repeat_threshold ?? 2} repeated no-progress attempts</span></div>}
           <details className="event-log" open><summary>Resumable event trail · cursor {eventCursor}</summary>
             {events.length === 0 ? <p>No new events after the saved cursor.</p> : <ol>{events.map((event) => <li key={`${event.attempt}-${event.sequence}`}><code>#{event.sequence}</code> <strong>{event.event_type.replaceAll('_', ' ')}</strong><time>{new Date(event.created_at).toLocaleTimeString()}</time></li>)}</ol>}
@@ -543,8 +776,8 @@ function App() {
               <p className="meta">Checks: {impact?.selected_checks.join(', ') || 'not loaded'}</p>
             </article>
           </div>
-          <div className="button-group"><button type="button" className="btn btn-secondary" disabled={loading || isTerminal || audit.run_state === 'STALLED'} onClick={() => void runAction(async () => { const response = await api.post<Diagnosis>(`/api/v1/audits/${audit.audit_id}/diagnose`); setDiagnosis(response.data); setTrajectory(response.data.trajectory) })}>{loading ? 'Working…' : 'Run bounded investigation'}</button>
-            {audit.run_state === 'STALLED' && <button type="button" className="btn btn-primary" disabled={loading || (trajectory?.recovery_count ?? 0) >= 1} onClick={() => void runAction(async () => { const response = await api.post<{ result: Diagnosis }>(`/api/v1/audits/${audit.audit_id}/recover`); setDiagnosis(response.data.result); setTrajectory(response.data.result.trajectory) })}>Run one fresh-context recovery</button>}
+          <div className="button-group"><button type="button" className="btn btn-secondary" disabled={loading || !can('diagnose', !isTerminal && audit.run_state !== 'STALLED')} title={why('diagnose')} onClick={() => void runSkill('diagnose')}>{loading ? 'Working…' : 'Run bounded investigation'}</button>
+            {audit.run_state === 'STALLED' && <button type="button" className="btn btn-primary" disabled={loading || !can('recover', (trajectory?.recovery_count ?? 0) < 1)} title={why('recover')} onClick={() => void runSkill('recover')}>Run one fresh-context recovery</button>}
           </div>
           {diagnosis && <article className="card action-result"><h3>Investigation observations</h3><p className="meta">{diagnosis.provider_metadata.provider} · {diagnosis.provider_metadata.mode} · action <code>{diagnosis.action_id}</code></p>
             <p className="meta">Strategy <code>{diagnosis.strategy}</code> · trajectory <span className={`badge badge-${badge(diagnosis.trajectory.outcome ?? 'PROGRESSING')}`}>{diagnosis.trajectory.outcome ?? 'PROGRESSING'}</span></p>
@@ -554,23 +787,7 @@ function App() {
             <div className="section-head"><div><h3 id="decisions-h">Reviewed decision ledger</h3><p className="meta">Current-only context <code>{short(impact?.context_hash)}</code> · refresh {decisionLedger?.refresh_overhead_ms ?? impact?.decision_refresh_overhead_ms ?? 0} ms</p></div></div>
             <div className="decision-compose">
               <label>Decision statement<input value={decisionStatement} onChange={(event) => setDecisionStatement(event.target.value)} /></label>
-              <button type="button" className="btn btn-secondary" disabled={loading || !decisionStatement.trim() || isTerminal} onClick={() => void runAction(async () => {
-                await api.post(`/api/v1/audits/${audit.audit_id}/decisions`, {
-                  statement: decisionStatement,
-                  review_status: 'REVIEWED',
-                  dependency_paths: plan?.targetFiles ?? [],
-                  include_contract: true,
-                  include_source: !plan,
-                  evidence_ids: graph ? [graph.graph_hash] : [],
-                  revisit_condition: 'Re-review when a declared dependency changes or is deleted.',
-                })
-                const [ledgerResponse, impactResponse] = await Promise.all([
-                  api.get<DecisionLedger>(`/api/v1/audits/${audit.audit_id}/decisions`),
-                  api.get<ImpactData>(`/api/v1/audits/${audit.audit_id}/impact`),
-                ])
-                setDecisionLedger(ledgerResponse.data)
-                setImpact(impactResponse.data)
-              })}>Record reviewed decision</button>
+              <button type="button" className="btn btn-secondary" disabled={loading || !decisionStatement.trim() || !can('decision', !isTerminal)} title={why('decision')} onClick={() => void runSkill('decision')}>Record reviewed decision</button>
             </div>
             {!decisionLedger?.decisions.length ? <p className="meta">No decisions recorded. Proposed records stay outside active context until reviewed.</p> : <div className="decision-list">{decisionLedger.decisions.map((decision) => <div key={decision.decision_id} className="decision-row">
               <p><code>{decision.decision_id}</code> <span className={`badge badge-${badge(decision.review_status)}`}>{decision.review_status}</span> <span className={`badge badge-${badge(decision.status)}`}>{decision.status}</span></p>
@@ -583,14 +800,14 @@ function App() {
 
         <section className="panel" aria-labelledby="repair-h">
           <div className="section-head"><div><p className="eyebrow">4 · Review and verify</p><h2 id="repair-h">Protected candidate repair</h2></div><div className="button-group">
-            <button type="button" className="btn btn-secondary" disabled={loading || !plan || isTerminal} onClick={() => void runAction(async () => { if (!plan || !graph) return; const response = await api.post<PatchRecord>(`/api/v1/audits/${audit.audit_id}/patch`, { diff: plan.diff, base_source_hash: graph.source_hash, target_files: plan.targetFiles, explanation: plan.explanation, context_hash: impact?.context_hash }); setActivePatch({ ...response.data, diff_text: plan.diff }) })}>Propose bounded diff</button>
-            <button type="button" className="btn btn-primary" disabled={loading || isTerminal || !ready?.runner.isolated_execution_available} title={!ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined} onClick={() => void runAction(async () => { const response = await api.post<GateResult>(`/api/v1/audits/${audit.audit_id}/verify`, { patch_id: activePatch?.patch_id ?? null, use_docker: true }); setGateResult(response.data) })}>Verify independently</button>
-            <button type="button" className="btn btn-secondary" disabled={loading || gateResult?.verdict !== 'VERIFIED' || !ready?.runner.isolated_execution_available} title={!ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined} onClick={() => void runAction(async () => { const response = await api.post<MutationRun>(`/api/v1/audits/${audit.audit_id}/mutations`, { patch_id: activePatch?.patch_id ?? null, max_mutants: 3 }); setMutationRun(response.data) })}>Assess test strength</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || !plan || !graph || !can('repair', !isTerminal)} title={why('repair')} onClick={() => void runSkill('repair')}>Propose bounded diff</button>
+            <button type="button" className="btn btn-primary" disabled={loading || !can('verify', !isTerminal && !!ready?.runner.isolated_execution_available)} title={why('verify', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('verify')}>Verify independently</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || !can('strength', gateResult?.verdict === 'VERIFIED' && !!ready?.runner.isolated_execution_available)} title={why('strength', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('strength')}>Assess test strength</button>
           </div></div>
           {!plan && <p className="scope-note">No automatic repair is approved for this case. Verification remains available.</p>}
-          {activePatch && <article className="diff-card"><p><strong>{activePatch.patch_id}</strong> · <span className={`badge badge-${badge(activePatch.policy_result)}`}>{activePatch.policy_result}</span> · {activePatch.changed_lines} changed diff lines</p><pre className="code-diff" tabIndex={0} aria-label="Proposed unified diff">{activePatch.diff_text ?? plan?.diff}</pre></article>}
+          {activePatch && <article className="diff-card"><p><strong>{activePatch.patch_id}</strong> · <span className={`badge badge-${badge(activePatch.policy_result)}`}>{activePatch.policy_result}</span> · {activePatch.changed_lines} changed diff lines{activePatch.policy_result === 'PENDING' && <small className="meta"> · validated against the patch rules; only the protected gate can approve or reject it</small>}</p><pre className="code-diff" tabIndex={0} aria-label="Proposed unified diff">{activePatch.diff_text ?? plan?.diff}</pre></article>}
           {gateResult && <div className="result-stack"><div className="result-summary">
-            <div><span>Contract gate</span><strong className={`badge badge-${badge(gateResult.verdict)}`}>{gateResult.verdict}</strong></div>
+            <div><span>Contract gate{gateResult.attempt ? ` · attempt ${gateResult.attempt}` : ''}</span><strong className={`badge badge-${badge(gateResult.verdict)}`}>{gateResult.verdict}</strong></div>
             <div><span>Required checks</span><strong>{gateResult.passing_checks.length} pass · {gateResult.failing_checks.length} fail · {gateResult.unknown_checks.length} unknown</strong></div>
             <div><span>Test strength</span><strong className={`badge badge-${badge(mutationRun?.strength_status ?? 'NOT_RUN')}`}>{mutationRun?.strength_status ?? 'NOT_RUN'} · OPTIONAL</strong></div>
           </div><div className="table-scroll" tabIndex={0} aria-label="Acceptance check results"><table><thead><tr><th>Check</th><th>Outcome</th><th>Oracle</th><th>Observation</th></tr></thead><tbody>
@@ -605,9 +822,9 @@ function App() {
 
         <section className="panel" aria-labelledby="evidence-h">
           <div className="section-head"><div><p className="eyebrow">5 · Preserve evidence</p><h2 id="evidence-h">Export and independent replay</h2></div><div className="button-group">
-            <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => void runAction(async () => { const response = await api.post(`/api/v1/audits/${audit.audit_id}/bundle`); setBundleInfo({ name: response.data.bundle_name, sha256: response.data.sha256, byteSize: response.data.byte_size, verdict: response.data.manifest.gate_verdict }) })}>Build bundle</button>
-            <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => void runAction(async () => { const response = await api.post<ValidationResult>(`/api/v1/audits/${audit.audit_id}/bundle/validate`); setValidationResult(response.data) })}>Validate hashes</button>
-            <button type="button" className="btn btn-primary" disabled={loading || !ready?.runner.isolated_execution_available} title={!ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined} onClick={() => void runAction(async () => { const response = await api.post<ReplayResult>(`/api/v1/audits/${audit.audit_id}/replay`); setReplayResult(response.data) })}>Replay checks</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || !can('export', true)} title={why('export')} onClick={() => void runSkill('export')}>Build bundle</button>
+            <button type="button" className="btn btn-secondary" disabled={loading || !can('validate', true)} title={why('validate')} onClick={() => void runSkill('validate')}>Validate hashes</button>
+            <button type="button" className="btn btn-primary" disabled={loading || !can('replay', !!ready?.runner.isolated_execution_available)} title={why('replay', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('replay')}>Replay checks</button>
           </div></div>
           {bundleInfo && <article className="card evidence-card"><p><strong>{bundleInfo.name}</strong> · {bundleInfo.byteSize.toLocaleString()} bytes</p><p className="meta">SHA-256 <code>{short(bundleInfo.sha256)}</code> · recorded verdict <span className={`badge badge-${badge(bundleInfo.verdict)}`}>{bundleInfo.verdict}</span></p>
             <button type="button" className="btn btn-secondary" onClick={() => void runAction(async () => { const response = await api.get(`/api/v1/audits/${audit.audit_id}/bundle`, { responseType: 'blob' }); const url = URL.createObjectURL(response.data); const link = document.createElement('a'); link.href = url; link.download = bundleInfo.name; link.click(); URL.revokeObjectURL(url) })}>Download authenticated ZIP</button>
@@ -620,6 +837,44 @@ function App() {
       <section className="panel" aria-labelledby="constraints-h"><p className="eyebrow">Protected policy</p><h2 id="constraints-h">Accepted executable constraints</h2><div className="constraint-list">
         {constraints.map((constraint) => <article key={constraint.constraint_id}><strong>{constraint.constraint_id} v{constraint.version}</strong><p>{constraint.statement}</p><small>{constraint.required ? 'Required' : 'Optional'} · checks {constraint.protected_check_ids.join(', ')}</small></article>)}
       </div></section>
+
+      {paletteOpen && <div className="palette-backdrop" role="presentation" onMouseDown={() => setPaletteOpen(false)}>
+        <section className="palette" role="dialog" aria-modal="true" aria-label="Skill palette" onMouseDown={(event) => event.stopPropagation()}>
+          <input
+            ref={paletteInput}
+            className="palette-input"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="skill-options"
+            aria-activedescendant={filteredSkills[paletteIndex] ? `skill-${filteredSkills[paletteIndex].skill_id}` : undefined}
+            placeholder="Type a skill, e.g. /verify"
+            value={paletteQuery}
+            onChange={(event) => { setPaletteQuery(event.target.value); setPaletteIndex(0) }}
+            onKeyDown={onPaletteKeyDown}
+          />
+          <p className="meta palette-hint">{skillsVersion || 'catalog'} · ↑↓ to move · Enter runs the highlighted skill · Esc closes · costs and blocked reasons are computed by the server</p>
+          <ol id="skill-options" className="palette-list" role="listbox" aria-label="Skills">
+            {filteredSkills.map((skill, index) => <li
+              key={skill.skill_id}
+              id={`skill-${skill.skill_id}`}
+              role="option"
+              aria-selected={index === paletteIndex}
+              aria-disabled={!skill.available}
+              onMouseEnter={() => setPaletteIndex(index)}
+              onClick={() => void runSkill(skill.skill_id)}
+            >
+              <div className="palette-row-head"><code>{skill.slash}</code><strong>{skill.title}</strong><span className="palette-category">{skill.category}</span></div>
+              <p>{skill.description}</p>
+              <div className="palette-row-meta">
+                {skill.costs.map((cost) => <span key={cost} className={`badge badge-${cost === 'none' ? 'neutral' : 'warning'}`}>{COST_LABELS[cost] ?? cost}</span>)}
+                <span className="meta">{skill.method} {skill.endpoint}</span>
+                {!skill.available && <span className="palette-blocked">{skill.blocked_reason}</span>}
+              </div>
+            </li>)}
+            {filteredSkills.length === 0 && <li className="palette-empty" aria-disabled="true">{skills.length ? `No skill matches “${paletteQuery}”.` : 'The skill catalog could not be loaded from the API.'}</li>}
+          </ol>
+        </section>
+      </div>}
     </main>
   )
 }

@@ -508,3 +508,138 @@ small {
   .code-diff { font-size: 0.72rem; }
   th, td { min-width: 120px; }
 }
+
+/* ── Skill palette (Day 15 / B-22) ─────────────────────────────────────── */
+
+.skill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0.25rem 0 0;
+}
+
+.next-action-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: min(12vh, 6rem) 1rem 1rem;
+  background: rgba(8, 6, 13, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(72vh, 680px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.palette-input {
+  padding: 0.9rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  font: 500 1rem/1.3 var(--mono);
+  outline: none;
+}
+
+.palette-input:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.palette-hint {
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.74rem;
+}
+
+.palette-list {
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  overflow: auto;
+}
+
+.palette-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.palette-list li[aria-selected='true'] {
+  background: var(--accent-bg);
+  outline: 1px solid var(--accent-border);
+}
+
+.palette-list li[aria-disabled='true'] {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.palette-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.palette-row-head strong {
+  color: var(--text-h);
+}
+
+.palette-category {
+  margin-left: auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.palette-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.palette-row-meta .meta {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+}
+
+.palette-blocked {
+  color: #b45309;
+  font-size: 0.78rem;
+}
+
+.palette-empty {
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .palette-blocked { color: #fcd34d; }
+}
+
+@media (max-width: 760px) {
+  .palette-backdrop { padding: 1rem 0.5rem; }
+  .palette { max-height: 85vh; }
+}

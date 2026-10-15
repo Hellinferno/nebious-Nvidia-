@@ -1,6 +1,6 @@
 {
   "accepted_contract_hash": "6d5b95ce4dbc2dbaf49290a9764169e600df4a2fcc831907345b67a18f547ba2",
-  "authored_at_commit": "093353ee036c339ccda4d9328bbc8dfddb2f75c7",
+  "authored_at_commit": "08866509a510def009e860d066e2e5df94b59d2b",
   "entries": {
     "gate-v12-v1/candidates.json": "ac025e06c860ce756e4ea33823f509c32216144cc1378198b4c579ee7f2d475a",
     "gate-v12-v1/candidates/V-01.diff": "b3ecba074ea29d8e65d5b5b7249780dbfdcb67b38259fdb0c330bad9c05cbc42",
@@ -15,11 +15,11 @@
     "gate-v12-v1/candidates/V-10.diff": "c1217f0ba2da614645e8d34dfb453248458605782f8d7eefe41e2dada7aacfcc",
     "gate-v12-v1/candidates/V-11.diff": "a5bfeb98252acd9852d8b12472abefc23e1238bd27b43068f00f1153b06d7747",
     "gate-v12-v1/candidates/V-12.diff": "9f5a7a6c039446af1830bca74af9f964916c78a18bfb8e548679c59beb1ae4fe",
-    "gate-v12-v1/expected.json": "dc565b99a507562489938113aa24458f53d98616dfb85bb0f68fc8c54f6bee51",
+    "gate-v12-v1/expected.json": "5acd31aec8fa619a690e0f0bdabdbc4d00a7f59bb0c5cfe58f232fc35c6a0f75",
     "manifests/freshness-f6-v1.json": "3c04ad9c1616395457238ba9d517ce7c9bab54a14dd2ed906dd3313e8af2ef42",
-    "manifests/gate-v12-v1.json": "e48dc075c5b2a8eaf8746517fd1cd62e5cf4f46e1108e3dc6cc07280a7a42471",
+    "manifests/gate-v12-v1.json": "0e4a4d9909d1a69b70a02accc941c2234238e8ab028fc89d4b951b4461580fc0",
     "manifests/graph-g8-v1.json": "0ac7f446ce9ebd6198f29373cd5d7e718cc62e03e129d827736a56b55c8575c6",
-    "manifests/mutants-m12-v1.json": "b3753d33948ac1c6c37ecaad7bdd84fc282ef8f48784ecf6ea9a8f047dc123c3",
+    "manifests/mutants-m12-v1.json": "099379797887361ffff50e5859e7b4dfdccfd7b61aaa36c274f25cf81d4d86af",
     "manifests/repair-r12-v1.json": "4f88ac3461aa0844ca7999d50814645962cc3a2f598f6b351f57905dbb71ef2e",
     "manifests/scope.json": "2fce3b3b0ebf25101711bbc74166f295c025147a18ce4d430c31572ab06228cb",
     "manifests/trajectory-w8-v1.json": "442fe3fb2b828122c6b17696f92f55e1f9e03c7902cf3b782b8911220169bdc1",
@@ -69,7 +69,7 @@
     "repair-r12-v1/HO-12/reference": "c543f97e059d17ede1911896ef523fb77b0d9505dcee8b0d2de6ee2a5e4e7182"
   },
   "frozen_at": "2026-10-17",
-  "lock_hash": "37fc5d3f5ef981d40bf7a9852b46e5f9f501747741b0d279579e407ee1c0d337",
+  "lock_hash": "efe61ad8c4b0df56e1f188c1a369ba81cc3bd7b109bc0d353056e47b2b1d0886",
   "schema": "benchproof/suite-lock-v1",
-  "written_at": "2026-10-14T08:03:52.438720+00:00"
+  "written_at": "2026-10-14T13:01:04.591938+00:00"
 }

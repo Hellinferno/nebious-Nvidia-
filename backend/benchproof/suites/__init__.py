@@ -55,11 +55,18 @@ def _sha256_bytes(data: bytes) -> str:
 
 
 def sha256_file(path: Path) -> str:
-    return _sha256_bytes(path.read_bytes())
+    """SHA-256 of a frozen text asset with CRLF normalized to LF.
+
+    Every held-out asset is text (.py, .json, .diff). Git's autocrlf rewrites
+    line endings per checkout, so a raw byte hash would make the lock fail on
+    the first Linux clone; normalizing keeps the lock platform-independent
+    while still detecting every content change.
+    """
+    return _sha256_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
 
 
 def tree_hash(root: Path, suffixes: tuple[str, ...] | None = None) -> str:
-    """Canonical hash of a directory: sorted relative posix paths and byte hashes."""
+    """Canonical hash of a directory: sorted relative posix paths and LF-normalized byte hashes."""
     entries: dict[str, str] = {}
     for path in sorted(root.rglob("*")):
         if not path.is_file() or "__pycache__" in path.parts:

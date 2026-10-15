@@ -214,8 +214,8 @@ def migrate(db_path: Path | None = None) -> None:
     conn.close()
 
 
-def save_audit(audit: AuditRecord, db_path: Path | None = None) -> None:
-    conn = _connect(db_path)
+def insert_audit(conn: sqlite3.Connection, audit: AuditRecord) -> None:
+    """Insert one audit row on an open connection (caller owns the transaction)."""
     conn.execute(
         """INSERT INTO audits
            (audit_id, owner_ref, fixture_id, task_id, source_hash,
@@ -238,8 +238,24 @@ def save_audit(audit: AuditRecord, db_path: Path | None = None) -> None:
             json.dumps(audit.reservations),
         ),
     )
+
+
+def save_audit(audit: AuditRecord, db_path: Path | None = None) -> None:
+    conn = _connect(db_path)
+    insert_audit(conn, audit)
     conn.commit()
     conn.close()
+
+
+# States in which no further work may be started or recorded against an audit.
+INACTIVE_STATES = (
+    RunState.COMPLETED.value,
+    RunState.FAILED.value,
+    RunState.CANCELLED.value,
+    RunState.TIMED_OUT.value,
+    RunState.BLOCKED.value,
+    RunState.CANCEL_PENDING.value,
+)
 
 
 def update_audit_state(
@@ -247,20 +263,27 @@ def update_audit_state(
     new_state: RunState,
     verdict: GateVerdict | None = None,
     db_path: Path | None = None,
-) -> None:
+    *,
+    only_if_active: bool = False,
+) -> bool:
+    """Write run_state (and optionally the verdict). With only_if_active, a terminal or
+    cancel-pending audit is left untouched and False is returned."""
     conn = _connect(db_path)
+    guard = ""
+    params: tuple[Any, ...]
+    if only_if_active:
+        guard = " AND run_state NOT IN (" + ",".join("?" for _ in INACTIVE_STATES) + ")"
     if verdict:
-        conn.execute(
-            "UPDATE audits SET run_state=?, gate_verdict=? WHERE audit_id=?",
-            (new_state.value, verdict.value, audit_id),
+        params = (new_state.value, verdict.value, audit_id, *(INACTIVE_STATES if only_if_active else ()))
+        cur = conn.execute(
+            f"UPDATE audits SET run_state=?, gate_verdict=? WHERE audit_id=?{guard}", params
         )
     else:
-        conn.execute(
-            "UPDATE audits SET run_state=? WHERE audit_id=?",
-            (new_state.value, audit_id),
-        )
+        params = (new_state.value, audit_id, *(INACTIVE_STATES if only_if_active else ()))
+        cur = conn.execute(f"UPDATE audits SET run_state=? WHERE audit_id=?{guard}", params)
     conn.commit()
     conn.close()
+    return cur.rowcount == 1
 
 
 def get_audit(audit_id: str, db_path: Path | None = None) -> dict[str, Any] | None:
@@ -506,11 +529,13 @@ def save_patch(
     diff_text: str,
     approved_paths: list[str],
     changed_lines: int,
-    policy_result: str = "APPROVED",
-    author: str = "nemotron-repair",
+    policy_result: str = "PENDING",
+    author: str = "unspecified",
     provider_meta: dict[str, Any] | None = None,
     db_path: Path | None = None,
 ) -> None:
+    """Persist a patch. PENDING means validated but not yet judged by the gate;
+    APPROVED/REJECTED are written only by the acceptance gate after verification."""
     conn = _connect(db_path)
     conn.execute(
         """INSERT INTO patches

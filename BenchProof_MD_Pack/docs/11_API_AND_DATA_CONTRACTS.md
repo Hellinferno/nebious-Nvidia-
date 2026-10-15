@@ -21,13 +21,18 @@ Research-aligned schema target: `benchproof/v2`. Implement strict typed records 
 | POST `/api/v1/audits/{id}/recover` | Consume the single changed-strategy recovery | Owner; audit must be STALLED with action/time budget remaining |
 | POST `/api/v1/audits/{id}/mutations` | Run at most three relevant trusted semantic mutants | Owner; VERIFIED baseline, accepted patch and execution budget |
 | GET `/api/v1/audits/{id}/mutations` | Read immutable strength runs and explicit outcome counts | Owner; policy stays separate from gate verdict |
-| POST `/api/v1/audits/{id}/patches` | Authorized developer diff import | Disabled for arbitrary public intake; base hash validated |
+| POST `/api/v1/audits/{id}/patch` | Authorized developer diff import; stored as `PENDING` | Disabled for arbitrary public intake; base hash and current context validated |
 | GET `/api/v1/patches/{id}` | Normalized diff and policy result | Owner via parent audit |
-| POST `/api/v1/patches/{id}/verify` | Request fresh protected gate | Owner, approved patch/contract, budget reservation |
+| POST `/api/v1/audits/{id}/verify` | Fresh protected gate; records the next verification attempt and writes `APPROVED`/`REJECTED` on the patch | Owner, isolated runner ready, patch belongs to the audit, budget |
+| GET `/api/v1/audits/{id}/gate` | Latest attempt's check results and attempt number | Owner |
 | POST `/api/v1/audits/{id}/cancel` | Durable cancellation request | Owner; remote reconciliation follows |
 | GET `/api/v1/audits/{id}/bundle` | Safe immutable evidence download | Owner; hash/secret checks passed |
+| GET `/api/v1/skills` | Versioned catalog of bounded skills with session-level availability | No model call; availability from cached readiness |
+| GET `/api/v1/audits/{id}/skills` | Same catalog with availability, cost and blocked reason computed from this audit's record, budgets and runtime | Owner; invoking a skill means calling its listed endpoint, which repeats every check |
 
-Use structured body arguments, not source paths in URLs. Audit, event, patch, gate, bundle and replay routes require the opaque `X-BenchProof-Owner` capability and validate it against the parent audit; list results are owner-filtered. This is the bounded demo access mechanism, not production identity authentication. POST idempotency keys bind owner, endpoint and body hash; same key/different body returns conflict. Reload/reconnect must not duplicate paid actions.
+Use structured body arguments, not source paths in URLs. Audit, event, patch, gate, bundle, replay and skill routes require the opaque `X-BenchProof-Owner` capability and validate it against the parent audit; list results are owner-filtered. This is the bounded demo access mechanism, not production identity authentication. POST idempotency keys bind owner, endpoint and body hash; same key/different body returns conflict. Audit creation under a key writes the audit row, the key record and the `audit_created` event in one serialized transaction, so a duplicate submit replays instead of creating a second audit. Reload/reconnect must not duplicate paid actions.
+
+Skills (`skills-v1`) are named, versioned capabilities (`/start`, `/ready`, `/diagnose`, `/recover`, `/decision`, `/repair`, `/verify`, `/strength`, `/export`, `/validate`, `/replay`, `/cancel`). Each maps to exactly one existing endpoint and declares its cost class (`model-call`, `isolated-execution`, `none`). The catalog never grants anything: availability and `blocked_reason` are advisory and the mapped endpoint repeats every check.
 
 ## Required records
 
@@ -40,8 +45,8 @@ Use structured body arguments, not source paths in URLs. Audit, event, patch, ga
 | Context | context_hash, source/contract/graph hashes, current_decision_ids, excerpts, selected_checks, unresolved_coverage, remaining_budget |
 | Decision | ID, statement, PROPOSED/REVIEWED state, CURRENT/STALE/SUPERSEDED freshness, typed dependency expected/current hashes and CHANGED/DELETED reason, evidence IDs, owner/role, timestamp, supersedes, revisit_condition, validation overhead |
 | Action | action_id, role, tool, strategy, canonical_args_hash, source/context hash, observation IDs/fingerprints, failure category/fingerprint, usage, elapsed, remaining original limits, status |
-| Patch | patch_id, base_hash, diff_hash, approved_paths, changed_lines, targeted_constraints, policy_result, author/provider metadata |
-| CheckResult | check_id/version, patch/source/contract/image/evaluator hashes, PASS/FAIL/UNKNOWN, oracle_kind, observation refs, duration, reason |
+| Patch | patch_id, base_hash, diff_hash, approved_paths, changed_lines, targeted_constraints, policy_result (`PENDING` until the protected gate writes `APPROVED` or `REJECTED`), author/provider metadata |
+| CheckResult | check_id/version, attempt, patch_id, patch/source/contract/image/evaluator hashes, PASS/FAIL/UNKNOWN, oracle_kind, observation refs, duration, reason |
 | MutationResult | template/version/family, base and mutant hashes, validity, KILLED/SURVIVED/INVALID/SKIPPED/UNKNOWN, supporting and selected check IDs, duration/reason |
 | Artifact | artifact_id, owner/audit/attempt, relative name, MIME, byte size, sha256, visibility |
 
@@ -90,4 +95,6 @@ Hash canonical UTF-8 JSON with fixed key ordering; store SHA-256 separately from
 
 ## Storage invariants
 
-Candidate output cannot write CheckResult or gate_verdict. VERIFIED requires matching manifests and PASS for every required check; skipped/UNKNOWN required checks forbid it. One active lease owns a run; compare-and-swap transitions prevent duplicate verifier results. Every patch belongs to its audit/owner. Results are immutable; corrections create new versioned attempts linked to the old record.
+Candidate output cannot write CheckResult or gate_verdict. VERIFIED requires matching manifests and PASS for every required check; skipped/UNKNOWN required checks forbid it. One active lease owns a run; compare-and-swap transitions commit the state change and its `state_changed` event together. Every patch belongs to its audit/owner. Results are immutable; every gate run stores its complete check set atomically as the next attempt, `checks.json` carries the latest attempt plus the attempt count, and earlier attempts stay readable. State writes that follow verification or investigation are guarded: a cancelled, timed-out, failed or blocked audit keeps its state while the evidence is still recorded. Source, intake, decision-dependency and suite-lock hashes are computed over LF-normalized bytes so a CRLF checkout and an LF checkout agree.
+
+Isolated observations are accepted only when the launcher parent's final stdout record equals `/out/observations.json`; the candidate runs in a child process with a cleared environment and exits without atexit hooks, and the `worker-caller-path` check (version 2) requires a live static delegation plus observed worker idempotency across a repeated and a conflicting job.

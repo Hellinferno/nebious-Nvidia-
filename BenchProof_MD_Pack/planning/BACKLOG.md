@@ -219,7 +219,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-22 — User observation and product fixes · P1; critical UX fixes P0
 
-**Owner:** Ravi. **Dependencies:** B-12. **Target:** 18/23 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-12. **Target:** 18/23 Oct. **Status:** DONE 14 Oct for the self-review scope (pulled forward). No volunteer tester was available, so no user study is claimed; the disclosed self-review found and fixed one core readability defect (a proposed diff read `APPROVED` before any gate ran; it is now `PENDING` until the protected gate judges it) and added the bounded skill catalog (`skills-v1`: twelve slash skills with server-computed availability, cost class and blocked reason, exposed at `GET /api/v1/skills` and `GET /api/v1/audits/{id}/skills`) with a Ctrl+K/`/` palette in the UI; the recommended next action now names its skill. A later volunteer session (23 Oct follow-up) can still be recorded here.
 
 **Work:** Observe voluntary task sessions if available; record consent/confusion/completion without coaching. Fix the highest-value core decision/readability issue.
 

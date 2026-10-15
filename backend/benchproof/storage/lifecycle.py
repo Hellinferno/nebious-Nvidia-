@@ -16,7 +16,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from benchproof.domain import Artifact, CheckOutcome, CheckResult, GateVerdict, RunState
+from benchproof.domain import (
+    Artifact,
+    AuditRecord,
+    CheckOutcome,
+    CheckResult,
+    GateVerdict,
+    RunState,
+)
 from benchproof.storage import _connect
 
 TRUSTED_EVALUATOR = "trusted-evaluator"
@@ -79,12 +86,21 @@ def migrate_lifecycle(db_path: Path | None = None) -> None:
         """
     )
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(check_results)")}
-    if "written_by" not in cols:
-        conn.execute(
-            "ALTER TABLE check_results ADD COLUMN written_by TEXT NOT NULL DEFAULT 'trusted-evaluator'"
-        )
+    additions = {
+        "written_by": "ALTER TABLE check_results ADD COLUMN written_by TEXT NOT NULL DEFAULT 'trusted-evaluator'",
+        "patch_id": "ALTER TABLE check_results ADD COLUMN patch_id TEXT",
+        "patch_hash": "ALTER TABLE check_results ADD COLUMN patch_hash TEXT",
+        "image_hash": "ALTER TABLE check_results ADD COLUMN image_hash TEXT NOT NULL DEFAULT ''",
+    }
+    for column, statement in additions.items():
+        if column not in cols:
+            conn.execute(statement)
     conn.commit()
     conn.close()
+
+
+class IdempotencyConflict(Exception):
+    """The same Idempotency-Key was reused with a different request body."""
 
 
 # ── Leases ───────────────────────────────────────────────────────────────
@@ -131,6 +147,27 @@ def lease_holder(audit_id: str, db_path: Path | None = None) -> dict[str, Any] |
 
 # ── Events ───────────────────────────────────────────────────────────────
 
+def _append_event_conn(
+    conn: sqlite3.Connection,
+    audit_id: str,
+    event_type: str,
+    payload: dict[str, Any] | None,
+    attempt: int = 1,
+) -> int:
+    """Insert one event inside the caller's open transaction and return its sequence."""
+    row = conn.execute(
+        "SELECT COALESCE(MAX(sequence), 0) AS s FROM events WHERE audit_id=? AND attempt=?",
+        (audit_id, attempt),
+    ).fetchone()
+    seq = int(row["s"]) + 1
+    conn.execute(
+        """INSERT INTO events (audit_id, attempt, sequence, event_type, payload, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (audit_id, attempt, seq, event_type, json.dumps(payload or {}, sort_keys=True), _now().isoformat()),
+    )
+    return seq
+
+
 def append_event(
     audit_id: str,
     event_type: str,
@@ -142,16 +179,7 @@ def append_event(
     conn = _connect(db_path)
     try:
         conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute(
-            "SELECT COALESCE(MAX(sequence), 0) AS s FROM events WHERE audit_id=? AND attempt=?",
-            (audit_id, attempt),
-        ).fetchone()
-        seq = int(row["s"]) + 1
-        conn.execute(
-            """INSERT INTO events (audit_id, attempt, sequence, event_type, payload, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (audit_id, attempt, seq, event_type, json.dumps(payload or {}, sort_keys=True), _now().isoformat()),
-        )
+        seq = _append_event_conn(conn, audit_id, event_type, payload, attempt)
         conn.execute("COMMIT")
         return seq
     finally:
@@ -191,16 +219,23 @@ def transition(
     allowed = tuple(s.value if isinstance(s, RunState) else s for s in from_states)
     conn = _connect(db_path)
     placeholders = ",".join("?" for _ in allowed)
-    cur = conn.execute(
-        f"UPDATE audits SET run_state=? WHERE audit_id=? AND run_state IN ({placeholders})",
-        (to_state.value, audit_id, *allowed),
-    )
-    conn.commit()
-    conn.close()
-    if cur.rowcount != 1:
-        return False
-    append_event(audit_id, "state_changed", {"to": to_state.value, "reason": reason}, db_path=db_path)
-    return True
+    try:
+        # The state write and its event commit together, so a reader that sees the new
+        # state can never miss the state_changed event (and the SSE end frame cannot
+        # overtake it).
+        conn.execute("BEGIN IMMEDIATE")
+        cur = conn.execute(
+            f"UPDATE audits SET run_state=? WHERE audit_id=? AND run_state IN ({placeholders})",
+            (to_state.value, audit_id, *allowed),
+        )
+        if cur.rowcount != 1:
+            conn.execute("ROLLBACK")
+            return False
+        _append_event_conn(conn, audit_id, "state_changed", {"to": to_state.value, "reason": reason})
+        conn.execute("COMMIT")
+        return True
+    finally:
+        conn.close()
 
 
 def request_cancellation(
@@ -261,6 +296,22 @@ def reconcile_cancellation(
 
 # ── Immutable results and verdict authority ──────────────────────────────
 
+def _insert_check_result(conn: sqlite3.Connection, audit_id: str, result: CheckResult, author: str, attempt: int) -> None:
+    conn.execute(
+        """INSERT INTO check_results
+           (check_id, audit_id, attempt, check_version, outcome, oracle_kind, reason, duration_ms,
+            source_hash, contract_hash, evaluator_hash, created_at, written_by,
+            patch_id, patch_hash, image_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            result.check_id, audit_id, attempt, result.check_version, result.outcome.value,
+            result.oracle_kind, result.reason, result.duration_ms, result.source_hash,
+            result.contract_hash, result.evaluator_hash, _now().isoformat(), author,
+            result.patch_id, result.patch_hash, result.image_hash or "",
+        ),
+    )
+
+
 def record_check_result(
     audit_id: str,
     result: CheckResult,
@@ -272,17 +323,7 @@ def record_check_result(
         raise VerdictAuthorityError(f"{author!r} may not write check results")
     conn = _connect(db_path)
     try:
-        conn.execute(
-            """INSERT INTO check_results
-               (check_id, audit_id, attempt, check_version, outcome, oracle_kind, reason, duration_ms,
-                source_hash, contract_hash, evaluator_hash, created_at, written_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                result.check_id, audit_id, attempt, result.check_version, result.outcome.value,
-                result.oracle_kind, result.reason, result.duration_ms, result.source_hash,
-                result.contract_hash, result.evaluator_hash, _now().isoformat(), author,
-            ),
-        )
+        _insert_check_result(conn, audit_id, result, author, attempt)
         conn.commit()
     except sqlite3.IntegrityError as e:
         raise ImmutableRecordError(f"check result {result.check_id} already recorded") from e
@@ -290,7 +331,55 @@ def record_check_result(
         conn.close()
 
 
-def list_check_results(audit_id: str, attempt: int = 1, db_path: Path | None = None) -> list[dict[str, Any]]:
+def record_check_results(
+    audit_id: str,
+    results: list[CheckResult],
+    author: str,
+    attempt: int,
+    db_path: Path | None = None,
+) -> None:
+    """Record one verification attempt's complete check set in a single transaction.
+
+    Either every check of the attempt is stored or none is, so a partially
+    written attempt can never leave an audit permanently unverifiable.
+    """
+    if author != TRUSTED_EVALUATOR:
+        raise VerdictAuthorityError(f"{author!r} may not write check results")
+    conn = _connect(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        for result in results:
+            _insert_check_result(conn, audit_id, result, author, attempt)
+        conn.execute("COMMIT")
+    except sqlite3.IntegrityError as e:
+        conn.execute("ROLLBACK")
+        raise ImmutableRecordError(f"verification attempt {attempt} already recorded") from e
+    finally:
+        conn.close()
+
+
+def latest_check_attempt(audit_id: str, db_path: Path | None = None) -> int:
+    """Highest recorded verification attempt for the audit (0 when none)."""
+    conn = _connect(db_path)
+    row = conn.execute(
+        "SELECT COALESCE(MAX(attempt), 0) AS a FROM check_results WHERE audit_id=?", (audit_id,)
+    ).fetchone()
+    conn.close()
+    return int(row["a"])
+
+
+def next_check_attempt(audit_id: str, db_path: Path | None = None) -> int:
+    return latest_check_attempt(audit_id, db_path) + 1
+
+
+def list_check_results(
+    audit_id: str, attempt: int | None = None, db_path: Path | None = None
+) -> list[dict[str, Any]]:
+    """Check results of one verification attempt; the latest attempt when none is given."""
+    if attempt is None:
+        attempt = latest_check_attempt(audit_id, db_path)
+        if attempt == 0:
+            return []
     conn = _connect(db_path)
     rows = conn.execute(
         "SELECT * FROM check_results WHERE audit_id=? AND attempt=? ORDER BY check_id", (audit_id, attempt)
@@ -390,3 +479,53 @@ def idempotency_put(
     )
     conn.commit()
     conn.close()
+
+
+def create_audit_idempotent(
+    owner_ref: str,
+    endpoint: str,
+    key: str,
+    bhash: str,
+    audit: AuditRecord,
+    response: dict[str, Any],
+    db_path: Path | None = None,
+) -> tuple[dict[str, Any], bool]:
+    """Create the audit and its idempotency record in one serialized transaction.
+
+    Returns (response, replayed). Two concurrent requests with the same key are
+    serialized by SQLite's write lock: the second one sees the first row and
+    replays it instead of creating a second audit. A different body for the same
+    key raises IdempotencyConflict.
+    """
+    from benchproof.storage import insert_audit
+
+    conn = _connect(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT body_hash, response_json FROM idempotency_keys WHERE owner_ref=? AND endpoint=? AND idem_key=?",
+            (owner_ref, endpoint, key),
+        ).fetchone()
+        if row is not None:
+            conn.execute("ROLLBACK")
+            if row["body_hash"] != bhash:
+                raise IdempotencyConflict("Idempotency-Key reused with a different body")
+            return json.loads(row["response_json"]), True
+        insert_audit(conn, audit)
+        conn.execute(
+            """INSERT INTO idempotency_keys
+               (owner_ref, endpoint, idem_key, body_hash, audit_id, response_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (owner_ref, endpoint, key, bhash, audit.audit_id, json.dumps(response, sort_keys=True), _now().isoformat()),
+        )
+        _append_event_conn(
+            conn,
+            audit.audit_id,
+            "audit_created",
+            {"fixture_id": audit.fixture_id, "source_hash": audit.source_hash,
+             "contract_hash": audit.contract_hash, "mode": audit.mode},
+        )
+        conn.execute("COMMIT")
+        return response, False
+    finally:
+        conn.close()

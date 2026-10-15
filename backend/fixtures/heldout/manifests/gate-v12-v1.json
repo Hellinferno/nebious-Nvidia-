@@ -124,7 +124,7 @@
   "schema_version": "benchproof/suite-manifest-v1",
   "smoke_gate": "visible-smoke-v1 (benchproof/evaluator/smoke.py)",
   "suite": "gate-v12-v1",
-  "truth_hash": "dc565b99a507562489938113aa24458f53d98616dfb85bb0f68fc8c54f6bee51",
+  "truth_hash": "5acd31aec8fa619a690e0f0bdabdbc4d00a7f59bb0c5cfe58f232fc35c6a0f75",
   "v6_subset": {
     "candidate_ids": [
       "V-01",

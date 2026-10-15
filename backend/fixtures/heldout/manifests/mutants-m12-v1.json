@@ -12,7 +12,7 @@
   "target": {
     "fixture_id": "clean-service",
     "note": "templates anchor on this accepted candidate; sensitivity measures the check set, not the agent",
-    "source_hash": "dedb7c2e1e8a9f5df45f3a7f3c21074684e40f457d438f4a23b74dd8c054ff74",
+    "source_hash": "8a3de5861202124142517d838d57d188622c520980581e65e673072bc18ef3ce",
     "suite": "development-v2"
   },
   "template_set_version": "development-semantic-v1",
@@ -22,7 +22,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "api",
-      "mutant_hash": "6b0c46f5fc5158f25b10c360323405dc730f5ba69f1b39540c5ae870e25bd42d",
+      "mutant_hash": "efc9443e03d16704a7dec8dd4655c45bbe8de0573f8a67e191e81f5e673ee1e6",
       "supporting_check_ids": [
         "api-status-code"
       ],
@@ -35,7 +35,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "api",
-      "mutant_hash": "160a4d3035e0d20f59b9ee3d0eb8e632c6e7dd33e044fcbcfad05d9f302063f8",
+      "mutant_hash": "7f96a2f6d625ae684fc3f7f02dce204f0143dcbba792e2dbacc539bffff43453",
       "supporting_check_ids": [
         "api-field-presence"
       ],
@@ -48,7 +48,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "api",
-      "mutant_hash": "8c5b265cc528e58833131d5af0b0f627f729729169e4f904ac130ba5f8732d9a",
+      "mutant_hash": "1c08dd53365a10d567e43950e3564905f2f7ded349c3fa6208351f396e151817",
       "supporting_check_ids": [
         "api-field-presence"
       ],
@@ -61,7 +61,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "amount",
-      "mutant_hash": "fd221323e52f7fa9cd1dda4575e6e7b719885ba8301910b2fbc82484b02d8fe7",
+      "mutant_hash": "56be2c77c7208ed206621d996cd08b61f8a584385451009b904cc807c73e28a9",
       "supporting_check_ids": [
         "amount-boundary"
       ],
@@ -74,7 +74,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "amount",
-      "mutant_hash": "85c639af2713e11a7360c8a0d1406afc1b7f79c1f12abb9f708e4fa3a47db2ee",
+      "mutant_hash": "26c301ae9574dc5a15a0f45da1f611f41a878eaa6b1db5b3c57c58dbdc31694c",
       "supporting_check_ids": [
         "amount-boundary"
       ],
@@ -87,7 +87,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "amount",
-      "mutant_hash": "1c30c0b088286cf630444415922dd7abfa8252b2bc669de5891d01654005d7bc",
+      "mutant_hash": "8b9d4fc97e66a5dbae2f857c777ce6cb24569bea1b1b5bf47968e3d33ca8fee7",
       "supporting_check_ids": [
         "amount-boundary"
       ],
@@ -100,7 +100,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "caller",
-      "mutant_hash": "c336cfa71318e5cc59cc7b05f48ecb48d170f96d8db88b2abbae3ec68eec74dc",
+      "mutant_hash": "8d5a08d5ce15867c0a790d077e381a6b9cbabbdcb3ba034e701be02feef35b17",
       "supporting_check_ids": [
         "caller-consistency"
       ],
@@ -113,7 +113,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "caller",
-      "mutant_hash": "595655dfb3ac85cbed6e729ce5debad5059ef87a89e618a99da8c43f9d045f0c",
+      "mutant_hash": "e92bfc24111c8eef273e13c717be1ee52cd18ba2fead02e7934b76ee34ee1020",
       "supporting_check_ids": [
         "caller-consistency"
       ],
@@ -126,7 +126,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "caller",
-      "mutant_hash": "68dd0279364838284e38cffc96355fd705fa6d201727c3dc8eb475a2b4f6eb5f",
+      "mutant_hash": "22154aefdd298cabdca4c9387f303b047d6d58627e876e7e78785f05bd66656a",
       "supporting_check_ids": [
         "caller-consistency",
         "worker-caller-path"
@@ -140,7 +140,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "idempotency",
-      "mutant_hash": "48fc6b4a7fafcc60f0e31221a9748adbb311c300eb46e6613846b2a72135a899",
+      "mutant_hash": "257b421ed26bebdc0500d7ae08db954527a136cca51d3c1d1eab40ee2a5535a1",
       "supporting_check_ids": [
         "idempotency-duplicate"
       ],
@@ -153,7 +153,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "idempotency",
-      "mutant_hash": "4dbb55f66936048bd9f460f29a34ee9c6b69e384779bc655d59ba2e45e7a4a87",
+      "mutant_hash": "0e0b1f1804ce4f7438faf6c26fbf4668166808104ab136e0384976f2c81493d1",
       "supporting_check_ids": [
         "idempotency-conflict"
       ],
@@ -166,7 +166,7 @@
       "applicable": true,
       "detail": "trusted exact replacement applied",
       "family": "idempotency",
-      "mutant_hash": "4f074729e43778abe69d6776447c89890f9ad8f39df06f6a9aacd1a5aaedc993",
+      "mutant_hash": "e6402efe97b1d44b4418e317a15a6e4382982287720e512c56d5f4def11a2658",
       "supporting_check_ids": [
         "idempotency-duplicate",
         "idempotency-conflict"
@@ -176,5 +176,5 @@
       "version": 1
     }
   ],
-  "templates_module_hash": "22cd1f20776deb2f4f502707a29160ed601b8bb75b346b536f3f2b1bad152ea5"
+  "templates_module_hash": "b45254453e2af9cb4ec313382e68f6c4437f51af0b31ea1caab5cddafb1f1133"
 }
