@@ -355,6 +355,26 @@ Pending: registration/eligibility/account checks, real provider and isolated run
   - Full backend test suite: 455 passed, 3 skipped, 0 failed in 86.36s.
 - Next: C-07 primary task workspace with source, plan, activity, diff, checks and download.
 
+### 2026-10-17 — C-07 completion: primary coding agent workspace and interactive workflow
+
+- Scope: Completed C-07 (primary task-centered coding workspace in React/TypeScript, project source browser with editable vs protected test separation, interactive brief and limits review, model plan review and step editing, 8-stage visual progress stepper, live controls [start, pause, resume, cancel], 5-gauge monotonic budget meters, unified syntax-highlighted diff viewer, isolated test execution terminal console, versioned checkpoint history with CAS restore, authenticated bundle ZIP export, and backward-compatible legacy assurance audit tab).
+- Frontend architecture:
+  - Default view: `frontend/src/components/coding/CodingWorkspace.tsx` mounted as the primary interface in `App.tsx`, with a tab navigation toggle to the historical assurance audit dashboard.
+  - Project source browser: Interactive file tree with badges (`EDITABLE [app/]` vs `PROTECTED TEST [tests/]`) and line-numbered code viewer.
+  - Sample projects: Pre-loaded `StringCalculator` (bug fix), `BankAccount` (bounded feature), and `MC-01` (invoice fixture).
+  - Custom project intake: Multi-file modal intake enforcing client-side validation rules (<= 20 files, <= 24 KiB/file, <= 128 KiB total, path traversal rejection).
+  - Task brief & plan review: Editable plan steps prior to approval, plan hash validation (`identity()`), and idempotency headers for all mutating actions.
+  - Multi-stage visual stepper: Tracking progression through `Draft` -> `Plan` -> `Approval` -> `Baseline` -> `Edit` -> `Candidate` -> `Final` -> `Review Ready`.
+  - Control bar & live polling: Seamless polling of task state, events, diffs, executions, usage, and checkpoints during active execution.
+  - Changes & diff viewer: Syntax-colored unified diff with addition (`+`), deletion (`-`), and chunk header styling, author attribution, and tested verdict badge.
+  - Checkpoint history & CAS rollback: Timeline of versioned snapshots with one-click restore to `PAUSED` state without resetting monotonic budgets.
+  - Bundle export: One-click downloads for raw `patch.diff` and authenticated `.zip` archive containing full verification evidence.
+- Quality & verification:
+  - `npm run lint` (oxlint): 0 warnings, 0 errors.
+  - `npm run build` (tsc -b && vite build): clean production bundle in 273ms.
+  - Full backend test regression: 455 passed, 3 skipped, 0 failed in 78.26s.
+- Next: C-08 cloud worker/session/quota acceptance, ownership, isolation and backup/restore.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number

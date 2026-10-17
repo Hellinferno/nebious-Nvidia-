@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import axios, { AxiosError } from 'axios'
+import { CodingWorkspace } from './components/coding/CodingWorkspace'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
@@ -31,6 +32,17 @@ type Ready = {
   runner: { mode: string; isolated_execution_available: boolean; detail?: string }
   worker: { alive: boolean; heartbeat: { worker_id: string; age_s: number } | null }
   fixtures: number
+  coding?: {
+    enabled: boolean
+    admission_configured: boolean
+    blocked_reason: string | null
+    worker_alive: boolean
+    profile: string
+    session_seconds_remaining: number
+    hard_model_calls_per_day: number
+    hard_executions_per_day: number
+    hard_token_cap: boolean
+  }
 }
 type Example = {
   id: string
@@ -273,6 +285,9 @@ function issueFrom(error: unknown): Issue {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState<'coding' | 'legacy'>(() => {
+    return (localStorage.getItem('benchproof.active-tab') as 'coding' | 'legacy') || 'coding'
+  })
   const [health, setHealth] = useState<Health | null>(null)
   const [ready, setReady] = useState<Ready | null>(null)
   const [examples, setExamples] = useState<Example[]>([])
@@ -304,6 +319,10 @@ function App() {
   const [paletteIndex, setPaletteIndex] = useState(0)
   const cursorRef = useRef(0)
   const paletteInput = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem('benchproof.active-tab', activeTab)
+  }, [activeTab])
 
   const activeAuditId = audit?.audit_id ?? null
   const plan = CANONICAL_DIFFS[selectedFixture]
@@ -706,7 +725,36 @@ function App() {
         </a>
         <div className="topbar-actions"><span className="topbar-caption">NVIDIA inference · Nebius</span><button type="button" className="btn btn-secondary" aria-haspopup="dialog" aria-expanded={paletteOpen} onClick={() => { setPaletteIndex(0); setPaletteOpen(true) }}>Commands<span className="shortcut">Ctrl K</span></button></div>
       </nav>
-      <header className="hero">
+
+      <div className="tab-navigation" role="tablist" aria-label="BenchProof Modules" style={{ marginTop: '16px', marginBottom: '20px' }}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'coding'}
+          className={`nav-tab-btn ${activeTab === 'coding' ? 'active' : ''}`}
+          onClick={() => setActiveTab('coding')}
+        >
+          ⚡ Autonomous Coding Agent (Primary)
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'legacy'}
+          className={`nav-tab-btn ${activeTab === 'legacy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('legacy')}
+        >
+          📋 Legacy Assurance Audit (Historical Gate)
+        </button>
+      </div>
+
+      {activeTab === 'coding' ? (
+        <CodingWorkspace api={api} ready={ready} owner={OWNER} />
+      ) : (
+        <>
+          <div className="scope-note" style={{ marginTop: '16px', marginBottom: '16px' }}>
+            <strong>Historical Assurance View:</strong> This view contains the contract verification dashboard on prepared invoice fixtures. For the autonomous coding agent with live task planning, code edits, isolated container execution, diffs, checkpoints, and downloads, use the <strong>⚡ Autonomous Coding Agent</strong> tab above.
+          </div>
+          <header className="hero">
         <div><p className="eyebrow">Bounded engineering assurance</p>
           <h1>Code changes.<br />Proof, not guesswork.</h1>
           <p className="subtitle">Investigate a change, verify it in isolation, and keep evidence anyone with the bundle can independently replay.</p>
@@ -846,6 +894,8 @@ function App() {
       <section className="panel" aria-labelledby="constraints-h"><p className="eyebrow">Protected policy</p><h2 id="constraints-h">Accepted executable constraints</h2><div className="constraint-list">
         {constraints.map((constraint) => <article key={constraint.constraint_id}><strong>{constraint.constraint_id} v{constraint.version}</strong><p>{constraint.statement}</p><small>{constraint.required ? 'Required' : 'Optional'} · checks {constraint.protected_check_ids.join(', ')}</small></article>)}
       </div></section>
+        </>
+      )}
 
       <footer className="workspace-footer"><span>BenchProof · bounded, independently checked, replayable.</span><span>VERIFIED applies only to the declared checks and source version.</span></footer>
 
