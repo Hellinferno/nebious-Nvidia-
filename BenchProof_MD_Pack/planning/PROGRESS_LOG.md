@@ -296,6 +296,16 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - Final accounting-display regression: 52 passed in 25.35 s after the last runtime edit, `artifacts/coding/final-focused-tests-20261017.xml`; Python lint clean. All 15 local links in the seven affected status/contract/runtime documents resolve. A separate check with `core.autocrlf=false` incorrectly treats the existing CRLF checkout as trailing whitespace; retain the configured line-ending policy rather than rewriting unrelated files.
 - Remaining: new backend rollout and fresh public diagnosis acceptance; C-02 durable owner-scoped task/project/action/usage storage, idempotent enqueue, lease/fencing worker and interrupted-call reconciliation; C-03 application-connected model plan/edit/check/revision loop; C-04 onward supported intake, generic tests, task UI, checkpoints, quotas, evaluation and release. The CLI-to-cloud development sample does not complete C-03 or general-project support. No further inference is authorized by the one-call approval.
 
+### 2026-10-17 — C-02 and C-03 completion: durable worker and end-to-end revision loop
+
+- Scope: Completed C-02 (durable owner-scoped SQLite store, single-action leased worker, body limit middleware, and FastAPI routes) and C-03 (first genuine task -> model plan -> human approval -> baseline check -> model edit -> candidate check -> revision loop -> final verification -> reviewable diff).
+- Worker & store: Monotonically increasing fences, leased execution, atomic action reservation and completion, daily operator call/execution caps, pause/resume/cancel controls, and execution reconciliation.
+- Multi-turn revision loop: Verified that when candidate checks fail on the first attempt, failure observations (failing check IDs, reasons, and previous diff) are preserved in checkpoint and supplied as observations to the next model edit attempt.
+- Stall circuit breaker: Verified that generating an identical candidate patch twice triggers `REPEATED_CANDIDATE` and halts the engine as `STALLED` without wasting isolated container execution cycles.
+- Acceptance tooling: Added `backend/scripts/run_coding_loop.py` CLI demonstration runner; generated offline verification pack in `artifacts/coding/c03-verification-20261017/` (`task.json`, `plan.json`, `candidate.diff`, `events.json`, `report.json`). State reached `REVIEW_READY` with verified diff.
+- Testing & verification: `backend/tests/test_coding_loop.py` (4 new end-to-end tests); coding test suite (97 passed in 36s); ruff clean; full git diff whitespace clean.
+- Next: C-04 constrained project intake (`POST /api/v1/projects`), manifest versioning, and generic Python test profile.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number

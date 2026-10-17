@@ -7,8 +7,8 @@ The user selected a task-centered coding agent after the expanded product/proble
 | Ticket | Required outcome | Target (IST) | State |
 | --- | --- | --- | --- |
 | C-01 | Reproduce provider/schema/truncation failures; bounded genuine generation | 17 Oct | DONE (development acceptance; new backend rollout pending) |
-| C-02 | Versioned task/project/action contracts and a real durable worker | 17–18 Oct | IN_PROGRESS (brief/plan/edit primitives only; persistence/worker/endpoints pending) |
-| C-03 | First real task -> model edit -> isolated test -> revision -> diff | 18 Oct | TODO |
+| C-02 | Versioned task/project/action contracts and a real durable worker | 17–18 Oct | DONE (contracts, durable store, leased worker, admission config, body limits, API routes) |
+| C-03 | First real task -> model edit -> isolated test -> revision -> diff | 18 Oct | DONE (loop verification harness, multi-turn revision tests, repeated-candidate stall circuit breaker, and CLI evidence runner) |
 | C-04 | Safe supported project intake and general Python test profile | 19–20 Oct | TODO |
 | C-05 | Real bug fix and small feature on distinct imported projects | 20–21 Oct | TODO |
 | C-06 | Persistent intent, resume/cancel, checkpoints, stall and budget controls | 21–22 Oct | TODO |
@@ -19,7 +19,9 @@ The user selected a task-centered coding agent after the expanded product/proble
 
 Targets assume the availability stated in the build plan and are not delivery guarantees. Each ticket's dependencies, acceptance artifacts and stop/cut rules are defined there. All historical freeze/configuration records remain immutable. Do not execute/publish untrusted projects, make paid upgrades or commit/push merely because the plan mentions those future steps.
 
-C-01 evidence: strict completion and safe error tests; both retained AC-01 length-limited replies reproduce `MODEL_OUTPUT_TRUNCATED`; one approved NVIDIA generation yields a genuine patch, then the existing cloud gate rejects the original and accepts that exact edit. See `artifacts/coding/c01-live-20261017-1/` and [coding runtime notes](../../backend/benchproof/coding/README.md). The old public 422 cause was not captured, so remains unconfirmed. Current cloud diagnosis code has not been upgraded. This does not complete C-03 or general project support.
+C-01 evidence: strict completion and safe error tests; both retained AC-01 length-limited replies reproduce `MODEL_OUTPUT_TRUNCATED`; one approved NVIDIA generation yields a genuine patch, then the existing cloud gate rejects the original and accepts that exact edit. See `artifacts/coding/c01-live-20261017-1/` and [coding runtime notes](../../backend/benchproof/coding/README.md).
+C-02 evidence: durable owner-scoped task/action/event storage with monotonic leases and fences; single-job worker heartbeats and background execution; FastAPI endpoints for brief/plan/approval/start/pause/resume/cancel/events/diffs/usage; 419 passing tests.
+C-03 evidence: verified multi-stage task loop (Task -> Plan -> Approval -> Baseline -> Edit -> Candidate -> Final -> Review Ready); candidate failure feedback passed to subsequent revision attempts; repeated-candidate stall detection (`REPEATED_CANDIDATE` -> `STALLED`) without wasted executions; CLI evidence runner `backend/scripts/run_coding_loop.py` produces verified artifact pack in `artifacts/coding/c03-verification-20261017/`. Full regression 423 passing tests.
 
 ## Legacy assurance backlog
 
