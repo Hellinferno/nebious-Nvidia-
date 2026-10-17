@@ -14,13 +14,16 @@ from benchproof.coding.generation import CodingBrief, CodingPlan, SourceHash
 from benchproof.coding.runtime import ADMISSION_MESSAGES, CodingRuntimeConfig
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.constraints import contract_hash
+from benchproof.execution.project_runner import PROJECT_CONTRACT_HASH
 from benchproof.fixtures import candidate_files, fixture_dir, list_fixture_ids, source_hash_for_dir
+from benchproof.projects.store import ProjectStore
 
 
 class CreateCodingTask(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    fixture_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    fixture_id: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    project_id: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     task: str = Field(min_length=1, max_length=4_000)
     source_hash: SourceHash
     editable_paths: list[str] = Field(min_length=1, max_length=3)
@@ -66,6 +69,15 @@ def _snapshot(fixture_id: str, source_hash: str) -> dict[str, str]:
     if source_hash_for_dir(app_dir) != source_hash:
         raise CodingStoreError("STALE_SOURCE", "The prepared project changed; select its current source revision")
     return source
+
+
+def _project_snapshot(db_path: Path, project_id: str, owner: str, source_hash: str) -> dict[str, str]:
+    proj = ProjectStore(db_path).get_project(project_id, owner_ref=owner)
+    if proj is None:
+        raise CodingStoreError("NOT_FOUND", f"Project '{project_id}' not found")
+    if proj.source_hash != source_hash:
+        raise CodingStoreError("STALE_SOURCE", "The project source changed; select its current source revision")
+    return proj.files
 
 
 def _public_task(task: dict[str, Any]) -> dict[str, Any]:
@@ -121,13 +133,24 @@ def coding_router(
         key = _key(idempotency_key)
         require_admission()
 
+        if (body.fixture_id is None and body.project_id is None) or (body.fixture_id and body.project_id):
+            raise HTTPException(422, detail={"code": "INVALID_INPUT", "message": "Specify exactly one of fixture_id or project_id."})
+
         def create(records: CodingStore) -> dict[str, Any]:
             brief = CodingBrief(
                 task=body.task, source_hash=body.source_hash, editable_paths=body.editable_paths,
             )
-            source = _snapshot(body.fixture_id, body.source_hash)
+            if body.project_id:
+                target_id = body.project_id
+                source = _project_snapshot(database_path(), body.project_id, owner, body.source_hash)
+                task_contract = PROJECT_CONTRACT_HASH
+            else:
+                target_id = body.fixture_id  # type: ignore[assignment]
+                source = _snapshot(body.fixture_id, body.source_hash)  # type: ignore[arg-type]
+                task_contract = contract_hash()
+
             return records.create_task(
-                owner, body.fixture_id, brief, source, contract_hash(), key,
+                owner, target_id, brief, source, task_contract, key,
                 runtime_config=expected_runtime(),
             )
 

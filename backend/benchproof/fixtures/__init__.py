@@ -62,7 +62,12 @@ def load_expected(fixture_id: str) -> dict[str, Any]:
 
 
 def candidate_files(app_dir: Path) -> list[Path]:
-    return sorted(p for p in app_dir.rglob("*.py") if "__pycache__" not in p.parts)
+    files = list(app_dir.rglob("*.py"))
+    if app_dir.name == "app":
+        tests_dir = app_dir.parent / "tests"
+        if tests_dir.exists() and tests_dir.is_dir():
+            files.extend(tests_dir.rglob("*.py"))
+    return sorted(p for p in files if "__pycache__" not in p.parts)
 
 
 def canonical_source_bytes(path: Path) -> bytes:

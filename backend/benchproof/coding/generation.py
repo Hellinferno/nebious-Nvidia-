@@ -30,11 +30,12 @@ from benchproof.providers.structured import (
 SourceHash = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 ShortText = Annotated[str, Field(min_length=1, max_length=400)]
 MAX_CONTEXT_BYTES = 24_576
-_SOURCE_PATH = re.compile(r"^app/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
+_EDITABLE_PATH = re.compile(r"^app/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
+_SOURCE_PATH = re.compile(r"^(?:app|tests)/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
 
 
 def _paths(paths: list[str]) -> list[str]:
-    if any(not _SOURCE_PATH.fullmatch(path) for path in paths):
+    if any(not _EDITABLE_PATH.fullmatch(path) for path in paths):
         raise ValueError("Only portable app/ Python source paths are supported")
     if len({path.casefold() for path in paths}) != len(paths):
         raise ValueError("Duplicate or case-colliding source paths")
@@ -67,7 +68,7 @@ class CodingPlan(BaseModel):
     brief_hash: SourceHash
     steps: list[ShortText] = Field(min_length=1, max_length=4)
     target_files: list[str] = Field(min_length=1, max_length=3)
-    check_profile: Literal["invoice-observation-v1"] = "invoice-observation-v1"
+    check_profile: Literal["invoice-observation-v1", "project-unittest-v1"] = "invoice-observation-v1"
 
     _validate_paths = field_validator("target_files")(_paths)
 

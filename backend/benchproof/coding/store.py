@@ -25,7 +25,7 @@ from benchproof.coding.contracts import (
 from benchproof.fixtures import candidate_files, fixture_dir
 
 _HASH = re.compile(r"^[a-f0-9]{64}$")
-_PATH = re.compile(r"^app/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
+_PATH = re.compile(r"^(?:app|tests)/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
 _TERMINAL = {"CANCELLED", "BLOCKED", "FAILED", "STALLED", "BUDGET_EXHAUSTED", "REVIEW_READY"}
 _STAGES = {"PLAN", "BASELINE", "EDIT", "CANDIDATE", "FINAL", "DONE"}
 _LIMITS = TaskLimits()
@@ -235,21 +235,32 @@ class CodingStore:
             replay = self._replay(connection, owner_ref, "create", idempotency_key, fingerprint)
             if replay:
                 return replay
-            try:
-                app_dir = fixture_dir(fixture_id) / "app"
-                if app_dir.is_symlink() or not app_dir.is_dir():
-                    raise ValueError("Missing prepared fixture")
-                expected = {}
-                for path in candidate_files(app_dir):
-                    if (any(parent.is_symlink() for parent in [path, *path.parents]
-                            if parent != app_dir.parent)
-                            or not path.resolve().is_relative_to(app_dir.resolve())):
-                        raise ValueError("Linked fixture")
-                    expected[path.relative_to(app_dir.parent).as_posix()] = path.read_bytes().decode("utf-8")
-                if expected != source_files:
-                    raise ValueError("Changed prepared fixture")
-            except (OSError, UnicodeError, ValueError) as exc:
-                raise CodingStoreError("STALE_SOURCE", "Only an exact prepared fixture snapshot is supported") from exc
+            if fixture_id.startswith("proj-"):
+                proj = connection.execute(
+                    "SELECT * FROM coding_projects WHERE project_id=? AND owner_ref=?",
+                    (fixture_id, owner_ref),
+                ).fetchone()
+                if proj is None:
+                    raise CodingStoreError("NOT_FOUND", f"Project '{fixture_id}' not found")
+                proj_files = json.loads(proj["files_json"])
+                if proj_files != source_files:
+                    raise CodingStoreError("STALE_SOURCE", "Task source does not match stored project snapshot")
+            else:
+                try:
+                    app_dir = fixture_dir(fixture_id) / "app"
+                    if app_dir.is_symlink() or not app_dir.is_dir():
+                        raise ValueError("Missing prepared fixture")
+                    expected = {}
+                    for path in candidate_files(app_dir):
+                        if (any(parent.is_symlink() for parent in [path, *path.parents]
+                                if parent != app_dir.parent)
+                                or not path.resolve().is_relative_to(app_dir.resolve())):
+                            raise ValueError("Linked fixture")
+                        expected[path.relative_to(app_dir.parent).as_posix()] = path.read_bytes().decode("utf-8")
+                    if expected != source_files:
+                        raise ValueError("Changed prepared fixture")
+                except (OSError, UnicodeError, ValueError) as exc:
+                    raise CodingStoreError("STALE_SOURCE", "Only an exact prepared fixture snapshot is supported") from exc
             count = connection.execute("SELECT COUNT(*) FROM coding_tasks").fetchone()[0]
             if count >= self.operator_limits.max_tasks:
                 raise CodingStoreError("STORAGE_LIMIT", "Prepared coding task storage is full")

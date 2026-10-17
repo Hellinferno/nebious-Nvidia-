@@ -306,6 +306,23 @@ Pending: registration/eligibility/account checks, real provider and isolated run
 - Testing & verification: `backend/tests/test_coding_loop.py` (4 new end-to-end tests); coding test suite (97 passed in 36s); ruff clean; full git diff whitespace clean.
 - Next: C-04 constrained project intake (`POST /api/v1/projects`), manifest versioning, and generic Python test profile.
 
+### 2026-10-17 — C-04 completion: constrained project intake and generic test profile
+
+- Scope: Completed C-04 (constrained project intake, owner-scoped project repository, manifest fingerprinting, generic unittest runner with process isolation, and CodingEngine integration).
+- Project intake & safety: Strict validation enforcing max 20 UTF-8 text files, 24 KiB/file, 128 KiB total raw bytes, and 256 KiB encoded body limit; disallows path traversal (`..`, absolute paths, drive letters, backslashes), secret filenames (`.env`, `id_rsa`, tokens), byte-code (`.pyc`, `.so`), case collisions, and null bytes. Canonical LF-normalized manifest fingerprinting produces SHA-256 source identity.
+- Durable project store: Owner-scoped SQLite `coding_projects` table (`proj-` ID prefix, name, runner profile, manifest, files JSON, owner reference, timestamps) with per-owner quota (max 20 projects per owner).
+- Project API endpoints: `POST /api/v1/projects` (creates and validates project with 256 KiB body limit), `GET /api/v1/projects` (lists owned projects), `GET /api/v1/projects/{id}` (retrieves project manifest), `GET /api/v1/projects/{id}/source` (retrieves source files), `DELETE /api/v1/projects/{id}`. `POST /api/v1/coding-tasks` extended to accept `project_id` or `fixture_id`.
+- Isolated generic test runner: `run_project_tests.py` trusted launcher running in parent/child process isolation with strict stdout/stderr capture; probes for network/socket attempts and secret/env leaks; discovers and runs bounded `unittest` suites; handles `ZERO_TESTS_COLLECTED` failure cleanly; formats structured check results with `PROJECT_CONTRACT_HASH` (64-char hex SHA256).
+- Verification & testing:
+  - Two distinct small projects (`StringCalculator` and `BankAccount`) pass unchanged.
+  - Failure detection verifies expected error reporting with tracebacks.
+  - Missing/zero tests collected properly fails with `ZERO_TESTS_COLLECTED`.
+  - Full end-to-end multi-stage coding task loop on user project: Baseline (REJECTED) -> Model Edit -> Candidate Check (VERIFIED) -> Final Independent Check (VERIFIED) -> `REVIEW_READY` with verified diff.
+  - `backend/tests/test_project_intake.py` (13 passed in 0.28s).
+  - `backend/tests/test_project_runner.py` (5 passed in 5.3s).
+  - Full backend regression: 441 passed, 3 skipped, 0 failed in 42.6s.
+- Next: C-05 running the agent on imported projects with focused context, reviewed plans and versioned project edit policy.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number

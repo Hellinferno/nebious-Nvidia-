@@ -26,6 +26,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from benchproof import __version__
 from benchproof.api.body_limit import CodingBodyLimitMiddleware
 from benchproof.api.coding import coding_router
+from benchproof.api.projects import projects_router
 from benchproof.coding.runtime import CodingRuntimeConfig
 from benchproof.coding.store import CodingStore
 from benchproof.constraints import contract_hash, get_constraint, list_constraints
@@ -171,6 +172,7 @@ app.include_router(coding_router(
     lambda: bool(getattr(app.state, "runner", {}).get("isolated_execution_available")),
     lambda: settings.nebius_model_id,
 ))
+app.include_router(projects_router(_request_owner, _db))
 
 
 # ── Health / ready ───────────────────────────────────────────────────────

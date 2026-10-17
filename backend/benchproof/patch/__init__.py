@@ -289,6 +289,14 @@ def apply_patch_to_dir(
         shutil.rmtree(dest_dir)
     shutil.copytree(base_app_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
+    # Preserve protected tests in candidate workspace if present
+    tests_src = base_app_dir.parent / "tests"
+    tests_dest = dest_dir.parent / "tests"
+    if base_app_dir.name == "app" and tests_src.exists() and tests_src.is_dir():
+        if tests_dest.exists():
+            shutil.rmtree(tests_dest)
+        shutil.copytree(tests_src, tests_dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
     file_diffs = {
         path.removeprefix("app/"): section
         for path, section in _split_file_diffs(proposal.diff).items()
