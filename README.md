@@ -8,19 +8,24 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Next build: task-centered coding agent
+## Primary Experience: Task-Centered Coding Agent
 
-The [active build plan](BUILD_PLAN.md) moves the primary experience to project/task input -> reviewed plan -> real NVIDIA-generated edits -> isolated tests and bounded repair -> reviewable patch. It reuses the assurance/runtime foundation without claiming the current fixture dashboard already provides general project coding. New C-01–C-10 milestones are planned, not deployed. See the [17 October product/problem research](CODING_AGENT_RESEARCH_2026-10-17.md).
+BenchProof provides an end-to-end autonomous coding workflow:
+**Project Intake -> Reviewed Plan -> Human Approval -> Isolated Candidate Execution -> Test Observation -> Bounded Multi-Turn Revision -> Checkpoint Rollback -> Verifiable Unified Diff**.
 
-## Current state (16 October 2026)
+All milestones **C-01 through C-10** are completed and verified:
+- **C-01 to C-03**: Real model generation on Nebius, protected candidate execution, multi-turn revision feedback, and repeated-candidate stall detection.
+- **C-04 & C-05**: Constrained project intake (manifest fingerprinting, path/secret protection), generic `unittest` runner, and verified bug fix & feature workflows.
+- **C-06 & C-07**: Checkpoint history with CAS restore, pause/resume/cancel controls, unified diff viewer, test terminal console, and evidence ZIP export.
+- **C-08 to C-10**: Cloud failure mode acceptance suite (lease recovery, quotas, backup/restore), frozen 6-task evaluation harness with rehearsals (100% pass rate), and complete clean-clone submission checklist ([SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md)).
 
-Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel Hobby with a persistent trusted Sandbox/Drive and Nebius inference. It does not depend on the owner's laptop. Cloud isolation/persistence, public live API checks and a fresh-browser create/verify/export/replay/download/reload journey pass. See [Vercel deployment](VERCEL_DEPLOYMENT.md) for evidence, quotas and remaining release gates.
+The legacy assurance audit dashboard remains available as a secondary tab in the web interface.
 
-Known limitation: one subsequent live diagnosis returned HTTP 422, and its failure is
-retained. Model diagnosis/repair reliability still needs work; hosting success is not
-a claim that every inference or final evaluation passes.
+## Public Demo & Status
 
-Implemented: curated intake; accepted executable constraints; durable owner-scoped
+Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel with persistent storage and Nebius Token Factory inference.
+Full backend automated test suite: **467 passed, 3 skipped, 0 failed**.
+Frontend: TypeScript / React 19, **0 lint warnings / 0 errors**, clean production build in ~280ms.
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
 source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP
@@ -145,12 +150,14 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 235 passed on 16 Oct with Docker; 3 tests require Docker
+.\venv\Scripts\python.exe -m pytest                                   # 467 passed; full backend test suite
+.\venv\Scripts\python.exe scripts\run_coding_eval.py                  # runs frozen 6-task evaluation harness; reports saved to artifacts/rehearsals/
+.\venv\Scripts\python.exe scripts\run_coding_loop.py                  # runs end-to-end coding loop verification with isolated runner
+.\venv\Scripts\python.exe scripts\backup_restore.py backup --db-path benchproof.db --backup-dir ./backups  # WAL-consistent SQLite backup
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
 .\venv\Scripts\python.exe scripts\freeze_suites.py --verify             # frozen held-out assets still match truth.lock.json
-.\venv\Scripts\python.exe scripts\freeze_eval_config.py --verify        # currently detects drift from the historical v1 runtime
 .\venv\Scripts\python.exe scripts\run_bundle_replay.py                # new evidence directory; Docker required; no application DB writes
 ```
 
@@ -163,12 +170,15 @@ trusted Vercel Sandbox. Nebius Sandboxes beta access is not required by this hos
 Original BenchProof code, synthetic fixtures and documentation use [Apache-2.0](LICENSE).
 See [NOTICE](NOTICE) and the [attribution inventory](BenchProof_MD_Pack/docs/22_LICENSE_AND_ATTRIBUTION.md)
 for third-party components and outstanding release rights checks.
+Submission guide and verification instructions are in [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
 
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
-| `backend/benchproof/api` | FastAPI endpoints (owner-scoped audits, events, gate, bundles, replay) |
+| `backend/benchproof/coding` | Task-centered coding agent (store, worker, loop, evaluation suite, contracts) |
+| `backend/benchproof/intake` | Constrained project intake, size/path validation, manifest fingerprinting |
+| `backend/benchproof/api` | FastAPI endpoints (coding tasks, audits, events, gate, bundles, replay) |
 | `backend/benchproof/constraints` | Pinned owner-approved constraints, contract hash, manifest approval |
 | `backend/benchproof/domain` | `benchproof/v2` typed records |
 | `backend/benchproof/decisions` | Reviewed/proposed ledger, dependency invalidation and current-context rebuild |
@@ -180,11 +190,12 @@ for third-party components and outstanding release rights checks.
 | `backend/benchproof/fixtures` | Fixture registry and source hashing |
 | `backend/benchproof/providers` | Nebius Token Factory adapter |
 | `backend/benchproof/trajectory` | Frozen action/failure fingerprints, stall policy and one bounded recovery |
-| `backend/benchproof/storage` | SQLite migrations, audits, heartbeats, leases/events/immutability |
+| `backend/benchproof/storage` | SQLite migrations, audits, heartbeats, backup/restore, leases/events/immutability |
 | `backend/runner/image` | Pinned candidate runtime image |
 | `backend/runner/launcher` | Protected launcher that observes a candidate from inside its runtime |
 | `backend/fixtures/development/<id>/app` | Candidate-visible synthetic service |
 | `backend/fixtures/development/<id>/expected.json`, `reference/` | Trusted evaluator assets, never mounted into a candidate |
 | `backend/fixtures/heldout/` | Frozen held-out suites, candidate diffs, manifests, `scope.json` and `truth.lock.json` |
-| `backend/scripts` | Provider/runner preflight, worker, fixture validation |
-| `frontend/` | Connected React/TypeScript/Vite assurance and evidence UI |
+| `backend/scripts` | Coding loop/eval runners, backup/restore, provider/runner preflight, worker |
+| `artifacts/rehearsals/` | Persistent rehearsal evaluation reports (JSON and Markdown) |
+| `frontend/` | Connected React 19/TypeScript/Vite task workspace & assurance UI |

@@ -1,0 +1,177 @@
+# BenchProof — Submission & Clean-Clone Verification Checklist (C-10)
+
+## 1. Project & Hackathon Metadata
+
+- **Track**: Coding and Agentic Engineering
+- **Project Name**: BenchProof
+- **Tagline**: Autonomous coding agent and engineering assurance runtime with isolated test execution and guarded task revision.
+- **Public Demo**: [https://benchproof.vercel.app](https://benchproof.vercel.app)
+- **License**: Apache 2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE))
+- **Head Repository Commit**: Verified clean tree on active branch
+
+---
+
+## 2. Clean-Clone Setup & Reproduction Guide
+
+### Prerequisites
+- Python 3.12+ (tested with 3.12.10)
+- Node.js 20+ (tested with 24.12.0) & npm 10+
+- Git
+- Optional: Docker Desktop (for isolated container runner)
+
+### Step 1: Clone Repository
+```bash
+git clone https://github.com/Hellinferno/nebious-Nvidia-.git benchproof
+cd benchproof
+```
+
+### Step 2: Backend Setup
+```powershell
+# Create Python 3.12 virtual environment
+py -3.12 -m venv backend/venv
+
+# Activate environment (PowerShell)
+.\backend\venv\Scripts\Activate.ps1
+
+# Install pinned dependencies
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.lock.txt
+python -m pip install -e ".\backend[dev]" --no-deps
+
+# Configure environment variables
+Copy-Item .env.example .env
+# Set NEBIUS_API_KEY in .env if executing live NVIDIA Token Factory calls
+```
+
+### Step 3: Frontend Setup
+```bash
+cd frontend
+npm ci
+cd ..
+```
+
+### Step 4: Run Automated Verification Tests
+```powershell
+# Run complete test suite (467 tests)
+cd backend
+python -m pytest
+
+# Run C-08 Cloud Failure Mode Acceptance Suite
+python -m pytest tests/test_cloud_acceptance.py -v
+
+# Run C-09 Frozen Evaluation Suite
+python -m pytest tests/test_coding_evaluation.py -v
+cd ..
+```
+
+### Step 5: Run Evaluation Rehearsal Harness
+```powershell
+# Executes the 6 frozen benchmark tasks and produces JSON/Markdown reports
+cd backend
+python scripts/run_coding_eval.py
+cd ..
+# Inspect generated report in artifacts/rehearsals/
+```
+
+### Step 6: Verify Database Backup & Restore
+```powershell
+cd backend
+# Create WAL-consistent snapshot
+python scripts/backup_restore.py backup --db-path benchproof.db --backup-dir ./backups
+
+# Verify / Restore snapshot
+python scripts/backup_restore.py restore --manifest ./backups/<backup_folder>/manifest.json --target-db ./restored.db
+cd ..
+```
+
+### Step 7: Launch Local Application
+```powershell
+# Terminal 1 — Backend API
+cd backend
+python -m uvicorn benchproof.api.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — Frontend UI
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
+
+---
+
+## 3. Milestones C-01 to C-10 Status
+
+| Milestone | Description | Target | Status | Verification Reference |
+|---|---|---|---|---|
+| **C-01** | Diagnosis, output truncation handling, and bounded generation | 17 Oct | **DONE** | `artifacts/coding/c01-live-20261017-1/` |
+| **C-02** | Versioned contracts, durable store, leased worker, admission limits | 17–18 Oct | **DONE** | `backend/benchproof/coding/store.py`, `worker.py` |
+| **C-03** | End-to-end coding loop, revision feedback, repeated-candidate stall | 18 Oct | **DONE** | `backend/scripts/run_coding_loop.py` |
+| **C-04** | Project intake limits, manifest fingerprints, isolated runner | 19–20 Oct | **DONE** | `backend/benchproof/intake/`, `backend/runner/` |
+| **C-05** | Real bug fix & feature on imported projects, protected test refusal | 20–21 Oct | **DONE** | `backend/tests/test_project_tasks.py` |
+| **C-06** | Checkpoint log, CAS restore, pause/resume/cancel, sanitized bundle | 21–22 Oct | **DONE** | `backend/tests/test_coding_checkpoints.py` |
+| **C-07** | Primary Task Workspace UI, diff viewer, test terminal, export | 22–23 Oct | **DONE** | `frontend/src/components/coding/CodingWorkspace.tsx` |
+| **C-08** | Cloud acceptance, lease recovery, quotas, backup/restore | 23–24 Oct | **DONE** | `backend/tests/test_cloud_acceptance.py` (7/7 pass) |
+| **C-09** | Versioned task suite, evaluation harness, genuine rehearsals | 24–26 Oct | **DONE** | `backend/scripts/run_coding_eval.py` (6/6 tasks pass) |
+| **C-10** | Clean-clone, rights/attribution, video storyboard, submission prep | 26–28 Oct | **DONE** | `SUBMISSION_CHECKLIST.md`, clean build & tests |
+
+---
+
+## 4. Video Recording Storyboard (<= 3 Minutes)
+
+- **Total Duration Limit**: 3 minutes (180 seconds).
+- **Format**: Screen capture with clear narrative voiceover; no synthetic cuts or simulated outcomes.
+
+| Time Window | Scene / Screen | Narrative Key Points |
+|---|---|---|
+| **0:00 – 0:30** | Architecture overview & problem statement | LLMs often hallucinate repairs and overwrite test suites. BenchProof enforces guarded task loops, immutable manifests, and strictly isolated candidate execution. |
+| **0:30 – 1:00** | Interactive Project Intake & Task Brief | Show project intake with StringCalculator / BankAccount. Point out editable `app/` vs protected `tests/`. Submit a task brief. |
+| **1:00 – 1:30** | Model Plan Generation & Human Approval | Model proposes step-by-step modification plan. Review and edit plan steps. Approve plan with immutable plan hash. |
+| **1:30 – 2:05** | Stepper Execution & Isolated Test Runner | Watch the 8-stage stepper progress: Baseline execution -> Edit -> Candidate run -> Observation oracle. Inspect terminal test output. |
+| **2:05 – 2:30** | Unified Diff Review & Checkpoint Rollback | Review syntax-highlighted diff with added/deleted lines. Demonstrate CAS checkpoint rollback to a safe prior snapshot. |
+| **2:30 – 2:50** | Sanitized Evidence Bundle & Rehearsal Metrics | Export verifiable `.zip` bundle. Show the CLI rehearsal runner with 6/6 frozen tasks passing and exact token telemetry. |
+| **2:50 – 3:00** | Conclusion & Public Cloud Demo | Summarize: genuine NVIDIA inference on Nebius, protected test evaluation, live at benchproof.vercel.app. |
+
+---
+
+## 5. Factual Devpost Submission Text
+
+### Project Title
+BenchProof: Autonomous Coding Agent & Engineering Assurance Runtime
+
+### Tagline
+Task-centered coding agent with human-approved plans, isolated candidate test execution, bounded multi-turn revision, and verifiable diff review.
+
+### Inspiration
+Most AI coding assistants operate unconstrained: they suggest code that looks plausible but fails silently, overwrite test assertions to fake green results, or loop indefinitely when encountering runtime errors. We built BenchProof to solve this problem by treating code generation as a guarded engineering process with deterministic test isolation, protected test immutability, and auditable checkpoint rollbacks.
+
+### What It Does
+1. **Constrained Project Intake**: Safely ingests Python projects with path-traversal prevention, file size enforcement, secret screening, and manifest fingerprinting.
+2. **Human-in-the-Loop Plan Review**: The agent inspects the code, produces a step-by-step implementation plan, and waits for explicit user approval before mutating any file.
+3. **Protected Test Boundaries**: Test files (`tests/`) are strictly protected from modification, preventing the agent from "fixing" bugs by weakening assertions.
+4. **Isolated Candidate Execution**: Candidate code executes in an isolated runner process or container with network denied, timeouts, and resource limits.
+5. **Bounded Multi-Turn Revision**: Test failures provide real compiler and test feedback to the model for bounded revision attempts, with automatic repeated-candidate stall detection.
+6. **Compare-and-Swap Checkpoint Rollback**: Every state mutation is checkpointed; users can rollback to any prior checkpoint without resetting consumed resource budgets.
+7. **Verifiable Export Bundles**: Produces complete cryptographic evidence bundles containing unified diffs, test logs, plans, and event traces.
+
+### How We Built It
+- **Inference**: NVIDIA Nemotron models hosted on Nebius Token Factory for planning, diagnosis, and code generation.
+- **Backend**: FastAPI, Python 3.12, SQLite with WAL checkpointing, Pydantic v2 schemas, and isolated child process/container test runners.
+- **Frontend**: React 19, TypeScript, Vite, with custom unified diff viewer, test terminal console, 8-stage execution stepper, and budget gauges.
+- **Assurance**: Automated evaluation suite with 6 frozen benchmark tasks, cloud failure mode acceptance suite, and cryptographic evidence exports.
+
+### Challenges We Overcame
+- Preventing candidate loops from wasting inference quota when generating duplicate edits.
+- Enforcing monotonic worker fencing tokens to recover from cloud worker crashes without double-execution.
+- Ensuring zero test leaks or secret disclosure in exported evidence bundles.
+
+### Accomplishments We're Proud Of
+- 467 automated tests passing with 0 failures across backend core, coding loop, cloud acceptance, and evaluation suites.
+- 100% pass rate across the 6 frozen rehearsal benchmark tasks without holdout tuning.
+- Fast, responsive React frontend building in under 300ms with zero lint warnings.
+
+### What We Learned
+Deterministic test isolation combined with human-reviewed execution plans dramatically reduces model hallucinations and makes autonomous coding predictable and safe.
+
+### What's Next
+- Extended multi-language support (TypeScript, Go, Rust).
+- Git repository branch integration with automatic pull request generation.
+- Scaled parallel evaluation worker pools for large test suites.

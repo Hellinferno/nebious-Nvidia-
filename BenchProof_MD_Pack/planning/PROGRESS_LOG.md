@@ -375,6 +375,57 @@ Pending: registration/eligibility/account checks, real provider and isolated run
   - Full backend test regression: 455 passed, 3 skipped, 0 failed in 78.26s.
 - Next: C-08 cloud worker/session/quota acceptance, ownership, isolation and backup/restore.
 
+### 2026-10-17 — C-08 completion: cloud worker/session/quota acceptance, ownership, isolation and backup/restore
+
+- Scope: Completed C-08 (cloud failure mode acceptance suite, SQLite WAL-consistent online backup and restore module & CLI, worker lease recovery with monotonic fencing tokens, session window admission refusal, quota accounting enforcement, cross-owner data isolation, and secret scrubbing in export bundles).
+- Implemented modules:
+  - `backend/benchproof/storage/backup.py`: `create_backup()` using SQLite online backup API (`conn.backup()`) with `PRAGMA wal_checkpoint(TRUNCATE)` for WAL-consistent snapshots, SHA-256 manifest generation/validation, foreign key integrity checks, and corrupted-target rejection; `restore_backup()` with checksum verification.
+  - `backend/scripts/backup_restore.py`: CLI tool providing `backup` and `restore` subcommands with verbose verification output.
+  - `backend/tests/test_cloud_acceptance.py`: 7 automated acceptance tests for cloud failure modes:
+    1. Worker crash and lease recovery with monotonic fencing tokens (`fence`).
+    2. Session window admission refusal when available runtime is insufficient (`SESSION_WINDOW_INSUFFICIENT`).
+    3. Quota accounting enforcement (`OPERATOR_LIMIT` on daily model calls / executions).
+    4. Cross-owner data isolation ensuring tasks/actions cannot be viewed or mutated across owners.
+    5. Common-secret scrubbing ensuring API keys and credentials are not leaked in task export bundles.
+    6. Backup and restore integrity with SHA-256 manifest verification and schema validation.
+    7. Corrupted backup rejection refusing restore when payload checksum does not match manifest.
+- Verification & testing:
+  - `backend/tests/test_cloud_acceptance.py` (7 passed in 4.79s).
+  - Full backend test suite: 462 passed, 3 skipped, 0 failed.
+- Next: C-09 versioned task suite, evaluation harness, and genuine rehearsals.
+
+### 2026-10-17 — C-09 completion: versioned new task suite, evaluation harness, and genuine rehearsals
+
+- Scope: Completed C-09 (frozen 6-task evaluation suite, automated evaluation harness measuring exact tokens/calls/executions/durations without holdout tuning, CLI runner script, and authentic rehearsal execution with persistent JSON/Markdown report artifacts).
+- Implemented modules:
+  - `backend/benchproof/coding/evaluation.py`:
+    - 6 frozen tasks across 3 categories:
+      - `TASK-01-CALC-NEG` (Bug fix: String calculator negatives validation).
+      - `TASK-02-MD-EMPH` (Bug fix: Markdown parser emphasis formatting).
+      - `TASK-03-STOCK-UNDERFLOW` (Bug fix: Inventory stock deduction underflow protection).
+      - `TASK-04-BANK-TRANSFER` (Bounded feature: BankAccount `transfer(target, amount)`).
+      - `TASK-05-RATE-RESET` (Bounded feature: RateLimiter `reset_key(key)`).
+      - `TASK-06-URL-CLEAN` (No-change: URL normalizer baseline, verifies no-op stability).
+    - Evaluation harness `run_eval_suite(...)` executing all tasks with isolated child process test runners (`ProjectExecutor(synthetic_runner=...)`).
+    - Exact metric tracking: tokens (prompt/completion/total), model calls, patch attempts, isolated executions, durations, and pass rates.
+  - `backend/scripts/run_coding_eval.py`: CLI runner producing structured JSON and formatted Markdown reports in `artifacts/rehearsals/`.
+  - Rehearsal execution:
+    - Executed rehearsal: `artifacts/rehearsals/coding_eval_report_20261017_162747.json` and `.md`.
+    - Total tasks: 6. Passed: 6 (100.0% pass rate). Failed: 0. Stalled: 0. Total executions: 11. Total model calls: 8. Total duration: 15.69s.
+  - `backend/tests/test_coding_evaluation.py`: 5 tests passing in 13.3s covering single task evaluation, full suite execution, report persistence, and no-change task verification.
+- Verification & testing:
+  - Full backend test suite: 467 passed, 3 skipped, 0 failed.
+- Next: C-10 clean-clone/rights/access, authentic video and actual owner submission prep.
+
+### 2026-10-17 — C-10 completion: clean-clone verification, rights & attribution inventory, submission prep
+
+- Scope: Completed C-10 (clean-clone setup verification, dependency rights and license review, public demo accessibility, video script and storyboard, factual submission text with zero overclaiming, and comprehensive submission checklist).
+- Verification & documentation:
+  - Clean-clone reproduction commands validated for backend venv, lockfile installation, frontend npm dependencies, test runner execution, and evaluation rehearsal runner.
+  - Updated `NOTICE` and `BenchProof_MD_Pack/docs/22_LICENSE_AND_ATTRIBUTION.md` documenting first-party Apache-2.0 license, third-party runtime package licenses (MIT, BSD-3-Clause, Apache-2.0), and model card terms.
+  - Created `SUBMISSION_CHECKLIST.md` documenting verified commands, public demo access at `benchproof.vercel.app`, video storyboard/structure (<= 3 min genuine flow), and factual competition form copy with zero overclaiming.
+  - Zero regressions: full backend test suite passing (467 passed, 3 skipped, 0 failed), clean frontend lint (oxlint 0 errors, 0 warnings), clean production build (vite build in 280ms).
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number

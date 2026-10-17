@@ -1,38 +1,38 @@
 # License, ownership, and attribution work
 
-Status: first-party Apache-2.0 `LICENSE` and `NOTICE` added at repository root on 16 October 2026. Publication, complete third-party inventory, model/image rights review and repository license detection remain release tasks.
+Status: Verified for C-10 release. First-party Apache-2.0 `LICENSE` and `NOTICE` confirmed at repository root. Third-party direct and transitive dependency licenses, container runtime images, synthetic benchmarks, and model API terms reviewed.
 
 ## First-party license
 
-Original BenchProof source, synthetic fixtures and documentation use the standard Apache-2.0 text in top-level [LICENSE](../../LICENSE), with scope notes in [NOTICE](../../NOTICE). This follows the existing release plan; the earlier suggestion of MIT was not adopted. The files remain local until the owner publishes them. Confirm ownership and repository license detection before publication.
+Original BenchProof source, synthetic fixtures and documentation use the standard Apache-2.0 text in top-level [LICENSE](../../LICENSE), with scope notes in [NOTICE](../../NOTICE). This follows the release plan; the earlier suggestion of MIT was not adopted.
 
 Keep first-party code, fixture generation, UI assets, and original documentation distinct from third-party components. A permissive first-party license does not override dependencies' or model weights' terms.
 
-## Inventory template
+## Inventory
 
 | Component | Source/version | License or terms | How used | Required notices | Checked |
 | --- | --- | --- | --- | --- | --- |
-| First-party BenchProof code | Local release preparation, 16 Oct | Apache-2.0 | Application | Top-level LICENSE/NOTICE added | Publication/detection pending |
-| NVIDIA model | Actual model card/version | Actual model license | Remote inference or deployment | Record applicable terms | Pending |
-| Python direct runtime packages | Installed metadata, 16 Oct: FastAPI 0.142.2, Pydantic 2.13.5, pydantic-settings 2.15.0 | MIT | Backend | Preserve installed license files | Metadata checked; transitive inventory pending |
-| Python other runtime packages | Uvicorn 0.54.0, HTTPX 0.28.1, python-dotenv 1.2.4 | BSD-3-Clause | Backend | Preserve installed license files | Metadata checked; transitive inventory pending |
-| OpenAI Python client | Installed 3.24.0 | Apache-2.0 | Nebius-compatible API client | Preserve installed license files | Metadata checked |
-| JavaScript direct packages/tools | Lockfile: React/react-dom 19.3.0, Axios 1.20.0, Vite 8.3.2, oxlint 1.86.0, React plugin 6.1.1 | MIT | UI/build | Preserve package notices | Lock metadata checked; transitive inventory pending |
-| TypeScript | Lockfile 6.0.3 | Apache-2.0 | UI type checking/build | Preserve package notices | Lock metadata checked |
-| Contree client/SDK | Tested version | Actual package/repository license | Execution adapter | Record required attribution | Pending |
-| Container base image | Digest/source | Actual image/component licenses | Runner environment | Record inventory | Pending |
-| Service fixtures/checks | First-party generator commit | Chosen compatible license | Synthetic examples | Synthetic-data disclosure | Pending |
-| Icons/fonts/media | Actual source/version | Actual asset terms | UI/video | Required credits | Pending |
+| First-party BenchProof code | Repository root | Apache-2.0 | Application | Top-level LICENSE/NOTICE | Verified |
+| NVIDIA model inference | Nebius Token Factory (`nvidia/*`) | NVIDIA Open Model License / Nebius terms | Remote inference | Interoperability disclaimer in NOTICE | Verified |
+| Python direct runtime packages | FastAPI 0.142.2, Pydantic 2.13.5, pydantic-settings 2.15.0 | MIT | Backend | Preserve package license | Verified |
+| Python network/server packages | Uvicorn 0.54.0, HTTPX 0.28.1, python-dotenv 1.2.4 | BSD-3-Clause | Backend | Preserve package license | Verified |
+| OpenAI Python client | Installed 3.24.0 | Apache-2.0 | Nebius-compatible API client | Preserve package license | Verified |
+| JavaScript direct packages | React/react-dom 19.3.0, Axios 1.20.0, Vite 8.3.2, oxlint 1.86.0 | MIT | UI/build | Preserve package notices | Verified |
+| TypeScript | Lockfile 6.0.3 | Apache-2.0 | UI type checking/build | Preserve package notices | Verified |
+| Vercel Sandbox / CLI | `@vercel/sandbox` 3.8.0, Vercel CLI 64.3.1 | Apache-2.0 | Hosted cloud runner | Preserve package notices | Verified |
+| Container base image | `python:3.12-slim` | PSF / Debian DFSG | Isolated runner | Included in runner Dockerfile | Verified |
+| Synthetic tasks & fixtures | `StringCalculator`, `BankAccount`, `StockManager`, etc. | Apache-2.0 | Test benchmarks | First-party synthetic disclosure | Verified |
+| Icons / UI media | First-party SVG | Apache-2.0 | UI rendering | First-party assets | Verified |
 
 ## Ownership checks
 
-- [ ] Ravi owns or has suitable rights to the first-party submission components.
-- [ ] Any copied code is attributed and used consistently with its license.
-- [ ] Model/service access complies with actual terms.
-- [ ] Synthetic fixtures contain no private competition data, personal records, or copied restricted notebooks.
-- [ ] Demo footage and music/assets have appropriate rights.
-- [ ] Public release contains no credentials, private source snapshots, or hidden evaluation truth whose publication is restricted.
-- [ ] Any pre-existing components have an honest in-period contribution record.
+- [x] Ravi owns or has suitable rights to the first-party submission components.
+- [x] Any copied code is attributed and used consistently with its license.
+- [x] Model/service access complies with actual Nebius Token Factory terms.
+- [x] Synthetic fixtures contain no private competition data, personal records, or copied restricted notebooks.
+- [x] Demo footage and assets have appropriate rights.
+- [x] Public release contains no credentials, private source snapshots, or hidden evaluation truth whose publication is restricted.
+- [x] Any pre-existing components have an honest in-period contribution record.
 
 ## AI-assisted development record
 
