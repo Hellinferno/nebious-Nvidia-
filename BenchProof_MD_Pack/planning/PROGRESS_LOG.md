@@ -323,6 +323,21 @@ Pending: registration/eligibility/account checks, real provider and isolated run
   - Full backend regression: 441 passed, 3 skipped, 0 failed in 42.6s.
 - Next: C-05 running the agent on imported projects with focused context, reviewed plans and versioned project edit policy.
 
+### 2026-10-17 — C-05 completion: agent execution on imported projects with edit policy
+
+- Scope: Completed C-05 (real bug fix on StringCalculator, bounded feature on BankAccount, protected test refusal, unauthorized path refusal, and stale base refusal).
+- Task 1 (Bug Fix): Project 1 (`StringCalculator` with negative number defect). Agent generates plan, baseline check fails with `REJECTED`, model generates fix, candidate passes, final check passes `VERIFIED`, and task reaches `REVIEW_READY` with verified diff.
+- Task 2 (Bounded Feature): Project 2 (`BankAccount` with `transfer()` feature). Agent generates plan, baseline check fails (missing method), model generates implementation delegating to withdraw and deposit, candidate check passes, final independent check passes `VERIFIED`, and task reaches `REVIEW_READY` with verified diff.
+- Security & Edit Policy Enforcement:
+  - Protected test refusal: verified `tests/` cannot be approved for editing in brief or plan (`ValueError`).
+  - Unauthorized new path refusal: verified non-app, non-python, or path traversal paths (`app/evil.py`, `app/../../root.py`) are strictly rejected.
+  - Stale base refusal: verified tasks against stale/mismatched source hashes are rejected at task creation.
+- Verification & testing:
+  - `backend/tests/test_project_tasks.py` (5 passed in 4.22s).
+  - Combined project suite (`test_project_intake.py`, `test_project_runner.py`, `test_project_tasks.py`): 23 passed in 7.39s.
+  - Full backend test suite: 446 passed, 3 skipped, 0 failed.
+- Next: C-06 persistent task brief, source-bound facts, checkpoint restore, pause/resume/cancel, repeated-failure classification and durable budget enforcement.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number
