@@ -1,5 +1,7 @@
 # BenchProof daily execution plan
 
+Scheduling update, 17 October 2026: [BUILD_PLAN.md](BUILD_PLAN.md) is the active C-01–C-10 build calendar for the task-centered coding agent. The v2 schedule below is historical. Follow the new dependency/acceptance gates without treating a plan as implemented functionality or deleting earlier evaluation evidence.
+
 Research-aligned v2: **Agentic Engineering Assurance Runtime**. Owner assumed Ravi, working solo. Dates are Asia/Kolkata (IST), 3–30 October 2026. These are implementation sessions, not completed tasks or scheduled reminders.
 
 ## Daily rhythm and definition of done

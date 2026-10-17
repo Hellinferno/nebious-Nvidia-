@@ -1,5 +1,7 @@
 # System architecture
 
+Active extension plan, 17 October 2026: [BUILD_PLAN.md](../../BUILD_PLAN.md) adds supported project snapshots, a real task-processing worker and a generic isolated test profile. Those components are not yet implemented. In particular, today's heartbeat process is not a task worker, and invoice observation execution is not a general project test runner. The architecture below describes the legacy assurance path and its existing trust boundaries.
+
 The revised architecture implements assurance around agent work. It is a bounded Python service implementation, not a whole IDE or a general distributed engineering platform.
 
 ## Components

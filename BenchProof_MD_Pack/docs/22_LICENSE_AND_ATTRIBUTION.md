@@ -1,10 +1,10 @@
 # License, ownership, and attribution work
 
-Status: release tasks. This document does not create the actual source-code license file required for the repository.
+Status: first-party Apache-2.0 `LICENSE` and `NOTICE` added at repository root on 16 October 2026. Publication, complete third-party inventory, model/image rights review and repository license detection remain release tasks.
 
-## Planned first-party license
+## First-party license
 
-Use Apache-2.0 for original BenchProof source unless Ravi chooses another compatible open-source license before publication. Add the exact standard text in top-level `LICENSE` and verify the repository recognizes it. Check owner/copyright fields that apply. Do not assume a Markdown planning file satisfies license detection.
+Original BenchProof source, synthetic fixtures and documentation use the standard Apache-2.0 text in top-level [LICENSE](../../LICENSE), with scope notes in [NOTICE](../../NOTICE). This follows the existing release plan; the earlier suggestion of MIT was not adopted. The files remain local until the owner publishes them. Confirm ownership and repository license detection before publication.
 
 Keep first-party code, fixture generation, UI assets, and original documentation distinct from third-party components. A permissive first-party license does not override dependencies' or model weights' terms.
 
@@ -12,10 +12,13 @@ Keep first-party code, fixture generation, UI assets, and original documentation
 
 | Component | Source/version | License or terms | How used | Required notices | Checked |
 | --- | --- | --- | --- | --- | --- |
-| First-party BenchProof code | Final release commit | Planned Apache-2.0 | Application | Top-level license | Pending |
+| First-party BenchProof code | Local release preparation, 16 Oct | Apache-2.0 | Application | Top-level LICENSE/NOTICE added | Publication/detection pending |
 | NVIDIA model | Actual model card/version | Actual model license | Remote inference or deployment | Record applicable terms | Pending |
-| Python dependencies | Locked versions | Per package | Backend/state/evaluator/testing | Preserve required notices | Pending |
-| JavaScript dependencies | Lockfile | Per package | UI/build | Preserve required notices | Pending |
+| Python direct runtime packages | Installed metadata, 16 Oct: FastAPI 0.142.2, Pydantic 2.13.5, pydantic-settings 2.15.0 | MIT | Backend | Preserve installed license files | Metadata checked; transitive inventory pending |
+| Python other runtime packages | Uvicorn 0.54.0, HTTPX 0.28.1, python-dotenv 1.2.4 | BSD-3-Clause | Backend | Preserve installed license files | Metadata checked; transitive inventory pending |
+| OpenAI Python client | Installed 3.24.0 | Apache-2.0 | Nebius-compatible API client | Preserve installed license files | Metadata checked |
+| JavaScript direct packages/tools | Lockfile: React/react-dom 19.3.0, Axios 1.20.0, Vite 8.3.2, oxlint 1.86.0, React plugin 6.1.1 | MIT | UI/build | Preserve package notices | Lock metadata checked; transitive inventory pending |
+| TypeScript | Lockfile 6.0.3 | Apache-2.0 | UI type checking/build | Preserve package notices | Lock metadata checked |
 | Contree client/SDK | Tested version | Actual package/repository license | Execution adapter | Record required attribution | Pending |
 | Container base image | Digest/source | Actual image/component licenses | Runner environment | Record inventory | Pending |
 | Service fixtures/checks | First-party generator commit | Chosen compatible license | Synthetic examples | Synthetic-data disclosure | Pending |
@@ -42,6 +45,8 @@ Open a fresh browser session on the final repository. Confirm source, release ta
 The exact event obligations and original-work provisions remain in the [official rules](https://nebiusglobalaihackathon.devpost.com/rules). This file is a practical inventory, not a substitute for reading them.
 
 ## Assurance and research attribution
+
+Deployment additions checked from installed metadata on 16 October: `@vercel/sandbox` 3.8.0 and Vercel CLI 64.3.1 declare Apache-2.0. Preserve their installed notices/licenses; the SDK is a server runtime dependency, while the CLI is development/deployment tooling. This does not complete the transitive dependency or cloud image/model rights review.
 
 Record provenance/license for fixture source, constraint/check code, graph manifests, trusted mutation templates and any imported patch/trajectory. Keep synthetic invoices first-party and label them; do not import Ravi's other competition data or private repository code without rights review. The reference repairs and accepted task rules are original implementation assets, not copied competitor internals.
 

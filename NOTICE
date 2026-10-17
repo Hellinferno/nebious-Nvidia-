@@ -1,0 +1,15 @@
+BenchProof — Agentic Engineering Assurance Runtime
+
+Original BenchProof source, synthetic fixtures, checks, and documentation are
+distributed under the Apache License, Version 2.0. See LICENSE.
+
+Third-party packages and container components retain their own licenses and
+notices. Installing dependencies or distributing an image requires preserving
+the notices supplied with those components. This repository's license does not
+relicense NVIDIA model weights, hosted inference services, or third-party assets.
+
+The invoice examples use synthetic data. Product and provider names identify
+interoperability and do not imply affiliation or endorsement.
+
+The release attribution inventory and outstanding model/image rights checks
+are recorded in BenchProof_MD_Pack/docs/22_LICENSE_AND_ATTRIBUTION.md.

@@ -1,5 +1,28 @@
 # Implementation backlog
 
+## Active coding-agent build — 17 October 2026
+
+The user selected a task-centered coding agent after the expanded product/problem review. [BUILD_PLAN.md](../../BUILD_PLAN.md) is the active dependency-ordered implementation plan. It supersedes the future priority order of the legacy fixture-first backlog below, not its historical implementation/evaluation evidence. Implementation has started; the new application workflow is not shipped. Completion requires the recorded acceptance evidence, not the plan alone.
+
+| Ticket | Required outcome | Target (IST) | State |
+| --- | --- | --- | --- |
+| C-01 | Reproduce provider/schema/truncation failures; bounded genuine generation | 17 Oct | DONE (development acceptance; new backend rollout pending) |
+| C-02 | Versioned task/project/action contracts and a real durable worker | 17–18 Oct | IN_PROGRESS (brief/plan/edit primitives only; persistence/worker/endpoints pending) |
+| C-03 | First real task -> model edit -> isolated test -> revision -> diff | 18 Oct | TODO |
+| C-04 | Safe supported project intake and general Python test profile | 19–20 Oct | TODO |
+| C-05 | Real bug fix and small feature on distinct imported projects | 20–21 Oct | TODO |
+| C-06 | Persistent intent, resume/cancel, checkpoints, stall and budget controls | 21–22 Oct | TODO |
+| C-07 | Primary task workspace with source, plan, activity, diff, checks and download | 22–23 Oct | TODO |
+| C-08 | Cloud worker/session/quota acceptance, ownership, isolation and backup/restore | 23–24 Oct | TODO |
+| C-09 | User sessions, new evaluation identity/results and genuine rehearsals | 24–26 Oct | TODO |
+| C-10 | Clean-clone/rights/access, authentic video and actual owner submission | 26–28 Oct | TODO |
+
+Targets assume the availability stated in the build plan and are not delivery guarantees. Each ticket's dependencies, acceptance artifacts and stop/cut rules are defined there. All historical freeze/configuration records remain immutable. Do not execute/publish untrusted projects, make paid upgrades or commit/push merely because the plan mentions those future steps.
+
+C-01 evidence: strict completion and safe error tests; both retained AC-01 length-limited replies reproduce `MODEL_OUTPUT_TRUNCATED`; one approved NVIDIA generation yields a genuine patch, then the existing cloud gate rejects the original and accepts that exact edit. See `artifacts/coding/c01-live-20261017-1/` and [coding runtime notes](../../backend/benchproof/coding/README.md). The old public 422 cause was not captured, so remains unconfirmed. Current cloud diagnosis code has not been upgraded. This does not complete C-03 or general project support.
+
+## Legacy assurance backlog
+
 Research-aligned v2. All tickets start TODO until actual evidence is recorded. Dependencies, outputs and cut lines below replace the active ML-audit work. Detailed behavior is in [runtime](../docs/25_ASSURANCE_RUNTIME.md); work dates are in [daily tasks](DAILY_TASKS.md).
 
 ## Board rules
@@ -189,7 +212,11 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-19 — Fair baseline harness and configuration freeze · P0 reduced; P1 full
 
+**16 October follow-up:** Historical local configuration v1 was frozen for its committed core/image, but the Linux output-directory compatibility fix changes `runtime_code_hash` and the Vercel image differs. Keep v1 immutable, commit/review the deployment changes, then create a new release configuration before final trials. Three live development records exist with mixed outcomes; none is a final held-out measurement.
+
 **Owner:** Ravi. **Dependencies:** B-18/B-04/B-10. **Target:** 20 Oct. **Status:** IN_PROGRESS (15 Oct, pulled forward). Implemented in `benchproof.trials`: B0 visible gate, one NVIDIA repair agent shared by B1 (visible tests and raw probe only) and B2 (plus graph context, protected feedback, evidence-based confirmation, gate acceptance and repeated-candidate stop), shared hard limits, balanced predetermined R12/R6 plans, sealed write-once trial records with INTERRUPTED handling, a fresh frozen-evaluator final run per trial, and the truth-based summary (`scripts/run_trials.py`, `scripts/summarize_trials.py`); a hand-counted artificial record set matches the script (`tests/test_trials.py`). `backend/evaluation/eval-config-v1.json` is a **candidate** configuration (`210affd887e92863…`): it cannot be `frozen` until the runtime source is committed, and the plan sequences the final freeze after the B-20 deployment path. Pinned model present in the live catalog 15 Oct (listing only); the official price page could not be read, so the price snapshot stays `NOT_RECORDED` and cost unknown. No live repair trial has been run.
+
+**16 Oct update:** The runtime is committed at `ad1955703ccc484e380f40edab33afe764beb3ba`; the local evaluation configuration is `frozen`, with unchanged identity `210affd887e92863…` and pinned Docker digest. Verification reports no difference. This identifies the local core, not a frozen deployed release. Price/credit reserve review and final held-out trials remain pending. Three live development records preserve an accepted amount repair, an API repair stopped by truncated JSON, and a clean case with a failed model call but independently VERIFIED unchanged source.
 
 **Work:** Implement B0 smoke, B1 same agent minus assurance and B2, shared final evaluator and immutable trial/summary records. Freeze model/prompts/thresholds/image/budgets.
 
@@ -199,7 +226,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-20 — Hosted product, persistence and recovery · P0
 
-**Owner:** Ravi. **Dependencies:** B-11/B-13/B-17. **Target:** 19 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-11/B-13/B-17. **Target:** 19 Oct. **Status:** IN_PROGRESS (16 Oct: public Vercel Hobby deployment `https://benchproof.vercel.app`; persistent Sandbox/Drive, private origin, Docker isolation/OOM enforcement, stop/resume with fresh replay, live NVIDIA diagnosis, access denial and fresh-browser create/verify/export/validate/replay/download/reload passed). Independent backup/restore, full judging-period quota/credit reserve and unattended availability remain open. Nebius Sandboxes access and the laptop are not dependencies of this cloud route. See `VERCEL_DEPLOYMENT.md`; ngrok remains an optional fallback.
 
 **Work:** Deploy exact working build with HTTPS, supervised worker, durable data, public curated mode, quotas and server secrets. Restore backup in separate location.
 
@@ -229,7 +256,7 @@ Status is TODO / IN_PROGRESS / BLOCKED / DONE. DONE requires acceptance artifact
 
 ## B-23 — Clean-clone release, license and docs · P0
 
-**Owner:** Ravi. **Dependencies:** B-17/B-20/B-21. **Target:** 24–25 Oct. **Status:** TODO.
+**Owner:** Ravi. **Dependencies:** B-17/B-20/B-21. **Target:** 24–25 Oct. **Status:** IN_PROGRESS (16 Oct: top-level Apache-2.0 LICENSE/NOTICE added following the existing plan; README, judge guide and hosting instructions updated; direct dependency license metadata recorded). Clean-clone setup, transitive/model/image rights review, public license detection, tag and three successful live rehearsals remain open.
 
 **Work:** Add actual LICENSE/notices, tested setup, accurate judge guide and results/limits. Clean clone the release, run appropriate checks and tag feature freeze.
 

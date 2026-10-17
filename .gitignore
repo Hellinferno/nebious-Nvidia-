@@ -56,3 +56,15 @@ venv/
 # Local SQLite WAL files
 *.db-wal
 *.db-shm
+
+# Vercel local credentials and generated deployment package
+.vercel/
+deployment/vercel/runtime-package.json
+
+.vercel
+.env*
+
+# Local test temp directories
+.codex-*
+integrity-temp/
+pytest-day12-*

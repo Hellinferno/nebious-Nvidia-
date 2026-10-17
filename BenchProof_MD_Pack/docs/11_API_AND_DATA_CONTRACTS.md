@@ -1,5 +1,9 @@
 # API, state, and evidence contracts
 
+Coding-agent planning update, 17 October 2026: proposed project/task/plan/action/execution/checkpoint/usage records and route families are in [BUILD_PLAN.md](../../BUILD_PLAN.md). C-02 must version their exact schemas and migrations before implementation. The existing audit contracts below are retained; no new coding-task endpoint or project-wide `VERIFIED` result is claimed by this planning update.
+
+First implementation increment: development `coding-brief-v1`, `coding-plan-v1` and `coding-edit-v1` primitives are in the [coding runtime notes](../../backend/benchproof/coding/README.md). They do not introduce task/project persistence or endpoints. A plan binds the brief hash, source hash, approved paths and fixed check profile; a generated edit echoes source/plan hashes. Existing public audit routes remain the only cloud execution interface used by this increment.
+
 Research-aligned schema target: `benchproof/v2`. Implement strict typed records and migrations before UI integration. Examples below are illustrative shapes, not output from a built service.
 
 ## Endpoints
@@ -77,6 +81,10 @@ Event types include audit_created, state_changed, graph_built, coverage_limited,
 Events have audit/attempt/sequence/timestamp and an artifact/result ID. SSE replays from `Last-Event-ID`; the snapshot remains authoritative if retention has expired. Terminal event emission follows committed results.
 
 Error codes: INVALID_INPUT, INVALID_STATE, OWNER_DENIED, SOURCE_LIMIT, STALE_SOURCE, STALE_CONTEXT, STALLED, RECOVERY_EXHAUSTED, CONTRACT_UNAPPROVED, REQUIRED_CHECK_MISSING, GRAPH_UNRESOLVED, PATCH_PROTECTED_PATH, PROVIDER_UNAVAILABLE, RUNNER_UNAVAILABLE, BUDGET_EXHAUSTED, CHECK_UNKNOWN, MUTATION_INVALID and CANCEL_PENDING. Safe user messages explain the next action; internal details remain sanitized server records.
+
+Local C-01 diagnosis/recovery contract: provider transport/configuration failures return HTTP 503 `PROVIDER_UNAVAILABLE`; an empty provider choice set returns HTTP 502 `PROVIDER_INVALID_RESPONSE`. HTTP 502 also distinguishes `MODEL_OUTPUT_TRUNCATED` (including valid-looking JSON with `finish_reason=length`), `MODEL_OUTPUT_INCOMPLETE`, `MODEL_OUTPUT_LIMIT` and schema/JSON failure `MALFORMED_ACTION`. These are upstream failures, not client request-validation 422s. No automatic paid or format retry, guessed JSON ending, invented required claim/location/refutation, or live-to-mock fallback is permitted.
+
+Diagnosis attempts reserve an `actions` row and `action_started` event atomically before the provider request. Failed calls finalize as `failed` with `action_failed`, safe code, usage and allowlisted provider identity/finish metadata; failures count toward the original action allowance. Missing usage remains UNKNOWN. A concurrent or crash-left `in_flight` action blocks another diagnosis; no automatic reconciliation/retry is claimed. `actions.provider_meta` is added by an additive migration and exposed as `provider_metadata`; raw responses, prompts, endpoint URLs and credentials are excluded. This is legacy diagnosis accounting, not C-02's future fenced task-worker contract. The rollout to the cloud backend is pending.
 
 ## Evidence bundle
 

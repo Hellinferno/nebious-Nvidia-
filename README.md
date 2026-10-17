@@ -8,7 +8,17 @@ accepts a patch only through a deterministic protected evaluator.
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
-## Current state (14 October 2026, Days 1–15)
+## Next build: task-centered coding agent
+
+The [active build plan](BUILD_PLAN.md) moves the primary experience to project/task input -> reviewed plan -> real NVIDIA-generated edits -> isolated tests and bounded repair -> reviewable patch. It reuses the assurance/runtime foundation without claiming the current fixture dashboard already provides general project coding. New C-01–C-10 milestones are planned, not deployed. See the [17 October product/problem research](CODING_AGENT_RESEARCH_2026-10-17.md).
+
+## Current state (16 October 2026)
+
+Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel Hobby with a persistent trusted Sandbox/Drive and Nebius inference. It does not depend on the owner's laptop. Cloud isolation/persistence, public live API checks and a fresh-browser create/verify/export/replay/download/reload journey pass. See [Vercel deployment](VERCEL_DEPLOYMENT.md) for evidence, quotas and remaining release gates.
+
+Known limitation: one subsequent live diagnosis returned HTTP 422, and its failure is
+retained. Model diagnosis/repair reliability still needs work; hosting success is not
+a claim that every inference or final evaluation passes.
 
 Implemented: curated intake; accepted executable constraints; durable owner-scoped
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
@@ -33,16 +43,16 @@ Remote cancellation stays `CANCEL_PENDING` until worker reconciliation confirms 
 
 Owner access currently uses a browser-generated opaque capability in the required
 `X-BenchProof-Owner` header. This is sufficient for the bounded local/demo boundary,
-not a claim of production identity authentication. Hosted sandbox execution remains
-blocked because Nebius Sandboxes spawn permission has not been granted. B-17 runtime
+not a claim of production identity authentication. Nebius Sandboxes spawn permission
+is unavailable, but the Vercel-hosted route uses the verified Docker boundary. B-17 runtime
 hardening is recorded in `INTEGRITY_REPORT_v1.md`. The final evaluation assets are
 frozen (B-18): `backend/fixtures/heldout/` holds the held-out repair suite `repair-r12-v1`
 (twelve opaque cases, eight faulty and four clean, built from four source styles), the fixed
 candidate gate suite `gate-v12-v1` (four valid and eight invalid candidates that all pass
 the visible smoke gate), and manifests for `graph-g8-v1`, `freshness-f6-v1`,
 `trajectory-w8-v1` and `mutants-m12-v1`. Every asset is pinned in `truth.lock.json`; the
-R6/V6 fallback is predeclared by id (D-027). Measured outcomes do not exist yet; the B-19
-configuration freeze (harness implemented, see below) and B-21 trials are next.
+R6/V6 fallback is predeclared by id (D-027). Final held-out outcomes do not exist yet;
+the committed local runtime configuration is frozen, while hosting and B-21 trials remain open.
 
 Day 15 (B-22, self-review; no volunteer tester, so no user study is claimed) added a bounded
 skill catalog: twelve slash skills (`/start` … `/cancel`) that map to existing endpoints and
@@ -62,10 +72,34 @@ plus graph context, protected feedback, evidence-based confirmation, the protect
 repeated-candidate stopping) under one set of hard limits. Each trial writes a sealed,
 write-once record and is judged afterwards by a fresh run of the frozen protected evaluator;
 `scripts/summarize_trials.py` scores records against trusted truth. The evaluation
-configuration `backend/evaluation/eval-config-v1.json` is still a **candidate**: it becomes
-`frozen` only after the runtime is committed (`python scripts/freeze_eval_config.py`), and a
-`--final` run refuses to start until then. Only development dry runs exist; no measured
-outcome is claimed (D-029).
+configuration `backend/evaluation/eval-config-v1.json` is **frozen** for committed runtime
+`ad1955703ccc484e380f40edab33afe764beb3ba` and the tested Docker image digest. Its identity
+hash remains `210affd887e92863543e4a2d2749534ba98e2c8a57203c5e0402016600d0460e`.
+This identifies a local evaluation configuration, not a deployed release. A runtime,
+prompt, model, budget or image change needs a new configuration version and affected reruns.
+
+The Linux deployment required a snapshot output-permission fix and uses a different
+candidate image. The historical configuration does not describe the current runtime:
+verification correctly reports `runtime_code_hash changed`. A new reviewed/committed
+release configuration is required before final measurements.
+
+Three live development B2 trials on 16 October are preserved in
+`artifacts/trials/dev-live-release-20261016-1`: MC-01 was repaired and VERIFIED;
+AC-01 ended `MALFORMED_OUTPUT` after both repair replies reached the output limit;
+the clean case kept its source and independently VERIFIED, but its model call failed
+with a connection error. These are development observations, not held-out measurements
+or three successful live rehearsals. Fresh canonical-reference API/amount/clean bundle
+replays and tamper rejection passed under Docker in
+`artifacts/release-replay/20261016-release-1`. Reference repairs are not model-generated repairs.
+
+Azure hosting is unavailable because the owner's subscription expired. Token Factory
+inference remains operational; its credits do not establish access to a compute host.
+The primary demo is [BenchProof on Vercel](https://benchproof.vercel.app), with same-origin
+UI/API, persistent cloud storage, one action at a time and a shared daily action ceiling.
+See [Vercel deployment](VERCEL_DEPLOYMENT.md) for operations and verification.
+The [laptop/ngrok route](DEMO_HOSTING.md) remains an optional fallback only. Backup/restore,
+judging-period availability, credit/pricing review, final trials, clean-clone
+installation, video and submission remain release work.
 
 ## Setup (Windows, PowerShell)
 
@@ -111,16 +145,24 @@ the API.
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 175 passed on 14 Oct with the Docker image built (3 skips without it)
+.\venv\Scripts\python.exe -m pytest                                   # 235 passed on 16 Oct with Docker; 3 tests require Docker
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
 .\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
 .\venv\Scripts\python.exe scripts\freeze_suites.py --verify             # frozen held-out assets still match truth.lock.json
+.\venv\Scripts\python.exe scripts\freeze_eval_config.py --verify        # currently detects drift from the historical v1 runtime
+.\venv\Scripts\python.exe scripts\run_bundle_replay.py                # new evidence directory; Docker required; no application DB writes
 ```
 
 The fixture validator imports candidate code in-process. That is a development
-tool only. The Docker runner is the tested isolated route for development; the
-hosted route is still Nebius Sandboxes, pending beta access (see DECISIONS D-024).
+tool only. The Docker runner is the tested isolated route locally and inside the
+trusted Vercel Sandbox. Nebius Sandboxes beta access is not required by this hosted route.
+
+## License
+
+Original BenchProof code, synthetic fixtures and documentation use [Apache-2.0](LICENSE).
+See [NOTICE](NOTICE) and the [attribution inventory](BenchProof_MD_Pack/docs/22_LICENSE_AND_ATTRIBUTION.md)
+for third-party components and outstanding release rights checks.
 
 ## Layout
 

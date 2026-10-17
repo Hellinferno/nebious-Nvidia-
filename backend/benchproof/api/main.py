@@ -1,7 +1,7 @@
 """BenchProof API — health/readiness, curated examples, accepted constraints, audits and events.
 
-No endpoint executes candidate code or bills a model call. Live mode is refused
-explicitly when the provider is not configured; it never falls back to a mock.
+Live diagnosis can bill a model request; public candidate verification requires
+the isolated Docker runner. Unconfigured live mode is refused, never mocked.
 POST /audits is idempotent under an Idempotency-Key; events are resumable by
 sequence; cancellation is a compare-and-swap transition.
 """
@@ -24,6 +24,10 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from benchproof import __version__
+from benchproof.api.body_limit import CodingBodyLimitMiddleware
+from benchproof.api.coding import coding_router
+from benchproof.coding.runtime import CodingRuntimeConfig
+from benchproof.coding.store import CodingStore
 from benchproof.constraints import contract_hash, get_constraint, list_constraints
 from benchproof.constraints.approval import ensure_registry_executable
 from benchproof.domain import AuditRecord, DecisionReviewStatus, RunState
@@ -64,6 +68,13 @@ class Settings(BaseSettings):
     nebius_api_key: str = ""
     nebius_base_url: str = "https://api.tokenfactory.nebius.com/v1/"
     nebius_model_id: str = ""
+    benchproof_diagnosis_max_tokens: int = Field(default=2_048, ge=256, le=4_096)
+    benchproof_coding_enabled: bool = False
+    benchproof_coding_model_calls_per_day: int = Field(default=0, ge=0)
+    benchproof_coding_executions_per_day: int = Field(default=0, ge=0)
+    benchproof_coding_max_tasks: int = Field(default=100, ge=1, le=100)
+    benchproof_coding_deadline_epoch: float = Field(default=0, ge=0, allow_inf_nan=False)
+    benchproof_coding_output_tokens: int = Field(default=2_048, ge=256, le=4_096)
     benchproof_runner: Literal["mock", "docker", "contree"] = "mock"
     heartbeat_stale_s: int = 30
     sse_max_wait_s: float = 15.0
@@ -78,6 +89,17 @@ settings = Settings()
 
 def _db() -> Path:
     return Path(settings.database_path)
+
+
+def coding_runtime_config() -> CodingRuntimeConfig:
+    return CodingRuntimeConfig(
+        enabled=settings.benchproof_coding_enabled,
+        model_calls_per_day=settings.benchproof_coding_model_calls_per_day,
+        executions_per_day=settings.benchproof_coding_executions_per_day,
+        max_tasks=settings.benchproof_coding_max_tasks,
+        deadline_epoch=settings.benchproof_coding_deadline_epoch,
+        max_output_tokens=settings.benchproof_coding_output_tokens,
+    )
 
 
 def _error(status: int, code: str, message: str) -> HTTPException:
@@ -127,6 +149,7 @@ def runner_status() -> dict[str, Any]:
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     migrate(_db())
     migrate_lifecycle(_db())
+    CodingStore(_db(), coding_runtime_config().operator_limits())
     ensure_registry_executable()  # REQUIRED_CHECK_MISSING aborts startup
     application.state.runner = runner_status()
     yield
@@ -141,6 +164,13 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Idempotency-Key", "Last-Event-ID", "X-BenchProof-Owner"],
 )
+app.add_middleware(CodingBodyLimitMiddleware)
+
+app.include_router(coding_router(
+    _request_owner, _db, coding_runtime_config, lambda: settings.provider_configured,
+    lambda: bool(getattr(app.state, "runner", {}).get("isolated_execution_available")),
+    lambda: settings.nebius_model_id,
+))
 
 
 # ── Health / ready ───────────────────────────────────────────────────────
@@ -154,6 +184,11 @@ def _runtime_snapshot(request: Request) -> dict[str, Any]:
     """Provider/runner/worker readiness from cached probes; shared by /ready and /skills."""
     hb = latest_heartbeat(_db())
     worker_alive = bool(hb and hb["age_s"] <= settings.heartbeat_stale_s)
+    coding = coding_runtime_config()
+    coding_blocked = coding.blocked_reason(
+        provider_configured=settings.provider_configured,
+        runner_ready=bool(request.app.state.runner.get("isolated_execution_available")),
+    )
     return {
         "provider": {
             "name": "nebius-token-factory",
@@ -162,6 +197,16 @@ def _runtime_snapshot(request: Request) -> dict[str, Any]:
         },
         "runner": request.app.state.runner,
         "worker": {"alive": worker_alive, "heartbeat": hb},
+        "coding": {
+            "enabled": coding.enabled, "admission_configured": coding_blocked is None,
+            "blocked_reason": coding_blocked,
+            "worker_alive": bool(worker_alive and hb and hb["worker_id"].startswith("coding-worker-")),
+            "profile": "invoice-observation-v1", "general_project_intake": False,
+            "session_seconds_remaining": int(coding.seconds_remaining()),
+            "hard_model_calls_per_day": coding.model_calls_per_day,
+            "hard_executions_per_day": coding.executions_per_day,
+            "hard_token_cap": False,
+        },
     }
 
 
@@ -564,11 +609,17 @@ def diagnose_audit(
             mode=audit["mode"],
             strategy=recovery["recovery_strategy"] or "broad_diagnosis",
             db_path=_db(),
+            model_id=settings.nebius_model_id or None,
+            api_key=settings.nebius_api_key or None,
+            base_url=settings.nebius_base_url,
+            max_tokens=settings.benchproof_diagnosis_max_tokens,
         )
         return res
     except InvestigationError as e:
         if e.code == "PROVIDER_UNAVAILABLE":
             status_code = 503
+        elif e.code.startswith(("MODEL_OUTPUT_", "PROVIDER_INVALID_")) or e.code == "MALFORMED_ACTION":
+            status_code = 502
         else:
             status_code = 409 if e.code in {"STALE_SOURCE", "CONTRACT_UNAPPROVED", "STALE_CONTEXT"} else 422
         raise _error(status_code, e.code, e.message)
@@ -615,13 +666,22 @@ def recover_stalled_audit(
             mode=audit["mode"],
             strategy=RECOVERY_STRATEGY,
             db_path=_db(),
+            model_id=settings.nebius_model_id or None,
+            api_key=settings.nebius_api_key or None,
+            base_url=settings.nebius_base_url,
+            max_tokens=settings.benchproof_diagnosis_max_tokens,
         )
         return {"recovery": reserved, "result": result}
     except TrajectoryError as e:
         status_code = 409 if e.code in {"BUDGET_EXHAUSTED", "RECOVERY_EXHAUSTED", "INVALID_STATE"} else 422
         raise _error(status_code, e.code, e.message)
     except InvestigationError as e:
-        status_code = 503 if e.code == "PROVIDER_UNAVAILABLE" else 409
+        if e.code == "PROVIDER_UNAVAILABLE":
+            status_code = 503
+        elif e.code.startswith(("MODEL_OUTPUT_", "PROVIDER_INVALID_")) or e.code == "MALFORMED_ACTION":
+            status_code = 502
+        else:
+            status_code = 409
         raise _error(status_code, e.code, e.message)
 
 

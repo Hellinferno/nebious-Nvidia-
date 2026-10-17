@@ -1,6 +1,10 @@
 # Assurance runtime specification
 
+Active priority, 17 October 2026: build the [task-centered coding agent](../../BUILD_PLAN.md), using assurance as supporting infrastructure. This v2 document retains the protected invoice semantics; it is not evidence of general project support. The new project execution profile and ordinary user-test status require separate contracts, and must not weaken or relabel these existing protected checks.
+
 Version v2, 3 October 2026. This is the detailed implementation contract for the research-driven scope. It complements [architecture](04_ARCHITECTURE.md) and [API records](11_API_AND_DATA_CONTRACTS.md).
+
+17 October implementation increment: shared strict completion validation and pre-call legacy diagnosis reservations are implemented locally; [API failure/accounting semantics](11_API_AND_DATA_CONTRACTS.md) and [coding primitives/acceptance](../../backend/benchproof/coding/README.md) document the boundary. One actual NVIDIA-generated MC-01 patch passed the existing cloud isolated gate after its original failed. This does not deploy the new code, implement a durable coding-task worker, broaden project support or change any protected verdict semantics below.
 
 ## 1. Human-owned executable constraints
 

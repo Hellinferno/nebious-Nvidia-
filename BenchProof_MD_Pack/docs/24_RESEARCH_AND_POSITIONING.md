@@ -1,5 +1,7 @@
 # Coding-agent research and BenchProof positioning
 
+17 October 2026 update: the expanded [17-product/problem review](../../CODING_AGENT_RESEARCH_2026-10-17.md) and [coding-agent build plan](../../BUILD_PLAN.md) now guide future product priorities. The main product becomes real task -> generated code -> executed tests -> bounded repair -> reviewable patch, with assurance underneath. The v2 analysis below is retained as historical rationale, not a claim that the new workflow is implemented or that any product was beaten in a benchmark.
+
 Revised 3 October 2026. The latest recovered research direction was **Agentic Engineering Assurance Runtime**, following an earlier “Agentic Engineering Control Plane” proposal. This document records verified public capabilities and our resulting design hypotheses. No hands-on competitor benchmark was recovered or performed in this revision.
 
 ## Research method and evidence levels

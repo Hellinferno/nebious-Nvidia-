@@ -1,6 +1,6 @@
 # Deployment, operations, and recovery
 
-The research revision adds protected contracts, graph/decision versions, trajectory records and mutation policy to deployment. A running UI alone is not a working assurance runtime. All deployment steps remain pending.
+The primary deployment is [benchproof.vercel.app](https://benchproof.vercel.app) on Vercel Hobby. A persistent named Sandbox hosts the trusted API and Docker runner; a Drive holds SQLite, bundles and daily limits. Cloud isolation, OOM enforcement, stop/resume with fresh replay, public live NVIDIA diagnosis and the fresh-browser create/verify/export/validate/replay/download/reload journey passed on 16 October. Follow [VERCEL_DEPLOYMENT.md](../../VERCEL_DEPLOYMENT.md) for exact identities, evidence, quotas and operational limits. The laptop/ngrok route is an optional fallback in [DEMO_HOSTING.md](../../DEMO_HOSTING.md). Azure remains unavailable; backup/restore and guaranteed judging-period availability remain open.
 
 ## Target topology and selection gate
 

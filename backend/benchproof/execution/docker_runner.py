@@ -14,12 +14,14 @@ This is a tested local alternate, not the hosted sandbox story (DECISIONS D-024)
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import stat
 import subprocess
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +38,7 @@ MAX_CAPTURE_BYTES = 64 * 1024
 MAX_OBSERVATION_BYTES = 256 * 1024
 MAX_ARTIFACT_FILES = 16
 MAX_ARTIFACT_TOTAL_BYTES = 512 * 1024
+CODING_OPERATION = re.compile(r"^bp-coding-[a-f0-9]{32}$")
 
 
 def _drain_bounded(stream: Any, captured: bytearray, seen: list[int]) -> None:
@@ -141,16 +144,19 @@ class DockerRunner:
         snapshot: Snapshot,
         timeout_s: int = 60,
         launcher_args: list[str] | None = None,
+        operation_id: str | None = None,
+        should_cancel: Callable[[], bool] | None = None,
         **_: Any,
     ) -> ExecutionResult:
+        if operation_id is not None and not CODING_OPERATION.fullmatch(operation_id):
+            raise ValueError("Invalid coding container operation ID")
         ok, why = self.available()
         if not ok:
             raise RunnerUnavailable(why)
         if not (LAUNCHER_DIR / LAUNCHER_FILE).exists():
             raise RunnerUnavailable(f"launcher missing: {LAUNCHER_DIR / LAUNCHER_FILE}")
 
-        name = f"bp-{snapshot.run_id}-{uuid.uuid4().hex[:6]}"
-        self._containers[snapshot.run_id] = name
+        name = operation_id or f"bp-{snapshot.run_id}-{uuid.uuid4().hex[:6]}"
         isolation = {
             "network": "none",
             "read_only_root": True,
@@ -186,6 +192,14 @@ class DockerRunner:
         timed_out = False
         exit_code: int | None = None
         stdout = stderr = ""
+        if should_cancel and should_cancel():
+            return ExecutionResult(
+                runner=self.name, run_id=snapshot.run_id, exit_code=None, timed_out=False,
+                duration_ms=0, stdout="", stderr="", observations=None, operation_id=name,
+                isolation={**isolation, "enforced": False, "cancelled_before_launch": True},
+                error="Execution cancelled before container launch",
+            )
+        self._containers[snapshot.run_id] = name
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout_bytes = bytearray()
@@ -278,6 +292,40 @@ class DockerRunner:
             return False
         r = subprocess.run([self.docker, "kill", name], capture_output=True, text=True, timeout=30, check=False)
         return r.returncode == 0
+
+    def cancel_operation(self, operation_id: str) -> bool:
+        """Kill only a persisted coding operation; confirm stopped/absent or fail closed."""
+        if not CODING_OPERATION.fullmatch(operation_id):
+            raise ValueError("Invalid coding container operation ID")
+
+        def running() -> bool | None:
+            inspected = subprocess.run(
+                [self.docker, "container", "inspect", "--format", "{{.State.Running}}", operation_id],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if inspected.returncode == 0:
+                value = inspected.stdout.strip()
+                return {"true": True, "false": False}.get(value)
+            listed = subprocess.run(
+                [self.docker, "container", "ls", "--all", "--filter", f"name=^/{operation_id}$",
+                 "--format", "{{.Names}}"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if listed.returncode == 0 and not listed.stdout.strip():
+                return False
+            return None
+
+        try:
+            state = running()
+            if state is not True:
+                return state is False
+            killed = subprocess.run(
+                [self.docker, "kill", operation_id],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            return killed.returncode == 0 and running() is False
+        except (OSError, subprocess.TimeoutExpired):
+            return False
 
     def container_running(self, run_id: str) -> bool:
         name = self._containers.get(run_id)

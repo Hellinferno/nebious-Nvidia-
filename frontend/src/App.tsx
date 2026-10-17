@@ -3,7 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import axios, { AxiosError } from 'axios'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000'
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 const OWNER_KEY = 'benchproof.owner-capability'
 const ACTIVE_AUDIT_KEY = 'benchproof.active-audit'
 const ACTIVE_FIXTURE_KEY = 'benchproof.active-fixture'
@@ -278,7 +278,7 @@ function App() {
   const [examples, setExamples] = useState<Example[]>([])
   const [constraints, setConstraints] = useState<Constraint[]>([])
   const [selectedFixture, setSelectedFixture] = useState('MC-01')
-  const [selectedMode, setSelectedMode] = useState<'live' | 'mock'>('mock')
+  const [selectedMode, setSelectedMode] = useState<'live' | 'mock'>(import.meta.env.DEV ? 'mock' : 'live')
   const [audit, setAudit] = useState<Audit | null>(null)
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [graph, setGraph] = useState<GraphData | null>(null)
@@ -698,30 +698,39 @@ function App() {
   const availableCount = skills.filter((skill) => skill.available).length
 
   return (
-    <main className="container">
+    <main className="container" id="workspace">
+      <nav className="topbar" aria-label="Main navigation">
+        <a className="brand" href="#workspace" aria-label="BenchProof workspace">
+          <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4.5 6v6c0 4.5 7.5 9 7.5 9s7.5-4.5 7.5-9V6L12 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="m8.5 12 2.2 2.2 4.8-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+          BenchProof<span className="workspace-label">Assurance workspace</span>
+        </a>
+        <div className="topbar-actions"><span className="topbar-caption">NVIDIA inference · Nebius</span><button type="button" className="btn btn-secondary" aria-haspopup="dialog" aria-expanded={paletteOpen} onClick={() => { setPaletteIndex(0); setPaletteOpen(true) }}>Commands<span className="shortcut">Ctrl K</span></button></div>
+      </nav>
       <header className="hero">
-        <p className="eyebrow">NVIDIA × Nebius · bounded assurance</p>
-        <h1>BenchProof</h1>
-        <p className="subtitle">From a proposed code change to independently replayable evidence.</p>
+        <div><p className="eyebrow">Bounded engineering assurance</p>
+          <h1>Code changes.<br />Proof, not guesswork.</h1>
+          <p className="subtitle">Investigate a change, verify it in isolation, and keep evidence anyone with the bundle can independently replay.</p>
+        </div>
+        <div className="workflow" aria-label="Assurance workflow"><span><b>01</b>Select scope</span><i aria-hidden="true" /><span><b>02</b>Verify change</span><i aria-hidden="true" /><span><b>03</b>Keep the proof</span></div>
       </header>
 
       <section className="status-strip" aria-label="Runtime status">
-        <span><strong>API</strong> {health ? `v${health.version}` : 'connecting'}</span>
-        <span><strong>Provider</strong> {ready?.provider.configured ? 'live ready' : 'mock only'}</span>
-        <span><strong>Runner</strong> {ready?.runner.mode ?? 'unknown'}{ready && !ready.runner.isolated_execution_available ? ' · isolation unavailable' : ''}</span>
-        <span><strong>Worker</strong> {ready?.worker.alive ? 'alive' : 'offline'}</span>
+        <div><span className={`status-dot ${health ? 'ready' : ''}`} aria-hidden="true" /><span className="status-copy"><strong>API</strong><span className="status-value">{health ? `v${health.version}` : 'Connecting…'}</span></span></div>
+        <div><span className={`status-dot ${ready?.provider.configured ? 'ready' : ''}`} aria-hidden="true" /><span className="status-copy"><strong>Provider</strong><span className="status-value">{ready ? ready.provider.configured ? 'Live ready' : 'Mock only' : 'Checking…'}</span></span></div>
+        <div><span className={`status-dot ${ready?.runner.isolated_execution_available ? 'ready' : ''}`} aria-hidden="true" /><span className="status-copy"><strong>Runner</strong><span className="status-value">{ready?.runner.mode ?? 'Checking…'}{ready && !ready.runner.isolated_execution_available ? ' · isolation unavailable' : ''}</span></span></div>
+        <div><span className={`status-dot ${ready?.worker.alive ? 'ready' : ''}`} aria-hidden="true" /><span className="status-copy"><strong>Worker</strong><span className="status-value">{ready ? ready.worker.alive ? 'Alive' : 'Offline' : 'Checking…'}</span></span></div>
       </section>
 
       <section className="skill-bar" aria-label="Skills">
-        <button type="button" className="btn btn-secondary" aria-haspopup="dialog" aria-expanded={paletteOpen} onClick={() => { setPaletteIndex(0); setPaletteOpen(true) }}>Skills · Ctrl+K or /</button>
-        <span className="meta">{skills.length ? `${availableCount} of ${skills.length} skills available now · ${skillsVersion}` : 'Skill catalog not loaded; buttons use local rules.'}</span>
+        <nav className="workspace-nav" aria-label="Workspace sections"><a href="#examples-h">Cases</a>{audit && <><a href="#run-h">Active run</a><a href="#repair-h">Verification</a><a href="#evidence-h">Evidence</a></>}<a href="#constraints-h">Policy</a></nav>
+        <span className="meta">{skills.length ? `${availableCount} / ${skills.length} commands available` : 'Direct controls available while the command catalog loads.'}</span>
       </section>
 
       {issue && <section className="alert" role="alert" aria-live="assertive"><strong>{issue.code}</strong><span>{issue.message}</span><small>Next: {issue.next}</small></section>}
 
       <section className="panel setup-panel" aria-labelledby="examples-h">
         <div className="section-head">
-          <div><p className="eyebrow">1 · Select scope</p><h2 id="examples-h">Curated synthetic invoice cases</h2></div>
+          <div><p className="eyebrow">01 / Select scope</p><h2 id="examples-h">Choose a case to investigate</h2><p className="section-description">Five synthetic invoice cases. One protected acceptance boundary.</p></div>
           <label className="mode-control">Execution mode
             <select value={selectedMode} onChange={(event) => setSelectedMode(event.target.value as 'live' | 'mock')}>
               <option value="mock">Mock investigation</option>
@@ -734,7 +743,7 @@ function App() {
           {examples.map((example) => <article className={`example-card ${selectedFixture === example.id ? 'selected' : ''}`} key={example.id}>
             <div className="card-title-row"><strong>{example.id}</strong><span className="badge badge-neutral">synthetic</span></div>
             <p>{example.family}</p><small>{example.defect ?? 'Clean control: expected to pass unchanged.'}</small>
-            <button type="button" className="btn btn-primary" disabled={loading} onClick={() => void startAudit(example.id)}>Start assurance</button>
+            <button type="button" className={`btn ${selectedFixture === example.id ? 'btn-primary' : 'btn-secondary'}`} disabled={loading} onClick={() => void startAudit(example.id)}>Start assurance</button>
           </article>)}
         </div>
       </section>
@@ -746,7 +755,7 @@ function App() {
       {audit && <>
         <section className="panel run-panel" aria-labelledby="run-h">
           <div className="section-head">
-            <div><p className="eyebrow">2 · Follow the run</p><h2 id="run-h">{audit.fixture_id} <code>{audit.audit_id}</code></h2></div>
+            <div><p className="eyebrow">02 / Active run</p><h2 id="run-h">{audit.fixture_id} <code>{audit.audit_id}</code></h2></div>
             <button type="button" className="btn btn-danger" disabled={loading || !can('cancel', !isTerminal && audit.run_state !== 'CANCEL_PENDING')} title={why('cancel')} onClick={() => void runSkill('cancel')}>{audit.run_state === 'CANCEL_PENDING' ? 'Cancel pending' : 'Cancel run'}</button>
           </div>
           <div className="verdict-grid">
@@ -764,7 +773,7 @@ function App() {
         </section>
 
         <section className="panel" aria-labelledby="impact-h">
-          <p className="eyebrow">3 · Inspect impact</p><h2 id="impact-h">Bounded engineering context</h2>
+          <p className="eyebrow">03 / Inspect impact</p><h2 id="impact-h">Understand the blast radius</h2>
           <div className="two-column">
             <article className="card"><h3>Graph coverage</h3><dl className="facts">
               <dt>Status</dt><dd><span className={`badge badge-${badge(graph?.coverage.status ?? 'UNKNOWN')}`}>{graph?.coverage.status ?? 'UNKNOWN'}</span></dd>
@@ -799,7 +808,7 @@ function App() {
         </section>
 
         <section className="panel" aria-labelledby="repair-h">
-          <div className="section-head"><div><p className="eyebrow">4 · Review and verify</p><h2 id="repair-h">Protected candidate repair</h2></div><div className="button-group">
+          <div className="section-head"><div><p className="eyebrow">04 / Review and verify</p><h2 id="repair-h">Independent acceptance gate</h2></div><div className="button-group">
             <button type="button" className="btn btn-secondary" disabled={loading || !plan || !graph || !can('repair', !isTerminal)} title={why('repair')} onClick={() => void runSkill('repair')}>Propose bounded diff</button>
             <button type="button" className="btn btn-primary" disabled={loading || !can('verify', !isTerminal && !!ready?.runner.isolated_execution_available)} title={why('verify', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('verify')}>Verify independently</button>
             <button type="button" className="btn btn-secondary" disabled={loading || !can('strength', gateResult?.verdict === 'VERIFIED' && !!ready?.runner.isolated_execution_available)} title={why('strength', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('strength')}>Assess test strength</button>
@@ -821,7 +830,7 @@ function App() {
         </section>
 
         <section className="panel" aria-labelledby="evidence-h">
-          <div className="section-head"><div><p className="eyebrow">5 · Preserve evidence</p><h2 id="evidence-h">Export and independent replay</h2></div><div className="button-group">
+          <div className="section-head"><div><p className="eyebrow">05 / Preserve evidence</p><h2 id="evidence-h">Take the proof with you</h2></div><div className="button-group">
             <button type="button" className="btn btn-secondary" disabled={loading || !can('export', true)} title={why('export')} onClick={() => void runSkill('export')}>Build bundle</button>
             <button type="button" className="btn btn-secondary" disabled={loading || !can('validate', true)} title={why('validate')} onClick={() => void runSkill('validate')}>Validate hashes</button>
             <button type="button" className="btn btn-primary" disabled={loading || !can('replay', !!ready?.runner.isolated_execution_available)} title={why('replay', !ready?.runner.isolated_execution_available ? 'Requires the isolated Docker runner' : undefined)} onClick={() => void runSkill('replay')}>Replay checks</button>
@@ -837,6 +846,8 @@ function App() {
       <section className="panel" aria-labelledby="constraints-h"><p className="eyebrow">Protected policy</p><h2 id="constraints-h">Accepted executable constraints</h2><div className="constraint-list">
         {constraints.map((constraint) => <article key={constraint.constraint_id}><strong>{constraint.constraint_id} v{constraint.version}</strong><p>{constraint.statement}</p><small>{constraint.required ? 'Required' : 'Optional'} · checks {constraint.protected_check_ids.join(', ')}</small></article>)}
       </div></section>
+
+      <footer className="workspace-footer"><span>BenchProof · bounded, independently checked, replayable.</span><span>VERIFIED applies only to the declared checks and source version.</span></footer>
 
       {paletteOpen && <div className="palette-backdrop" role="presentation" onMouseDown={() => setPaletteOpen(false)}>
         <section className="palette" role="dialog" aria-modal="true" aria-label="Skill palette" onMouseDown={(event) => event.stopPropagation()}>

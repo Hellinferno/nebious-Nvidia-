@@ -57,6 +57,14 @@ Use readable neutral surfaces, restrained status color, one main action per stag
 
 ## Usability protocol and acceptance
 
+### Implemented visual refresh — 16–17 October 2026
+
+The hosted workspace uses a fixed light visual system: slate text, white panels on a neutral canvas, and restrained teal actions. Typography uses an explicit local sans-serif stack (Segoe UI on Windows), independent heading line heights, and monospace only for identifiers, hashes and diffs. No remote font service or new package is required. Browser color-scheme preference must not mix incompatible foreground/background palettes.
+
+The brand/command bar, compact runtime status, section links and numbered stages separate navigation from decisions. Five case cards share a responsive grid; the active selection is distinguished by a border and fill, not only its button. Status dots accompany actual API text and remain pending until readiness is known. Lifecycle, gate verdict and optional test strength remain separate; this is a presentation change, not a new assurance claim.
+
+`deployment/vercel/ui-check.mjs` checks rendered font faces, heading/subtitle separation, horizontal overflow at 1440/1280/1024/768/390/320 px, Ctrl+K/Escape, and stable colors under dark preference. The connected browser journey also checks active-audit layouts at 1440/768/390/320 px, in addition to gate/export/replay/download/reload. Screenshots and machine-readable records are stored under `artifacts/ui-refresh-20261016/`. Automated layout checks do not replace volunteer usability sessions.
+
 If volunteers are available, ask them to choose a faulty example, explain why it was rejected, verify a repair and find what remains unchecked. Ravi arranges contact; this pack sends no messages. Record consent, completion, confusion, time and changes without coaching answers. Aim for three sessions, disclose actual count and limited sample.
 
 Release acceptance: users can identify the failed constraint and next action, distinguish graph limits from behavior checks, inspect the real diff, recover from reload, and download the evidence. All displayed statuses/numbers come from actual API records; no hardcoded passing demo state.

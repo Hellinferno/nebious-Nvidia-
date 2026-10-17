@@ -1,5 +1,7 @@
 # Product requirements
 
+Active direction, 17 October 2026: [coding-agent build plan](../../BUILD_PLAN.md) defines the new task-centered project workflow and MVP acceptance. The fixture-only journey below is the legacy v2 contract, not the full target product. New coding-agent requirements are planned until their C-ticket acceptance evidence exists; existing invoice verdicts do not automatically apply to imported projects.
+
 Version: research-aligned v2, 3 October 2026. All capabilities are planned until implemented and recorded. Detailed deterministic semantics live in [runtime specification](25_ASSURANCE_RUNTIME.md).
 
 ## Primary journey

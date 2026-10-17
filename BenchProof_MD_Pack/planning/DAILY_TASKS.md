@@ -1,5 +1,7 @@
 # BenchProof daily execution plan
 
+Scheduling update, 17 October 2026: [BUILD_PLAN.md](../../BUILD_PLAN.md) is the active remaining-work calendar for the coding-agent pivot (C-01–C-10). Start with real model generation and the durable task/execute/test vertical slice, not more dashboard polish. This v2 daily plan remains a historical schedule; its pending fixture evaluation breadth must not silently override the new priorities. No completed legacy evidence is erased or reclassified by this update.
+
 Research-aligned v2: **Agentic Engineering Assurance Runtime**. Owner assumed Ravi, working solo. Dates are Asia/Kolkata (IST), 3–30 October 2026. These are implementation sessions, not completed tasks or scheduled reminders.
 
 ## Daily rhythm and definition of done

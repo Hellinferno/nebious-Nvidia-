@@ -1,11 +1,11 @@
 # Release and submission checklist
 
-All implementation gates are pending. Feature freeze: 25 October. Internal submission: 28 October, 8:00 p.m. IST. Official dates/obligations are in [event requirements](../docs/01_HACKATHON_REQUIREMENTS.md).
+Updated 16 October: Vercel cloud isolation/persistence, public live API and automated fresh-profile UI journey are verified; unchecked release gates remain open. Historical local configuration v1 does not cover the deployed Linux compatibility fix/image; a new release identity is required. Feature freeze: 25 October. Internal submission: 28 October, 8:00 p.m. IST. Official dates/obligations are in [event requirements](../docs/01_HACKATHON_REQUIREMENTS.md).
 
 ## Product gate
 
-- [ ] Actual qualifying NVIDIA model participates meaningfully at runtime on the recorded Nebius path.
-- [ ] Candidate code executes in the tested isolated backend with pinned image.
+- [x] Actual NVIDIA model participates in bounded diagnosis/repair on Nebius Token Factory (16 Oct development records; mixed outcomes disclosed).
+- [x] Candidate code executes in the tested isolated backend with pinned image (16 Oct Docker preflight and complete regression).
 - [ ] Accepted executable constraints are human-owned and mapped to protected checks.
 - [ ] API/amount P0 repairs complete; any caller/idempotency P1 claims are implemented.
 - [ ] Graph/impact context shows provenance and unknown/truncated scope accurately.
@@ -30,7 +30,7 @@ All implementation gates are pending. Feature freeze: 25 October. Internal submi
 
 ## Evidence and claims gate
 
-- [x] Selected suites/versioned truth are frozen before final measurement (B-18, `truth.lock.json`); runtime configuration freeze remains B-19.
+- [x] Selected suites/versioned truth are frozen; historical local configuration v1 is retained. The changed deployed runtime still needs its own reviewed release freeze before final measurement.
 - [ ] R12/R6 trials and V12/V6/G8/F6/W8/M12 counts are kept separate.
 - [ ] Every assigned failure/timeout/invalid output remains in the appropriate denominator.
 - [ ] Same-model baseline uses fair information/budgets and common final evaluator.
@@ -46,7 +46,7 @@ All implementation gates are pending. Feature freeze: 25 October. Internal submi
 - [ ] Third-party model/SDK/image/asset notices and rights are reviewed.
 - [ ] Exact locked install/setup works from a clean release clone.
 - [ ] README/judge guide reflect implemented commands and supported features.
-- [ ] Hosted incognito testing is free and independent of Ravi's private session.
+- [x] Hosted fresh-profile testing is free and independent of Ravi's private session (16 Oct Vercel production browser journey).
 - [ ] Persistent storage/backup restoration, worker supervision and stable URL are tested.
 - [ ] Host/provider balance/expiry support the full judging period with reserve.
 - [ ] Public bundles exclude hidden final evaluation truth until its intended release.

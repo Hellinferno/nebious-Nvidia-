@@ -6,6 +6,7 @@ ProviderError; nothing here ever substitutes a mock.
 
 from __future__ import annotations
 
+import math
 import os
 import time
 from pathlib import Path
@@ -20,7 +21,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class ProviderError(Exception):
-    pass
+    def __init__(self, message: str, code: str = "PROVIDER_UNAVAILABLE") -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class NebiusAdapter:
@@ -60,6 +63,7 @@ class NebiusAdapter:
         max_tokens: int = 256,
         temperature: float = 0.0,
         response_format: dict[str, Any] | None = None,
+        timeout_s: float | None = None,
     ) -> dict[str, Any]:
         """One bounded chat completion. Returns sanitized metadata (no credentials)."""
         kwargs: dict[str, Any] = {
@@ -73,14 +77,20 @@ class NebiusAdapter:
         }
         if response_format:
             kwargs["response_format"] = response_format
+        if timeout_s is not None:
+            if not math.isfinite(timeout_s) or not 0 < timeout_s <= 60:
+                raise ValueError("A positive provider timeout of at most 60 seconds is required")
+            kwargs["timeout"] = timeout_s
 
         started = time.perf_counter()
         try:
             response = self._client.chat.completions.create(**kwargs)
         except Exception as e:
-            raise ProviderError(f"Inference failed: {type(e).__name__}: {e}") from e
+            raise ProviderError(f"Inference failed: {type(e).__name__}") from e
         elapsed_ms = int((time.perf_counter() - started) * 1000)
 
+        if not response.choices:
+            raise ProviderError("Provider returned no choices", code="PROVIDER_INVALID_RESPONSE")
         choice = response.choices[0]
         usage = response.usage
         return {

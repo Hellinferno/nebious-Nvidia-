@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -43,6 +44,24 @@ def test_two_snapshots_are_distinct_and_fresh() -> None:
     finally:
         a.cleanup()
         b.cleanup()
+
+
+def test_snapshot_grants_container_write_access_only_to_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_chmod = Path.chmod
+    permission_changes = []
+
+    def record_chmod(path: Path, mode: int) -> None:
+        permission_changes.append((path, mode))
+        original_chmod(path, mode)
+
+    monkeypatch.setattr(Path, "chmod", record_chmod)
+    snapshot = prepare_snapshot(CLEAN)
+    try:
+        assert permission_changes == [(snapshot.out_dir, 0o777)]
+        assert snapshot.out_dir.parent == snapshot.root
+        assert snapshot.out_dir != snapshot.candidate_dir
+    finally:
+        snapshot.cleanup()
 
 
 def test_mock_runner_is_labeled_and_executes_nothing() -> None:

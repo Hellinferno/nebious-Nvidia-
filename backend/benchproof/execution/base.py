@@ -85,5 +85,6 @@ def prepare_snapshot(app_dir: Path, base_dir: Path | None = None) -> Snapshot:
     dst = root / "candidate" / "app"
     shutil.copytree(app_dir, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (root / "out").mkdir()
+    (root / "out").chmod(0o777)
     assert_no_trusted_assets(dst)
     return Snapshot(run_id=run_id, root=root, source_hash=source_hash_for_dir(dst))

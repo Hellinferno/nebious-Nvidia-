@@ -7,9 +7,11 @@ Generates real bundle archives and replay records for:
 4. Tampered bundle detection (BLOCKED / TAMPERED)
 """
 
+import argparse
 import json
 import sys
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parents[1]
@@ -19,9 +21,12 @@ if str(backend_dir) not in sys.path:
 from benchproof.bundle import export_bundle, replay_bundle, validate_bundle_nonexecuting
 from benchproof.constraints import contract_hash
 from benchproof.domain import AuditRecord, GateVerdict, RunState
+from benchproof.execution.docker_runner import DockerRunner
 from benchproof.fixtures import source_hash
 from benchproof.gate import execute_acceptance_gate
 from benchproof.patch import (
+    compute_diff_hash,
+    extract_diff_paths,
     get_canonical_ac01_repair_diff,
     get_canonical_mc01_repair_diff,
 )
@@ -53,25 +58,40 @@ def setup_audit_and_gate(db_path: Path, fixture_id: str, patch_diff: str | None 
             patch_id=patch_id,
             audit_id=audit_id,
             base_hash=shash,
-            diff_hash="canonical-hash",
+            diff_hash=compute_diff_hash(patch_diff),
             diff_text=patch_diff,
-            approved_paths=["app/money.py", "app/schemas.py", "app/services.py"],
-            changed_lines=5,
-            policy_result="APPROVED",
+            approved_paths=extract_diff_paths(patch_diff),
+            changed_lines=sum(
+                line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+                for line in patch_diff.splitlines()
+            ),
+            policy_result="PENDING",
+            author="trusted-reference-repair",
             db_path=db_path,
         )
 
-    res = execute_acceptance_gate(audit_id, patch_id=patch_id, db_path=db_path)
+    res = execute_acceptance_gate(audit_id, patch_id=patch_id, use_docker=True, db_path=db_path)
+    if res["verdict"] != "VERIFIED":
+        raise RuntimeError(f"Reference scenario {fixture_id} did not verify: {res['verdict']}")
     print(f"  [+] Gate executed for {fixture_id}: {res['verdict']}")
     return audit_id
 
 
-def main() -> None:
-    db_path = Path("benchproof.db")
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, help="new directory; existing paths are refused")
+    args = parser.parse_args()
+    available, detail = DockerRunner().available()
+    if not available:
+        print(f"RUNNER_UNAVAILABLE: {detail}", file=sys.stderr)
+        return 2
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+    artifacts_dir = args.output_dir or backend_dir.parent / "artifacts" / "release-replay" / stamp
+    artifacts_dir.mkdir(parents=True, exist_ok=False)
+    db_path = artifacts_dir / "replay-evidence.db"
     migrate(db_path)
     migrate_lifecycle(db_path)
 
-    artifacts_dir = Path("artifacts")
     bundles_dir = artifacts_dir / "bundles"
     replay_dir = artifacts_dir / "replay"
     bundles_dir.mkdir(parents=True, exist_ok=True)
@@ -83,7 +103,7 @@ def main() -> None:
 
     # 1. MC-01 Canonical Repair
     print("[1/4] Processing MC-01 Canonical Repair Bundle...")
-    mc01_audit = setup_audit_and_gate(db_path, "mc-01", get_canonical_mc01_repair_diff())
+    mc01_audit = setup_audit_and_gate(db_path, "MC-01", get_canonical_mc01_repair_diff())
     mc01_zip, _mc01_manifest = export_bundle(mc01_audit, bundles_dir / "mc01_canonical_repair_bundle.zip", db_path=db_path)
     mc01_val = validate_bundle_nonexecuting(mc01_zip)
     mc01_replay = replay_bundle(mc01_zip)
@@ -94,7 +114,7 @@ def main() -> None:
 
     # 2. AC-01 Canonical Repair
     print("[2/4] Processing AC-01 Canonical Repair Bundle...")
-    ac01_audit = setup_audit_and_gate(db_path, "ac-01", get_canonical_ac01_repair_diff())
+    ac01_audit = setup_audit_and_gate(db_path, "AC-01", get_canonical_ac01_repair_diff())
     ac01_zip, _ac01_manifest = export_bundle(ac01_audit, bundles_dir / "ac01_canonical_repair_bundle.zip", db_path=db_path)
     ac01_val = validate_bundle_nonexecuting(ac01_zip)
     ac01_replay = replay_bundle(ac01_zip)
@@ -136,12 +156,27 @@ def main() -> None:
     print(f"      Tamper Detected by Validator: {not tampered_val['valid']}")
     print(f"      Tamper Detected by Replayer:  {tampered_replay.tampered} (Verdict: {tampered_replay.replayed_verdict})")
 
+    records = ((mc01_val, mc01_replay), (ac01_val, ac01_replay), (clean_val, clean_replay))
+    replays_ok = all(
+        validation["valid"] and record.verdict_matches and record.checks_matched
+        and record.replayed_verdict == "VERIFIED" and not record.tampered
+        for validation, record in records
+    )
+    tamper_ok = (
+        not tampered_val["valid"] and tampered_replay.tampered
+        and tampered_replay.replayed_verdict == "BLOCKED"
+    )
+    if not replays_ok or not tamper_ok:
+        print("Replay verification failed; preserved artifacts for inspection", file=sys.stderr)
+        return 1
+
     print("\n=========================================================")
     print("  ALL 4 BUNDLE & REPLAY EVIDENCE ARTIFACTS GENERATED!")
     print(f"  Bundles: {bundles_dir}")
     print(f"  Replay:  {replay_dir}")
     print("=========================================================\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

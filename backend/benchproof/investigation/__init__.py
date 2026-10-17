@@ -12,6 +12,7 @@ Implements:
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import uuid
@@ -26,11 +27,16 @@ from benchproof.constraints import contract_hash, get_constraint
 from benchproof.domain import ContextPacket, RunState
 from benchproof.fixtures import fixture_dir, source_hash_for_dir
 from benchproof.impact import ImpactReport
-from benchproof.providers import NebiusAdapter
-from benchproof.storage import save_action
+from benchproof.providers import NebiusAdapter, ProviderError
+from benchproof.providers.structured import (
+    ModelOutputError,
+    completion_metadata,
+    validate_completion,
+)
 from benchproof.storage.lifecycle import append_event
 
 ALLOWED_PROBES = {"observe_invoice", "amount_boundary_probe", "api_schema_probe"}
+DEFAULT_DIAGNOSIS_OUTPUT_TOKENS = 2_048
 
 
 class Hypothesis(BaseModel):
@@ -42,6 +48,13 @@ class Hypothesis(BaseModel):
     claim: str = Field(min_length=1, max_length=1_000)
     refutation_condition: str = Field(min_length=1, max_length=1_000)
     proposed_probe: str = "observe_invoice"
+
+    @field_validator("proposed_probe")
+    @classmethod
+    def validate_proposed_probe(cls, value: str) -> str:
+        if value not in ALLOWED_PROBES:
+            raise ValueError("Unknown proposed probe")
+        return value
 
     @field_validator("constraint_id")
     @classmethod
@@ -93,10 +106,13 @@ class DiagnosisProposal(BaseModel):
 
 
 class InvestigationError(Exception):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self, code: str, message: str, provider_metadata: dict[str, Any] | None = None
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.provider_metadata = provider_metadata or {}
 
 
 INVESTIGATOR_SYSTEM_PROMPT = """You review a bounded Python service under accepted engineering constraints.
@@ -125,8 +141,11 @@ def generate_structured_diagnosis(
     api_key: str | None = None,
     base_url: str | None = None,
     provider_mode: str = "live",
+    max_tokens: int = DEFAULT_DIAGNOSIS_OUTPUT_TOKENS,
 ) -> tuple[DiagnosisProposal, dict[str, Any]]:
-    """Generate a structured diagnosis proposal via NVIDIA Nemotron or fallback."""
+    """Generate a validated proposal with no repair, invented fields or live fallback."""
+    if provider_mode not in {"mock", "live"} or not 256 <= max_tokens <= 4_096:
+        raise InvestigationError("INVALID_INPUT", "Unsupported provider mode or output allowance")
     user_prompt = f"""Context:
 Source hash: {context.source_hash}
 Contract hash: {context.contract_hash}
@@ -169,30 +188,35 @@ Return JSON with format:
             "reason": "audit requested mock mode",
         }
     else:
+        active_model = (
+            model_id or os.getenv("NEBIUS_MODEL_ID", "").strip()
+            or "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+        )
+        provider_metadata = completion_metadata({}, active_model)
+        provider_metadata["max_output_tokens"] = max_tokens
         try:
             adapter = NebiusAdapter(api_key=api_key, base_url=base_url)
-            active_model = model_id or "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
             res = adapter.complete(
                 model=active_model,
                 system_prompt=INVESTIGATOR_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
-                max_tokens=1024,
+                max_tokens=max_tokens,
                 temperature=0.0,
                 response_format={"type": "json_object"},
             )
             raw_content = res.get("content", "")
-            provider_metadata = {
-                "mode": "live",
-                "provider": "nebius-token-factory",
-                "model_id": res.get("response_model") or active_model,
-                "response_id": res.get("response_id"),
-                "usage": res.get("usage"),
-                "elapsed_ms": res.get("elapsed_ms"),
-            }
+            provider_metadata = completion_metadata(res, active_model)
+            provider_metadata["max_output_tokens"] = max_tokens
+        except ProviderError as exc:
+            raise InvestigationError(
+                exc.code, "Live provider request failed; no automatic retry or mock fallback was used",
+                provider_metadata,
+            ) from exc
         except Exception as exc:
             raise InvestigationError(
                 "PROVIDER_UNAVAILABLE",
                 f"Live provider request failed ({type(exc).__name__}); no mock fallback was used",
+                provider_metadata,
             ) from exc
 
     if provider_metadata["mode"] == "mock":
@@ -214,49 +238,11 @@ Return JSON with format:
             "risk_reasons": impact.risk_reasons,
         })
 
-    # Parse and validate JSON with one format repair attempt
-    clean_text = _clean_json_text(raw_content)
-    parsed: Any = None
     try:
-        parsed = json.loads(clean_text)
-    except json.JSONDecodeError:
-        # One format repair attempt
-        for suffix in ['"}]}', '"}}', '}]}', '}}', '}']:
-            try:
-                parsed = json.loads(clean_text + suffix)
-                break
-            except Exception:  # noqa: S112, BLE001
-                continue
-
-    # Validate schema with robust normalization
-    try:
-        if isinstance(parsed, dict):
-            hyps = parsed.get("hypotheses")
-            if isinstance(hyps, list):
-                for h in hyps:
-                    if isinstance(h, dict):
-                        if "refutation_condition" not in h:
-                            h["refutation_condition"] = (
-                                h.get("refutation")
-                                or h.get("refuted_by")
-                                or h.get("refutation_criteria")
-                                or "Observation of compliant behavior under boundary inputs"
-                            )
-                        if "claim" not in h:
-                            h["claim"] = (
-                                h.get("description")
-                                or h.get("hypothesis")
-                                or "Component violates declared constraint"
-                            )
-                        if "source_location" not in h:
-                            h["source_location"] = h.get("location") or h.get("source") or "app/money.py:compute_total"
-                        if "constraint_id" not in h:
-                            h["constraint_id"] = h.get("constraint") or "C-AMOUNT"
-                        if "proposed_probe" not in h:
-                            h["proposed_probe"] = "observe_invoice"
-        proposal = DiagnosisProposal.model_validate(parsed)
-    except Exception as err:
-        raise InvestigationError("MALFORMED_ACTION", f"Diagnosis schema validation failed: {err}") from err
+        response = {"content": raw_content, "finish_reason": "stop"} if provider_mode == "mock" else res
+        proposal = validate_completion(response, DiagnosisProposal)
+    except ModelOutputError as err:
+        raise InvestigationError(err.code, err.message, provider_metadata) from err
 
     return proposal, provider_metadata
 
@@ -270,6 +256,10 @@ def run_investigation(
     mode: str = "mock",
     strategy: str = "broad_diagnosis",
     db_path: Path | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    max_tokens: int = DEFAULT_DIAGNOSIS_OUTPUT_TOKENS,
 ) -> dict[str, Any]:
     """Execute a complete, bounded investigation cycle."""
     from benchproof.trajectory import ensure_action_budget
@@ -313,15 +303,31 @@ def run_investigation(
     # 3. Emit action_started event
     action_id = f"act-{uuid.uuid4().hex[:12]}"
     started_time = time.perf_counter()
-    append_event(
-        audit_id,
-        "action_started",
-        {"action_id": action_id, "role": "investigator", "tool": "diagnose"},
-        db_path=db_path,
+    from benchproof.investigation.actions import finish_diagnosis, reserve_diagnosis
+
+    reservation = reserve_diagnosis(
+        audit_id, action_id, actual_shash, context.context_hash, strategy, db_path
     )
+    remaining_before.update(reservation)
 
     # 4. Generate Diagnosis
-    proposal, provider_meta = generate_structured_diagnosis(context, impact, provider_mode=mode)
+    try:
+        proposal, provider_meta = generate_structured_diagnosis(
+            context, impact, provider_mode=mode, model_id=model_id,
+            api_key=api_key, base_url=base_url, max_tokens=max_tokens,
+        )
+    except InvestigationError as exc:
+        elapsed_ms = int((time.perf_counter() - started_time) * 1000)
+        finish_diagnosis(
+            action_id=action_id, audit_id=audit_id, status="failed", elapsed_ms=elapsed_ms,
+            provider_metadata=exc.provider_metadata, error_code=exc.code, db_path=db_path,
+            failure_category=exc.code,
+            remaining_limits={**reservation, "max_actions": reservation["max_actions"] - 1,
+                              "used_actions": reservation["used_actions"] + 1,
+                              "used_elapsed_ms": reservation["used_elapsed_ms"] + elapsed_ms,
+                              "audit_deadline_s": max(0, reservation["audit_deadline_s"] - elapsed_ms // 1000)},
+        )
+        raise
 
     # The model call is an asynchronous trust boundary. Reject a response if
     # source, contract, graph, or the reviewed-decision set moved meanwhile.
@@ -341,18 +347,20 @@ def run_investigation(
         or response_context.context_hash != context.context_hash
     ):
         elapsed_ms = int((time.perf_counter() - started_time) * 1000)
-        save_action(
+        finish_diagnosis(
             action_id=action_id,
             audit_id=audit_id,
-            role="investigator",
             tool="diagnose",
             canonical_args_hash=context.context_hash,
-            source_hash=actual_shash,
-            context_hash=context.context_hash,
-            strategy=strategy,
-            remaining_limits=remaining_before,
+            remaining_limits={
+                **remaining_before, "max_actions": remaining_before["max_actions"] - 1,
+                "used_actions": remaining_before["used_actions"] + 1,
+                "used_elapsed_ms": remaining_before["used_elapsed_ms"] + elapsed_ms,
+                "audit_deadline_s": max(0, remaining_before["audit_deadline_s"] - elapsed_ms // 1000),
+            },
             elapsed_ms=elapsed_ms,
             status="rejected_stale_context",
+            provider_metadata=provider_meta,
             db_path=db_path,
         )
         append_event(
@@ -446,21 +454,18 @@ def run_investigation(
     remaining_after["max_actions"] = max(0, remaining_after["max_actions"] - 1)
     remaining_after["used_actions"] += 1
     remaining_after["used_elapsed_ms"] += elapsed_ms
-    save_action(
+    remaining_after["audit_deadline_s"] = max(0, remaining_after["audit_deadline_s"] - elapsed_ms // 1000)
+    finish_diagnosis(
         action_id=action_id,
         audit_id=audit_id,
-        role="investigator",
         tool=probe_name,
         canonical_args_hash=canonical_args_hash,
-        source_hash=actual_shash,
-        context_hash=context.context_hash,
         observation_ids=semantic_observation_ids,
         failure_fingerprint=failure_fp,
         failure_category=failure_category,
-        strategy=strategy,
         observation_fingerprints=observation_fps,
         remaining_limits=remaining_after,
-        usage=provider_meta.get("usage", {}),
+        provider_metadata=provider_meta,
         elapsed_ms=elapsed_ms,
         status="completed",
         db_path=db_path,

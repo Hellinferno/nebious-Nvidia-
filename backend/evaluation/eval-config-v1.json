@@ -1,11 +1,9 @@
 {
   "config_hash": "210affd887e92863543e4a2d2749534ba98e2c8a57203c5e0402016600d0460e",
   "config_id": "eval-config-v1",
-  "created_at": "2026-10-15T08:28:05.856020+00:00",
-  "freeze_blockers": [
-    "runtime source has uncommitted changes; commit it, then refreeze"
-  ],
-  "freeze_status": "candidate",
+  "created_at": "2026-10-16T08:25:44.343423+00:00",
+  "freeze_blockers": [],
+  "freeze_status": "frozen",
   "identity": {
     "budgets": {
       "execution_timeout_s": 30,
@@ -124,12 +122,12 @@
     "status": "NOT_RECORDED"
   },
   "runtime": {
-    "git_head": "08866509a510def009e860d066e2e5df94b59d2b",
+    "git_head": "ad1955703ccc484e380f40edab33afe764beb3ba",
     "runtime_paths": [
       "backend/benchproof",
       "backend/runner/launcher"
     ],
-    "runtime_paths_clean": false
+    "runtime_paths_clean": true
   },
   "schema_version": "benchproof/eval-config-v1",
   "systems": {

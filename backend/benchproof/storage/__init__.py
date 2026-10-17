@@ -202,6 +202,7 @@ def migrate(db_path: Path | None = None) -> None:
     """)
     action_columns = {row["name"] for row in conn.execute("PRAGMA table_info(actions)")}
     action_migrations = {
+        "provider_meta": "ALTER TABLE actions ADD COLUMN provider_meta TEXT NOT NULL DEFAULT '{}'",
         "failure_category": "ALTER TABLE actions ADD COLUMN failure_category TEXT",
         "strategy": "ALTER TABLE actions ADD COLUMN strategy TEXT NOT NULL DEFAULT 'broad_diagnosis'",
         "observation_fps": "ALTER TABLE actions ADD COLUMN observation_fps TEXT NOT NULL DEFAULT '[]'",
@@ -385,6 +386,7 @@ def save_action(
     elapsed_ms: int = 0,
     status: str = "completed",
     db_path: Path | None = None,
+    provider_metadata: dict[str, Any] | None = None,
 ) -> None:
     from datetime import UTC, datetime
     conn = _connect(db_path)
@@ -392,8 +394,9 @@ def save_action(
         """INSERT INTO actions
            (action_id, audit_id, role, tool, canonical_args_hash, source_hash,
             context_hash, observation_ids, failure_fingerprint, failure_category,
-            strategy, observation_fps, remaining_limits, usage_json, elapsed_ms, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            strategy, observation_fps, remaining_limits, usage_json, elapsed_ms, status, created_at,
+            provider_meta)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             action_id,
             audit_id,
@@ -412,6 +415,7 @@ def save_action(
             elapsed_ms,
             status,
             datetime.now(UTC).isoformat(),
+            json.dumps(provider_metadata or {}),
         ),
     )
     conn.commit()
@@ -429,6 +433,7 @@ def list_actions(audit_id: str, db_path: Path | None = None) -> list[dict[str, A
         d["observation_fingerprints"] = json.loads(d.pop("observation_fps"))
         d["remaining_limits"] = json.loads(d["remaining_limits"])
         d["usage"] = json.loads(d["usage_json"])
+        d["provider_metadata"] = json.loads(d.pop("provider_meta"))
         out.append(d)
     return out
 
