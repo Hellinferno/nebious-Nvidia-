@@ -338,6 +338,23 @@ Pending: registration/eligibility/account checks, real provider and isolated run
   - Full backend test suite: 446 passed, 3 skipped, 0 failed.
 - Next: C-06 persistent task brief, source-bound facts, checkpoint restore, pause/resume/cancel, repeated-failure classification and durable budget enforcement.
 
+### 2026-10-17 — C-06 completion: persistent checkpoints, restore, controls, and bundle export
+
+- Scope: Completed C-06 (immutable checkpoint history log, conflict-checked compare-and-swap checkpoint restore, sanitized task bundle export in JSON and ZIP formats, durability and crash reconciliation, monotonic budget preservation, and container cancellation reconciliation).
+- Checkpoint storage & history: Added `coding_checkpoints` table storing versioned, immutable snapshots (`checkpoint_id`, `task_id`, `sequence`, `stage`, `state`, `checkpoint_json`, `created_at`). Recorded on plan approval (initial baseline checkpoint seq 1), action completion (baseline report, candidate patch, test results), and manual updates.
+- Conflict-checked CAS rollback: Implemented `store.restore_checkpoint()` and `POST /api/v1/coding-tasks/{id}/restore` taking `checkpoint_id` and optional `expected_checkpoint_id` for CAS conflict detection (`CONFLICT` / 409). Sets task state to `PAUSED`, restores checkpoint and next stage, appends new immutable checkpoint entry, and emits `CHECKPOINT_RESTORED` event.
+- Strict budget enforcement: Monotonic counters (`model_calls`, `patch_attempts`, `executions`, `active_seconds`) are strictly preserved across checkpoint restore, pause, resume, and retry.
+- Sanitized task bundle export: Implemented `store.export_bundle()`, `store.export_bundle_zip()`, and `GET /api/v1/coding-tasks/{id}/bundle` supporting JSON and downloadable ZIP (`?format=zip`). Bundle includes task brief, approved plan, patch diff, test reports, event timeline, file manifest, and markdown summary; strictly omits credentials, environment secrets, and bearer tokens.
+- Durability & lifecycle controls:
+  - Crash/interruption handling: Expired worker leases mark actions `UNKNOWN` / `INTERRUPTED` without losing usage; resuming requires explicit retry to prevent accidental double-spend.
+  - Active execution guards: Restore is rejected with `INVALID_STATE` or `ACTION_IN_FLIGHT` if an action or worker lease is active.
+  - Container cancellation reconciliation: `cancel` sets `CANCEL_PENDING`, and runner confirms termination via `reconcile_execution(..., stopped=True)` -> `CANCELLED`.
+- Verification & testing:
+  - `backend/tests/test_coding_checkpoints.py` (9 passed in 2.53s).
+  - Coding suite regression (124 passed in 45.59s).
+  - Full backend test suite: 455 passed, 3 skipped, 0 failed in 86.36s.
+- Next: C-07 primary task workspace with source, plan, activity, diff, checks and download.
+
 ## Daily entry template
 
 ### YYYY-MM-DD — day number

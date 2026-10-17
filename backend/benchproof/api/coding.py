@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from benchproof.coding.generation import CodingBrief, CodingPlan, SourceHash
@@ -33,6 +33,13 @@ class ApproveCodingPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     plan_hash: SourceHash
+
+
+class RestoreCheckpointRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    checkpoint_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    expected_checkpoint_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 class EmptyControl(BaseModel):
@@ -273,5 +280,31 @@ def coding_router(
             "hard_token_cap": False,
             "output_tokens_per_call": (task.get("runtime_config") or {}).get("max_output_tokens"),
         }
+
+    @router.get("/{task_id}/checkpoints")
+    def checkpoints(task_id: str, owner: str = Depends(owner_dependency)) -> list[dict[str, Any]]:
+        return owned_call(lambda records: records.list_checkpoints(owner, task_id))
+
+    @router.post("/{task_id}/restore")
+    def restore(
+        task_id: str, body: RestoreCheckpointRequest, owner: str = Depends(owner_dependency),
+    ) -> dict[str, Any]:
+        return _public_task(owned_call(lambda records: records.restore_checkpoint(
+            owner, task_id, body.checkpoint_id, expected_checkpoint_id=body.expected_checkpoint_id,
+        )))
+
+    @router.get("/{task_id}/bundle")
+    def bundle(
+        task_id: str, format: str | None = Query(default=None),
+        owner: str = Depends(owner_dependency),
+    ) -> Any:
+        if format == "zip":
+            zip_bytes = owned_call(lambda records: records.export_bundle_zip(owner, task_id))
+            return Response(
+                content=zip_bytes,
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename=task-{task_id}-bundle.zip"},
+            )
+        return owned_call(lambda records: records.export_bundle(owner, task_id))
 
     return router

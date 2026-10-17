@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import sqlite3
 import time
 import uuid
+import zipfile
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
 from datetime import UTC, datetime
@@ -130,8 +132,15 @@ class CodingStore:
                     day TEXT PRIMARY KEY, model_calls INTEGER NOT NULL DEFAULT 0,
                     executions INTEGER NOT NULL DEFAULT 0
                 );
+                CREATE TABLE IF NOT EXISTS coding_checkpoints (
+                    checkpoint_id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES coding_tasks(task_id),
+                    sequence INTEGER NOT NULL, stage TEXT NOT NULL, state TEXT NOT NULL,
+                    checkpoint_json TEXT NOT NULL, created_at REAL NOT NULL,
+                    UNIQUE (task_id, sequence)
+                );
                 CREATE INDEX IF NOT EXISTS coding_owner ON coding_tasks(owner_ref, created_at);
                 CREATE INDEX IF NOT EXISTS coding_queue ON coding_tasks(state, created_at);
+                CREATE INDEX IF NOT EXISTS coding_chk_idx ON coding_checkpoints(task_id, sequence);
             """)
             columns = {column[1] for column in connection.execute("PRAGMA table_info(coding_tasks)")}
             if "runtime_config_json" not in columns:
@@ -174,6 +183,22 @@ class CodingStore:
             INSERT INTO coding_events(task_id,sequence,event_type,payload_json,created_at)
             SELECT ?,COALESCE(MAX(sequence),0)+1,?,?,? FROM coding_events WHERE task_id=?
         """, (task_id, kind, _json(payload, 32_768), self.clock(), task_id))
+
+    def _save_checkpoint(
+        self, connection: sqlite3.Connection, task_id: str, stage: str, state: str,
+        checkpoint: dict[str, Any],
+    ) -> str:
+        chk_id = f"chk-{uuid.uuid4().hex[:12]}"
+        connection.execute("""
+            INSERT INTO coding_checkpoints(checkpoint_id,task_id,sequence,stage,state,checkpoint_json,created_at)
+            SELECT ?,?,COALESCE(MAX(sequence),0)+1,?,?,?,?
+            FROM coding_checkpoints WHERE task_id=?
+        """, (chk_id, task_id, stage, state, _json(checkpoint), self.clock(), task_id))
+        self._event(connection, task_id, "CHECKPOINT_SAVED", {
+            "checkpoint_id": chk_id, "stage": stage, "state": state,
+            "candidate_hash": checkpoint.get("candidate_hash"),
+        })
+        return chk_id
 
     def _task(self, connection: sqlite3.Connection, task_id: str) -> dict[str, Any]:
         row = dict(self._row(connection, task_id))
@@ -365,6 +390,7 @@ class CodingStore:
                                             updated_at=? WHERE task_id=?
                 """, (plan_hash, self.clock(), task_id))
                 self._event(connection, task_id, "PLAN_APPROVED", {"plan_hash": plan_hash})
+                self._save_checkpoint(connection, task_id, "BASELINE", "APPROVED", {})
             return self._task(connection, task_id)
 
     def _accrue(self, connection: sqlite3.Connection, task: sqlite3.Row, until: float) -> None:
@@ -581,6 +607,9 @@ class CodingStore:
                 resulting_state = "PAUSED"
             if resulting_state is not None:
                 self._release(connection, lease.task_id, resulting_state)
+            if checkpoint is not None and resulting_state != "AWAITING_APPROVAL":
+                self._save_checkpoint(connection, lease.task_id, next_stage or action["stage"],
+                                      resulting_state or "RUNNING", checkpoint)
             self._event(connection, lease.task_id, "ACTION_FINISHED",
                         {"action_id": action_id, "status": status, "state": resulting_state or "RUNNING"})
             return self._task(connection, lease.task_id)
@@ -591,9 +620,10 @@ class CodingStore:
         if next_stage not in _STAGES:
             raise CodingStoreError("INVALID_INPUT", "Unknown coding stage")
         with self._transaction() as connection:
-            self._lease(connection, lease)
+            task = self._lease(connection, lease)
             connection.execute("UPDATE coding_tasks SET next_stage=?,checkpoint_json=?,updated_at=? WHERE task_id=?",
                                (next_stage, _json(checkpoint), self.clock(), lease.task_id))
+            self._save_checkpoint(connection, lease.task_id, next_stage, task["state"], checkpoint)
             return self._task(connection, lease.task_id)
 
     def finish_task(
@@ -698,3 +728,172 @@ class CodingStore:
                     pending.append({"task_id": action["task_id"], "action_id": action["action_id"],
                                     "operation_id": operation_id})
             return pending
+
+    def list_checkpoints(self, owner_ref: str, task_id: str) -> list[dict[str, Any]]:
+        self.reconcile()
+        with self._transaction() as connection:
+            self._owned(connection, owner_ref, task_id)
+            rows = connection.execute(
+                "SELECT * FROM coding_checkpoints WHERE task_id=? ORDER BY sequence ASC",
+                (task_id,),
+            ).fetchall()
+            checkpoints = []
+            for r in rows:
+                item = dict(r)
+                item["checkpoint"] = json.loads(item.pop("checkpoint_json"))
+                checkpoints.append(item)
+            return checkpoints
+
+    def get_checkpoint(self, owner_ref: str, task_id: str, checkpoint_id: str) -> dict[str, Any]:
+        _token(checkpoint_id, "checkpoint identity")
+        self.reconcile()
+        with self._transaction() as connection:
+            self._owned(connection, owner_ref, task_id)
+            row = connection.execute(
+                "SELECT * FROM coding_checkpoints WHERE task_id=? AND checkpoint_id=?",
+                (task_id, checkpoint_id),
+            ).fetchone()
+            if row is None:
+                raise CodingStoreError("NOT_FOUND", f"Checkpoint '{checkpoint_id}' not found")
+            item = dict(row)
+            item["checkpoint"] = json.loads(item.pop("checkpoint_json"))
+            return item
+
+    def restore_checkpoint(
+        self, owner_ref: str, task_id: str, checkpoint_id: str, *,
+        expected_checkpoint_id: str | None = None,
+    ) -> dict[str, Any]:
+        _token(checkpoint_id, "checkpoint identity")
+        if expected_checkpoint_id is not None:
+            _token(expected_checkpoint_id, "expected checkpoint identity")
+        self.reconcile()
+        with self._transaction() as connection:
+            task = self._owned(connection, owner_ref, task_id)
+            if task["state"] == "RUNNING" and task["lease_deadline"] and task["lease_deadline"] > self.clock():
+                raise CodingStoreError("INVALID_STATE", "Cannot restore while task is actively running")
+            if task["state"] == "CANCEL_PENDING":
+                raise CodingStoreError("INVALID_STATE", "Cannot restore a task pending cancellation")
+            if connection.execute("SELECT 1 FROM coding_actions WHERE task_id=? AND status='RUNNING'",
+                                  (task_id,)).fetchone():
+                raise CodingStoreError("ACTION_IN_FLIGHT", "Cannot restore while an action is in flight")
+            target = connection.execute(
+                "SELECT * FROM coding_checkpoints WHERE task_id=? AND checkpoint_id=?",
+                (task_id, checkpoint_id),
+            ).fetchone()
+            if target is None:
+                raise CodingStoreError("NOT_FOUND", f"Checkpoint '{checkpoint_id}' not found")
+            latest = connection.execute(
+                "SELECT checkpoint_id FROM coding_checkpoints WHERE task_id=? ORDER BY sequence DESC LIMIT 1",
+                (task_id,),
+            ).fetchone()
+            if expected_checkpoint_id is not None and (latest is None or latest["checkpoint_id"] != expected_checkpoint_id):
+                raise CodingStoreError("CONFLICT", "Current checkpoint does not match expected checkpoint")
+
+            target_checkpoint = json.loads(target["checkpoint_json"])
+            restored_stage = target["stage"]
+            connection.execute("""
+                UPDATE coding_tasks
+                SET next_stage=?, checkpoint_json=?, state='PAUSED', pause_requested=0,
+                    lease_worker=NULL, lease_deadline=NULL, active_since=NULL, updated_at=?
+                WHERE task_id=?
+            """, (restored_stage, target["checkpoint_json"], self.clock(), task_id))
+            new_chk_id = self._save_checkpoint(connection, task_id, restored_stage, "PAUSED", target_checkpoint)
+            self._event(connection, task_id, "CHECKPOINT_RESTORED", {
+                "restored_from": checkpoint_id,
+                "new_checkpoint_id": new_chk_id,
+                "stage": restored_stage,
+                "candidate_hash": target_checkpoint.get("candidate_hash"),
+            })
+            return self._task(connection, task_id)
+
+    def export_bundle(self, owner_ref: str, task_id: str) -> dict[str, Any]:
+        self.reconcile()
+        with self._transaction() as connection:
+            self._owned(connection, owner_ref, task_id)
+            task_data = self._task(connection, task_id)
+            events = [
+                {"sequence": r["sequence"], "event_type": r["event_type"],
+                 "payload": json.loads(r["payload_json"]), "created_at": r["created_at"]}
+                for r in connection.execute(
+                    "SELECT * FROM coding_events WHERE task_id=? ORDER BY sequence ASC",
+                    (task_id,),
+                ).fetchall()
+            ]
+            chk = task_data.get("checkpoint") or {}
+            patch = chk.get("patch") or {}
+            manifest_files = [
+                {"path": p, "bytes": len(content.encode("utf-8"))}
+                for p, content in sorted((task_data.get("source_files") or {}).items())
+            ]
+            reports = {}
+            if chk.get("baseline"):
+                reports["baseline"] = chk["baseline"]
+            if chk.get("last_candidate"):
+                reports["last_candidate"] = chk["last_candidate"]
+            if chk.get("final"):
+                reports["final"] = chk["final"]
+            return {
+                "schema_version": "coding-bundle-v1",
+                "task_id": task_id,
+                "fixture_id": task_data["fixture_id"],
+                "state": task_data["state"],
+                "contract_hash": task_data["contract_hash"],
+                "created_at": task_data["created_at"],
+                "exported_at": self.clock(),
+                "brief": task_data["brief"],
+                "plan": task_data.get("plan"),
+                "approved_plan_hash": task_data.get("approved_plan_hash"),
+                "source_manifest": {
+                    "file_count": len(manifest_files),
+                    "source_hash": task_data["brief"]["source_hash"],
+                    "files": manifest_files,
+                },
+                "patch": {
+                    "diff": patch.get("diff", ""),
+                    "author": patch.get("author"),
+                    "candidate_hash": chk.get("candidate_hash"),
+                    "target_files": patch.get("target_files", []),
+                },
+                "test_reports": reports,
+                "counters": task_data["counters"],
+                "limits": task_data["limits"],
+                "events": events,
+            }
+
+    def export_bundle_zip(self, owner_ref: str, task_id: str) -> bytes:
+        bundle = self.export_bundle(owner_ref, task_id)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("manifest.json", json.dumps(bundle, indent=2))
+            diff_text = bundle["patch"].get("diff", "")
+            if diff_text:
+                zf.writestr("patch.diff", diff_text)
+            if bundle.get("plan"):
+                zf.writestr("plan.json", json.dumps(bundle["plan"], indent=2))
+            if bundle.get("test_reports"):
+                zf.writestr("test_reports.json", json.dumps(bundle["test_reports"], indent=2))
+            zf.writestr("events.json", json.dumps(bundle["events"], indent=2))
+            summary_lines = [
+                f"# Task Export: {bundle['task_id']}",
+                f"- Project / Fixture: {bundle['fixture_id']}",
+                f"- State: {bundle['state']}",
+                f"- Created At: {datetime.fromtimestamp(bundle['created_at'], UTC).isoformat()}",
+                f"- Exported At: {datetime.fromtimestamp(bundle['exported_at'], UTC).isoformat()}",
+                "",
+                "## Task Brief",
+                f"{bundle['brief'].get('task', '')}",
+                "",
+                "## Counters & Limits",
+                f"- Model Calls: {bundle['counters']['model_calls']} / {bundle['limits']['model_calls']}",
+                f"- Patch Attempts: {bundle['counters']['patch_attempts']} / {bundle['limits']['patch_attempts']}",
+                f"- Test Executions: {bundle['counters']['executions']} / {bundle['limits']['executions']}",
+                f"- Active Seconds: {bundle['counters']['active_seconds']:.2f}s / {bundle['limits']['active_seconds']}s",
+                "",
+                "## Diff",
+                "```diff",
+                diff_text if diff_text else "(No patch generated)",
+                "```",
+            ]
+            zf.writestr("summary.md", "\n".join(summary_lines))
+        buffer.seek(0)
+        return buffer.getvalue()
