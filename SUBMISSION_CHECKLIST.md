@@ -121,20 +121,24 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
 
 ---
 
-## 4. Video Recording Storyboard (<= 3 Minutes)
+## 4. Video Recording Walkthrough (<= 3 Minutes) — COMPLETE
 
-- **Total Duration Limit**: 3 minutes (180 seconds).
-- **Format**: Screen capture with clear narrative voiceover; no synthetic cuts or simulated outcomes.
+- **File Path**: [`recordings/benchproof_demo_walkthrough.mp4`](file:///d:/Nvidia%20hackathon/recordings/benchproof_demo_walkthrough.mp4)
+- **Duration**: **02:03** (123.27 seconds) — strictly complies with the &le; 3 minutes (180s) competition limit.
+- **Resolution**: 1280x720 (720p HD @ 25 fps, H.264/AVC)
+- **Audio**: AAC 192kbps stereo with Microsoft David narrative voiceover
+- **Subtitles**: Embedded timed subtitle track (`mov_text`) + standalone [`recordings/subtitles.srt`](file:///d:/Nvidia%20hackathon/recordings/subtitles.srt)
+- **Production URL Demonstrated**: `https://benchproof.vercel.app`
+- **Methodology**: Real browser screen recording using Playwright-Core + Google Chrome against live production, driven by NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory.
 
-| Time Window | Scene / Screen | Narrative Key Points |
-|---|---|---|
-| **0:00 – 0:30** | Architecture overview & problem statement | LLMs often hallucinate repairs and overwrite test suites. BenchProof enforces guarded task loops, immutable manifests, and strictly isolated candidate execution. |
-| **0:30 – 1:00** | Interactive Project Intake & Task Brief | Show project intake with StringCalculator / BankAccount. Point out editable `app/` vs protected `tests/`. Submit a task brief. |
-| **1:00 – 1:30** | Model Plan Generation & Human Approval | Model proposes step-by-step modification plan. Review and edit plan steps. Approve plan with immutable plan hash. |
-| **1:30 – 2:05** | Stepper Execution & Isolated Test Runner | Watch the 8-stage stepper progress: Baseline execution -> Edit -> Candidate run -> Observation oracle. Inspect terminal test output. |
-| **2:05 – 2:30** | Unified Diff Review & Checkpoint Rollback | Review syntax-highlighted diff with added/deleted lines. Demonstrate CAS checkpoint rollback to a safe prior snapshot. |
-| **2:30 – 2:50** | Sanitized Evidence Bundle & Rehearsal Metrics | Export verifiable `.zip` bundle. Show the CLI rehearsal runner with 6/6 frozen tasks passing and exact token telemetry. |
-| **2:50 – 3:00** | Conclusion & Public Cloud Demo | Summarize: genuine NVIDIA inference on Nebius, protected test evaluation, live at benchproof.vercel.app. |
+| Time Window | Scene / Screen | Narrative Key Points | Verified Visual Artifact |
+|---|---|---|---|
+| **0:00 – 0:25** | Architecture overview & problem statement | LLMs often hallucinate repairs and overwrite test suites. BenchProof enforces guarded engineering, immutable manifests, and isolated execution. | [`frame_scene1.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene1.png) |
+| **0:25 – 0:46** | Interactive Project Intake & Boundary Protection | Selecting StringCalculator. Editable `app/` files vs immutable, protected `tests/`. Crafting the negative number task brief. | [`frame_scene2.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene2.png) |
+| **0:46 – 1:04** | Cryptographic Planning & Human Approval | NVIDIA Nemotron multi-step plan generation. Immutable plan hash and explicit human approval before code mutation. | [`frame_scene3.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene3.png) |
+| **1:04 – 1:27** | Stepper Execution & Isolated Test Runner | 8-stage stepper progress: Baseline failure -> Nemotron surgical edit -> Candidate re-test in container (network denied, limits enforced) -> REVIEW_READY. | [`frame_scene4.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene4.png) |
+| **1:27 – 1:44** | Unified Diff Review & Checkpoint Rollback | Syntax-highlighted diff of `app/calculator.py`. Compare-and-swap (CAS) checkpoint timeline with instant rollback without budget reset. | [`frame_scene5.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene5.png) |
+| **1:44 – 2:03** | Evidence Bundle Export & Live Deployment | Complete verifiable signed `.zip` export (diffs, test logs, event trace). Accessible live on production at `benchproof.vercel.app`. | [`frame_scene6.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene6.png) |
 
 ---
 
