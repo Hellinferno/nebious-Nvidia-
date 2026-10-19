@@ -52,7 +52,7 @@ cd ..
 
 ### Step 4: Run Automated Verification Tests
 ```powershell
-# Run complete test suite (467 tests)
+# Run complete test suite (541 tests)
 cd backend
 python -m pytest
 
@@ -61,6 +61,12 @@ python -m pytest tests/test_cloud_acceptance.py -v
 
 # Run C-09 Frozen Evaluation Suite
 python -m pytest tests/test_coding_evaluation.py -v
+cd ..
+
+# Run frontend tests and linter
+cd frontend
+npm test
+npm run lint
 cd ..
 ```
 
@@ -164,9 +170,10 @@ Most AI coding assistants operate unconstrained: they suggest code that looks pl
 - Ensuring zero test leaks or secret disclosure in exported evidence bundles.
 
 ### Accomplishments We're Proud Of
-- 467 automated tests passing with 0 failures across backend core, coding loop, cloud acceptance, and evaluation suites.
+- 541 automated backend tests and 24 frontend tests passing with 0 failures across core runtime, coding loop, cloud acceptance, and agent customization suites.
 - 100% pass rate across the 6 frozen rehearsal benchmark tasks without holdout tuning.
 - Fast, responsive React frontend building in under 300ms with zero lint warnings.
+- Real end-to-end NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory with isolated candidate Docker verification live on production.
 
 ### What We Learned
 Deterministic test isolation combined with human-reviewed execution plans dramatically reduces model hallucinations and makes autonomous coding predictable and safe.

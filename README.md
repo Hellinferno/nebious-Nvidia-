@@ -24,7 +24,7 @@ The legacy assurance audit dashboard remains available as a secondary tab in the
 ## Public Demo & Status
 
 Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel with persistent storage and Nebius Token Factory inference.
-Full backend automated test suite: **467 passed, 3 skipped, 0 failed**.
+Full automated test suite: **541 backend passed, 3 skipped, 0 failed; 24 frontend tests passed**.
 Frontend: TypeScript / React 19, **0 lint warnings / 0 errors**, clean production build in ~280ms.
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
