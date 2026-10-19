@@ -255,7 +255,9 @@ def generate_edits(
             raise GenerationError("PROTECTED_FILE_VIOLATION", "The model edited an unapproved file", metadata)
         old = source[edit.path]
         new = edit.content.replace("\r\n", "\n")
-        if "\x00" in new or (old and not old.endswith("\n")) or (new and not new.endswith("\n")):
+        if new and not new.endswith("\n"):
+            new += "\n"
+        if "\x00" in new or (old and not old.endswith("\n")) or not new.endswith("\n"):
             raise GenerationError("UNSUPPORTED_SOURCE", "Edits require NUL-free, LF-terminated text", metadata)
         if old == new:
             continue

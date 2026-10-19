@@ -28,6 +28,7 @@ from benchproof.evaluator.harness import evaluator_hash, required_check_ids
 from benchproof.evaluator.observations import evaluate_observations
 from benchproof.execution.base import RunnerUnavailable, prepare_snapshot
 from benchproof.execution.docker_runner import DockerRunner
+from benchproof.execution.project_runner import ProjectExecutor
 from benchproof.fixtures import fixture_dir, load_manifest, source_hash_for_dir
 from benchproof.patch import PatchProposal, apply_patch_to_dir, validate_patch
 from benchproof.providers import ProviderError
@@ -133,6 +134,42 @@ class InvoiceExecutor:
         with self._lock:
             self._cancelled.setdefault(operation_id, threading.Event()).set()
         return self.runner.cancel_operation(operation_id)
+
+
+class DispatchingExecutor:
+    """Dispatches to InvoiceExecutor or ProjectExecutor based on candidate structure."""
+
+    def __init__(self, invoice: InvoiceExecutor, project: ProjectExecutor) -> None:
+        self.invoice = invoice
+        self.project = project
+
+    def run(
+        self,
+        app_dir: Path,
+        *,
+        operation_id: str,
+        timeout_s: int = 30,
+        should_cancel: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
+        # If worker.py exists in app_dir, it is a curated invoice fixture. Otherwise, it is a general project.
+        if (app_dir / "worker.py").is_file():
+            return self.invoice.run(
+                app_dir,
+                operation_id=operation_id,
+                timeout_s=timeout_s,
+                should_cancel=should_cancel,
+            )
+        return self.project.run(
+            app_dir,
+            operation_id=operation_id,
+            timeout_s=timeout_s,
+            should_cancel=should_cancel,
+        )
+
+    def cancel(self, operation_id: str) -> bool:
+        c1 = self.invoice.cancel(operation_id)
+        c2 = self.project.cancel(operation_id)
+        return c1 or c2
 
 
 @dataclass(frozen=True)

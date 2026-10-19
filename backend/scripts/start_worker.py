@@ -43,10 +43,11 @@ def coding_config_from_environment():
 
 
 def configured_coding_worker(db: Path, worker_id: str, runner_mode: str):
-    from benchproof.coding.engine import CodingEngine, InvoiceExecutor
+    from benchproof.coding.engine import CodingEngine, DispatchingExecutor, InvoiceExecutor
     from benchproof.coding.store import CodingStore
     from benchproof.coding.worker import CodingWorker
     from benchproof.execution.docker_runner import DockerRunner
+    from benchproof.execution.project_runner import ProjectExecutor
     from benchproof.providers import NebiusAdapter
 
     config = coding_config_from_environment()
@@ -62,9 +63,10 @@ def configured_coding_worker(db: Path, worker_id: str, runner_mode: str):
             if config.enabled:
                 raise ValueError(reason)
             return None
+        cleanup_adapter = DockerRunner()
         engine = CodingEngine(
             client=DisabledCompletionClient(), model_id="disabled-cleanup-only",
-            executor=InvoiceExecutor(DockerRunner()),
+            executor=DispatchingExecutor(InvoiceExecutor(cleanup_adapter), ProjectExecutor(cleanup_adapter)),
         )
         return CodingWorker(records, engine, worker_id=worker_id, live_enabled=False)
     adapter = DockerRunner()
@@ -74,8 +76,9 @@ def configured_coding_worker(db: Path, worker_id: str, runner_mode: str):
     provider = NebiusAdapter(
         api_key=key, base_url=os.getenv("NEBIUS_BASE_URL") or None, timeout_s=30,
     )
+    executor = DispatchingExecutor(InvoiceExecutor(adapter), ProjectExecutor(adapter))
     engine = CodingEngine(
-        client=provider, model_id=model, executor=InvoiceExecutor(adapter),
+        client=provider, model_id=model, executor=executor,
         max_output_tokens=config.max_output_tokens,
     )
     return CodingWorker(
