@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from benchproof.coding.generation import CodingBrief, CodingPlan
+from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences
 
 TaskState = Literal[
     "DRAFT", "QUEUED", "RUNNING", "AWAITING_APPROVAL", "APPROVED", "PAUSED",
@@ -36,6 +36,11 @@ class TaskLimits:
     executions: int = 4
     active_seconds: int = 300
 
+    @classmethod
+    def for_brief(cls, brief: CodingBrief) -> TaskLimits:
+        requested = brief.preferences.limits if brief.preferences is not None else None
+        return cls(**requested.model_dump()) if requested is not None else cls()
+
 
 @dataclass(frozen=True)
 class Lease:
@@ -51,6 +56,6 @@ class CodingStoreError(Exception):
 
 
 __all__ = [
-    "ActionKind", "CodingBrief", "CodingPlan", "CodingStoreError", "Lease", "OperatorLimits",
+    "ActionKind", "CodingBrief", "CodingPlan", "CodingPreferences", "CodingStoreError", "Lease", "OperatorLimits",
     "TaskLimits", "TaskState",
 ]

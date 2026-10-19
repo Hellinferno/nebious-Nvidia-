@@ -1,0 +1,31 @@
+.agent-settings { display: grid; gap: 12px; }
+.agent-profile-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.agent-profile-selector > label, .profile-manager > label { color: var(--text-h); font-size: 0.86rem; font-weight: 650; }
+.agent-profile-selector select { flex: 1; min-width: 160px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
+.profile-modified { color: #875d13; font-size: 0.75rem; }
+.agent-customization-details { border: 1px solid var(--border); border-radius: 9px; }
+.agent-customization-details > summary { padding: 13px; color: var(--text-h); font-size: 0.9rem; font-weight: 650; cursor: pointer; }
+.agent-customization-details > summary > span { display: block; margin: 6px 0 0 15px; color: var(--text); font-size: 0.76rem; font-weight: 400; }
+.agent-settings-body { display: grid; gap: 24px; padding: 5px 14px 18px; }
+.agent-mode-options, .instruction-module-list { display: grid; gap: 10px; }
+.agent-mode-options label, .instruction-module-list label { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; }
+.agent-mode-options label:has(input:checked), .instruction-module-list label:has(input:checked) { border-color: var(--accent-border); background: var(--accent-bg); }
+.agent-mode-options input, .instruction-module-list input { margin: 3px 0 0; accent-color: var(--accent); }
+.agent-mode-options strong, .instruction-module-list strong { display: block; color: var(--text-h); font-size: 0.83rem; }
+.agent-mode-options small, .instruction-module-list small { display: block; color: var(--text); margin-top: 3px; font-size: 0.76rem; line-height: 1.55; }
+.instruction-module-list { margin-top: 12px; }
+.agent-budget-presets, .agent-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-budget-presets { margin: 12px 0; }
+.agent-budget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.agent-budget-grid label { display: grid; gap: 6px; color: var(--text-h); font-size: 0.8rem; }
+.agent-budget-grid input, .profile-manager > input { min-width: 0; width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
+.agent-budget-grid input:disabled { background: var(--canvas); color: var(--text); }
+.agent-budget-grid + .composer-blocked { margin-top: 12px; }
+.profile-manager { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--border); }
+.profile-import-button { position: relative; overflow: hidden; border-color: var(--border); }
+.profile-import-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.profile-import-button:focus-within { outline: 3px solid var(--accent-border); outline-offset: 3px; }
+@media (max-width: 400px) {
+  .agent-budget-grid { grid-template-columns: 1fr; }
+  .agent-profile-selector select { flex-basis: 100%; }
+}

@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from benchproof.coding.generation import CodingBrief, CodingPlan, SourceHash
+from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences, SourceHash
 from benchproof.coding.runtime import ADMISSION_MESSAGES, CodingRuntimeConfig
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.constraints import contract_hash
@@ -27,6 +27,7 @@ class CreateCodingTask(BaseModel):
     task: str = Field(min_length=1, max_length=4_000)
     source_hash: SourceHash
     editable_paths: list[str] = Field(min_length=1, max_length=3)
+    preferences: CodingPreferences | None = None
 
 
 class ApproveCodingPlan(BaseModel):
@@ -146,6 +147,7 @@ def coding_router(
         def create(records: CodingStore) -> dict[str, Any]:
             brief = CodingBrief(
                 task=body.task, source_hash=body.source_hash, editable_paths=body.editable_paths,
+                preferences=body.preferences,
             )
             if body.project_id:
                 target_id = body.project_id

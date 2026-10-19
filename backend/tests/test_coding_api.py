@@ -139,6 +139,80 @@ def test_create_replay_conflict_and_server_runtime_pin(enabled_client):
     assert len(enabled_client.get(BASE).json()) == 1
 
 
+def test_task_preferences_roundtrip_without_changing_runtime_or_limits(enabled_client):
+    legacy = create(enabled_client, key="legacy-preferences")
+    assert "preferences" not in legacy["brief"]
+    assert create(enabled_client, key="legacy-preferences", preferences=None)["task_id"] == legacy["task_id"]
+    preferences = {"workflow": "refactor", "instructions": "Preserve the public API"}
+    task = create(enabled_client, key="preferences", preferences=preferences)
+    assert task["brief"]["preferences"] == preferences
+    assert task["runtime_config"] == legacy["runtime_config"]
+    assert task["limits"] == legacy["limits"]
+    assert create(enabled_client, key="preferences", preferences=preferences)["task_id"] == task["task_id"]
+    exported = enabled_client.get(f"{BASE}/{task['task_id']}/bundle").json()
+    assert exported["brief"]["preferences"] == preferences
+    conflict = enabled_client.post(BASE, json=payload(
+        preferences={**preferences, "instructions": "Use a different style"},
+    ), headers={"Idempotency-Key": "preferences"})
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+
+def test_custom_task_budget_roundtrip_and_default_controls_remain_idempotent(enabled_client):
+    legacy = create(enabled_client, key="previous-controls", preferences={"workflow": "feature"})
+    replay = create(enabled_client, key="previous-controls", preferences={
+        "workflow": "feature", "mode": "implement", "limits": {
+            "model_calls": 4, "patch_attempts": 2, "executions": 4, "active_seconds": 300,
+        },
+    })
+    assert replay["task_id"] == legacy["task_id"]
+    custom = create(enabled_client, key="lowered-controls", preferences={
+        "workflow": "bugfix", "limits": {"model_calls": 2, "active_seconds": 60},
+    })
+    assert custom["limits"] == {"model_calls": 2, "patch_attempts": 2, "executions": 4, "active_seconds": 60}
+    assert custom["runtime_config"] == legacy["runtime_config"]
+    assert custom["brief"]["preferences"]["limits"] == {"model_calls": 2, "active_seconds": 60}
+
+
+def test_plan_only_api_allows_review_but_rejects_start_resume_and_execution_restore(enabled_client):
+    task = create(enabled_client, key="plan-only", preferences={"mode": "plan_only"})
+    plan = await_plan(enabled_client, task)
+    reviewed = approve(enabled_client, task, plan)
+    assert reviewed["state"] == "APPROVED"
+    task_id = task["task_id"]
+    for operation in ("start", "resume"):
+        response = enabled_client.post(
+            f"{BASE}/{task_id}/{operation}", json={}, headers={"Idempotency-Key": f"deny-{operation}"},
+        )
+        assert response.status_code == 409, response.text
+        assert response.json()["detail"]["code"] == "PLAN_ONLY"
+    checkpoint = records().list_checkpoints("test-owner", task_id)[-1]
+    response = enabled_client.post(f"{BASE}/{task_id}/restore", json={
+        "checkpoint_id": checkpoint["checkpoint_id"],
+    })
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"]["code"] == "PLAN_ONLY"
+    current = enabled_client.get(f"{BASE}/{task_id}").json()
+    assert current["counters"]["executions"] == current["counters"]["patch_attempts"] == 0
+
+
+@pytest.mark.parametrize("preferences", [
+    "bugfix", {"workflow": "invalid"}, {"instructions": 4},
+    {"instructions": "x" * 2_001}, {"workflow": "custom", "max_tokens": 8_192},
+    {"workflow": "feature", "allow_shell": True},
+    {"mode": "run_anything"}, {"limits": {"model_calls": 5}},
+    {"limits": {"model_calls": True}}, {"limits": {"patch_attempts": 3}},
+    {"limits": {"executions": 5}}, {"limits": {"active_seconds": 29}},
+    {"limits": {"active_seconds": 301}}, {"limits": {"allow_network": True}},
+])
+def test_task_preferences_are_strict_bounded_and_cannot_change_controls(enabled_client, preferences):
+    response = enabled_client.post(
+        BASE, json=payload(preferences=preferences), headers={"Idempotency-Key": "invalid-preferences"},
+    )
+    assert response.status_code == 422
+    assert enabled_client.get(BASE).json() == []
+
+
 @pytest.mark.parametrize("key", [None, "invalid key", "x" * 129])
 def test_creation_requires_a_bounded_idempotency_key(enabled_client, key):
     headers = {} if key is None else {"Idempotency-Key": key}

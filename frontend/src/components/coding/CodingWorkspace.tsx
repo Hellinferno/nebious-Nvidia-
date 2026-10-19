@@ -3,9 +3,23 @@ import type { AxiosInstance } from 'axios'
 import './CodingWorkspace.css'
 import { SAMPLE_PROJECTS } from './sampleProjects'
 import type { SampleProjectDef } from './sampleProjects'
+import { TaskComposer } from './TaskComposer'
+import { AgentSettings } from './AgentSettings'
+import {
+  compileAgentPreferences, DEFAULT_AGENT_PREFERENCES, deleteAgentProfile, duplicateAgentProfile,
+  exportAgentProfile, MAX_PROFILE_IMPORT_LENGTH, parseProfileImport, readAgentProfiles,
+  readDefaultAgentProfile, saveAgentProfile, setDefaultAgentProfile,
+} from './agentProfiles'
+import type { AgentPreferences, AgentProfile } from './agentProfiles'
+import { ExecutionResults } from './ExecutionResults'
+import { formatTimestamp, taskResultMessage } from './presentation'
+import { instructionStorageKey, readSavedInstructions, recipeLabel } from './taskRecipes'
+import { sameReviewedPlan } from './planReview'
 import type {
   CheckpointRecord,
   CodingEvent,
+  CodingPreferences,
+  CodingPlan,
   CodingTask,
   ExecutionRecord,
   Project,
@@ -28,6 +42,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() => localStorage.getItem(ACTIVE_TASK_KEY))
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() => localStorage.getItem(ACTIVE_PROJECT_KEY))
   const [selectedSample, setSelectedSample] = useState<SampleProjectDef>(SAMPLE_PROJECTS[0])
+  const [draftProject, setDraftProject] = useState<Project | null>(null)
 
   // Data Collections
   const [projectsList, setProjectsList] = useState<Project[]>([])
@@ -46,6 +61,19 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
   // Task Creation Form State
   const [taskPrompt, setTaskPrompt] = useState<string>(SAMPLE_PROJECTS[0].suggestedPrompt)
   const [selectedEditablePaths, setSelectedEditablePaths] = useState<string[]>(SAMPLE_PROJECTS[0].defaultEditablePaths)
+  const [initialProfile] = useState(() => readDefaultAgentProfile(owner))
+  const [agentPreferences, setAgentPreferences] = useState<AgentPreferences>(() => initialProfile?.preferences || {
+    ...DEFAULT_AGENT_PREFERENCES, workflow: 'bugfix', instructions: readSavedInstructions(owner) || '',
+  })
+  const workflow = agentPreferences.workflow
+  const instructions = agentPreferences.instructions
+  const setWorkflow = (value: CodingPreferences['workflow']) => setAgentPreferences((current) => ({ ...current, workflow: value }))
+  const setInstructions = (value: string) => setAgentPreferences((current) => ({ ...current, instructions: value }))
+  const [agentProfiles, setAgentProfiles] = useState(() => readAgentProfiles(owner))
+  const [selectedProfileId, setSelectedProfileId] = useState(initialProfile?.id || '')
+  const [defaultProfileId, setDefaultProfileId] = useState<string | null>(initialProfile?.id || null)
+  const [profileName, setProfileName] = useState(initialProfile?.name || '')
+  const [savedInstructions, setSavedInstructions] = useState<string | null>(() => readSavedInstructions(owner))
 
   // Plan Editing State
   const [isEditingPlan, setIsEditingPlan] = useState<boolean>(false)
@@ -118,6 +146,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
 
       if (taskRes.status === 'fulfilled') {
         setCurrentTask(taskRes.value.data)
+        setTasksList((tasks) => tasks.map((task) => task.task_id === taskId ? taskRes.value.data : task))
         if (taskRes.value.data.plan?.steps) {
           setPlanSteps(taskRes.value.data.plan.steps)
         }
@@ -167,8 +196,10 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
       queueMicrotask(() => {
         if (!ignore) {
           setCurrentTask(null)
-          setSourceFiles(selectedSample.files)
-          setSelectedFile(Object.keys(selectedSample.files)[0] || '')
+          if (!activeProjectId) {
+            setSourceFiles(selectedSample.files)
+            setSelectedFile(Object.keys(selectedSample.files)[0] || '')
+          }
           setTaskChanges(null)
           setTaskExecutions([])
           setTaskUsage(null)
@@ -195,6 +226,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
         if (ignore) return
         if (taskRes.status === 'fulfilled') {
           setCurrentTask(taskRes.value.data)
+          setTasksList((tasks) => tasks.map((task) => task.task_id === activeTaskId ? taskRes.value.data : task))
           if (taskRes.value.data.plan?.steps) {
             setPlanSteps(taskRes.value.data.plan.steps)
           }
@@ -217,7 +249,31 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
     return () => {
       ignore = true
     }
-  }, [activeTaskId, api, selectedSample])
+  }, [activeTaskId, activeProjectId, api, selectedSample])
+
+  useEffect(() => {
+    if (!activeProjectId || activeTaskId) return
+    let ignore = false
+    const loadProject = async () => {
+      try {
+        const response = await api.get<Project>(`/api/v1/projects/${activeProjectId}`)
+        if (ignore) return
+        const files = response.data.files || {}
+        setDraftProject(response.data)
+        setSourceFiles(files)
+        setSelectedFile(Object.keys(files)[0] || '')
+        setSelectedEditablePaths(Object.keys(files).filter((path) => path.startsWith('app/')).slice(0, 3))
+      } catch {
+        if (!ignore) {
+          setDraftProject(null)
+          setSourceFiles({})
+          setStatusMessage({ type: 'error', text: 'Could not load the selected project. Select it again or choose a sample.' })
+        }
+      }
+    }
+    void loadProject()
+    return () => { ignore = true }
+  }, [activeProjectId, activeTaskId, api])
 
   // Live polling for running/queued tasks
   useEffect(() => {
@@ -243,33 +299,106 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
 
   // Sample Selection Handlers
   const handleSelectSample = (sample: SampleProjectDef) => {
+    setActiveTaskId(null)
+    setActiveProjectId(null)
+    setDraftProject(null)
     setSelectedSample(sample)
     setTaskPrompt(sample.suggestedPrompt)
+    if (!selectedProfileId) setWorkflow(sample.tag === 'Feature' ? 'feature' : 'bugfix')
     setSelectedEditablePaths(sample.defaultEditablePaths)
-    if (!activeTaskId) {
-      setSourceFiles(sample.files)
-      setSelectedFile(Object.keys(sample.files)[0] || '')
+    setSourceFiles(sample.files)
+    setSelectedFile(Object.keys(sample.files)[0] || '')
+  }
+
+  const handleSaveInstructions = () => {
+    try {
+      localStorage.setItem(instructionStorageKey(owner), instructions)
+      setSavedInstructions(instructions)
+      notify('success', 'Instructions saved in this browser for future tasks.')
+    } catch {
+      notify('error', 'Browser storage is unavailable. Your instructions will still be included in this task.')
+    }
+  }
+
+  const handleForgetInstructions = () => {
+    try {
+      localStorage.removeItem(instructionStorageKey(owner))
+      setSavedInstructions(null)
+      setInstructions('')
+      notify('info', 'Saved instructions removed. Existing tasks are unchanged.')
+    } catch {
+      notify('error', 'Browser storage is unavailable; saved instructions could not be removed.')
+    }
+  }
+
+  const applyAgentProfile = (profile: AgentProfile) => {
+    setSelectedProfileId(profile.id)
+    setProfileName(profile.name)
+    setAgentPreferences(profile.preferences)
+  }
+
+  const profileAction = (action: () => void) => {
+    try {
+      action()
+      setAgentProfiles(readAgentProfiles(owner))
+      setDefaultProfileId(readDefaultAgentProfile(owner)?.id || null)
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'Could not update the profile.')
+    }
+  }
+
+  const handleSaveProfile = (asNew: boolean) => profileAction(() => {
+    const profile = saveAgentProfile(owner, { name: profileName, preferences: agentPreferences }, asNew ? undefined : selectedProfileId || undefined)
+    applyAgentProfile(profile)
+    notify('success', 'Agent profile saved in this browser. Existing tasks are unchanged.')
+  })
+
+  const handleExportProfile = () => profileAction(() => {
+    const contents = exportAgentProfile({ id: `profile-${crypto.randomUUID()}`, name: profileName, preferences: agentPreferences })
+    const url = URL.createObjectURL(new Blob([contents], { type: 'application/json;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${profileName.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'agent-profile'}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  })
+
+  const handleImportProfile = async (file: File) => {
+    try {
+      if (file.size > MAX_PROFILE_IMPORT_LENGTH) throw new Error('Profile files must be at most 16 KiB.')
+      const configuration = parseProfileImport(await file.text())
+      profileAction(() => {
+        const profile = saveAgentProfile(owner, configuration)
+        applyAgentProfile(profile)
+        notify('success', 'Profile imported and selected. No task was started and no code was installed.')
+      })
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : 'Could not import the profile.')
     }
   }
 
   // Create Project & Task from Selected Sample or Upload
   const handleCreateTaskForSample = async () => {
+    if (activeProjectId && draftProject?.project_id !== activeProjectId) {
+      notify('error', 'Wait for the selected project to load before creating a task.')
+      return
+    }
     setLoadingAction('create-task')
     try {
+      const preferences = compileAgentPreferences(agentPreferences)
       let targetProjectId: string | undefined
       let targetFixtureId: string | undefined
       let currentSourceHash = ''
 
-      if (selectedSample.isFixture && selectedSample.fixtureId) {
+      if (activeProjectId && draftProject) {
+        targetProjectId = draftProject.project_id
+        currentSourceHash = draftProject.source_hash
+      } else if (selectedSample.isFixture && selectedSample.fixtureId) {
         targetFixtureId = selectedSample.fixtureId
-        // Retrieve source hash from ready or fixture check
-        try {
-          const exRes = await api.get<Array<{ id: string; source_hash: string }>>('/api/v1/examples')
-          const found = exRes.data.find((e) => e.id === selectedSample.fixtureId)
-          currentSourceHash = found ? found.source_hash : 'fixture-hash'
-        } catch {
-          currentSourceHash = 'sample-fixture-hash'
-        }
+        const exRes = await api.get<Array<{ id: string; source_hash: string }>>('/api/v1/examples')
+        const found = exRes.data.find((example) => example.id === selectedSample.fixtureId)
+        if (!found) throw new Error('The prepared project is unavailable.')
+        currentSourceHash = found.source_hash
       } else {
         // Create or ensure the sample project exists on the backend
         const projRes = await api.post<Project>('/api/v1/projects', {
@@ -279,6 +408,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
         })
         targetProjectId = projRes.data.project_id
         currentSourceHash = projRes.data.source_hash
+        setDraftProject(projRes.data)
         setActiveProjectId(targetProjectId)
         await refreshProjects()
       }
@@ -292,6 +422,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           task: taskPrompt.trim(),
           source_hash: currentSourceHash,
           editable_paths: selectedEditablePaths,
+          preferences,
         },
         {
           headers: { 'Idempotency-Key': `key-${crypto.randomUUID()}` },
@@ -348,11 +479,13 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
       })
       notify('success', `Custom project "${res.data.name}" created!`)
       setActiveProjectId(res.data.project_id)
+      setActiveTaskId(null)
+      setDraftProject(res.data)
       setModalOpen(false)
       await refreshProjects()
       // Pre-select editable app files
       const editable = Object.keys(filesDict).filter((p) => p.startsWith('app/')).slice(0, 3)
-      setSelectedEditablePaths(editable.length ? editable : [Object.keys(filesDict)[0]])
+      setSelectedEditablePaths(editable)
       setSourceFiles(filesDict)
       setSelectedFile(Object.keys(filesDict)[0])
     } catch (err: unknown) {
@@ -383,25 +516,32 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
 
   const handleApprovePlan = async () => {
     if (!activeTaskId || !currentTask?.plan) return
+    const reviewedPlan = { ...currentTask.plan, steps: planSteps }
     setLoadingAction('approve-plan')
     try {
       // If user edited steps, update the plan first
-      if (isEditingPlan) {
+      if (JSON.stringify(planSteps) !== JSON.stringify(currentTask.plan.steps)) {
         await api.post(`/api/v1/coding-tasks/${activeTaskId}/plan/edit`, {
-          ...currentTask.plan,
-          steps: planSteps,
+          ...reviewedPlan,
         })
         setIsEditingPlan(false)
       }
 
       // Obtain current plan hash from endpoint
-      const planRes = await api.get<{ plan_hash: string }>(`/api/v1/coding-tasks/${activeTaskId}/plan`)
+      const planRes = await api.get<{ plan: CodingPlan | null; plan_hash: string }>(`/api/v1/coding-tasks/${activeTaskId}/plan`)
+      if (!sameReviewedPlan(reviewedPlan, planRes.data.plan)) {
+        notify('error', 'The plan changed since you reviewed it. Review the updated plan before approving.')
+        await loadTaskData(activeTaskId)
+        return
+      }
       const currentPlanHash = planRes.data.plan_hash
 
       await api.post(`/api/v1/coding-tasks/${activeTaskId}/approve`, {
         plan_hash: currentPlanHash,
       })
-      notify('success', 'Plan approved! Task is ready for execution.')
+      notify('success', currentTask.brief.preferences?.mode === 'plan_only'
+        ? 'Reviewed plan saved. This task cannot edit code or run tests.'
+        : 'Plan approved. Choose Start task when you are ready to run it.')
       await loadTaskData(activeTaskId)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: { message?: string } } } })?.response?.data?.detail?.message || 'Failed to approve plan.'
@@ -532,8 +672,33 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
   // Filtered Events
   const filteredEvents = useMemo(() => {
     if (eventFilter === 'ALL') return taskEvents
-    return taskEvents.filter((ev) => ev.stage === eventFilter || ev.event_type.includes(eventFilter))
+    return taskEvents.filter((event) => (event.stage || event.payload.stage) === eventFilter || event.event_type.includes(eventFilter))
   }, [taskEvents, eventFilter])
+
+  const codingBlockedReason = !ready
+    ? 'Checking service availability. You can prepare your task while you wait.'
+    : !ready.coding
+      ? 'This deployment does not yet expose the coding-task service. You can explore the workspace, but task creation is unavailable.'
+      : !ready.coding.enabled
+        ? 'Coding tasks are disabled on this deployment.'
+        : ready.coding.blocked_reason
+          ? 'The coding service is not accepting new work. Its provider, runner, session window or daily allowance needs attention.'
+          : null
+
+  const draftBlockedReason = codingBlockedReason || (activeProjectId && draftProject?.project_id !== activeProjectId
+    ? 'Loading your selected project. Its exact source revision is required before creating a task.' : null)
+
+  let preferencesError: string | null = null
+  try {
+    compileAgentPreferences(agentPreferences)
+  } catch (error) {
+    preferencesError = error instanceof Error ? error.message : 'Check your agent settings.'
+  }
+  const selectedAgentProfile = agentProfiles.find((profile) => profile.id === selectedProfileId)
+  const profileModified = !!selectedAgentProfile && (profileName.trim() !== selectedAgentProfile.name
+    || JSON.stringify(agentPreferences) !== JSON.stringify(selectedAgentProfile.preferences))
+  const planOnlyTask = currentTask?.brief.preferences?.mode === 'plan_only'
+  const planEditsPending = !!currentTask?.plan && JSON.stringify(planSteps) !== JSON.stringify(currentTask.plan.steps)
 
   // Stepper calculations
   const STAGES = [
@@ -557,11 +722,11 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
     }
     if (stageKey === 'PLAN') {
       if (s === 'DRAFT') return 'upcoming'
-      if (s === 'PLANNING') return 'active'
+      if (['PLANNING', 'QUEUED', 'RUNNING'].includes(s) && n === 'PLAN') return 'active'
       return 'completed'
     }
     if (stageKey === 'APPROVAL') {
-      if (['DRAFT', 'PLANNING'].includes(s)) return 'upcoming'
+      if (['DRAFT', 'PLANNING'].includes(s) || n === 'PLAN') return 'upcoming'
       if (s === 'AWAITING_APPROVAL') return 'active'
       return 'completed'
     }
@@ -601,7 +766,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
       <header className="workspace-header">
         <div className="workspace-title-group">
           <h1>
-            <span>⚡ Autonomous Coding Agent</span>
+            <span>Build with an agent. Stay in control.</span>
             {currentTask && (
               <span className={`state-badge ${currentTask.state.toLowerCase()}`}>
                 {currentTask.state.replace('_', ' ')}
@@ -609,7 +774,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             )}
           </h1>
           <p className="workspace-subtitle">
-            Autonomous multi-stage Python coding loop: plan review, model edits, isolated container execution, and verifiable diffs.
+            Choose a Python project, set your conventions, and review a plan before the agent changes code.
           </p>
         </div>
 
@@ -620,9 +785,9 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               id="task-select"
               className="task-selector"
               value={activeTaskId || ''}
-              onChange={(e) => setActiveTaskId(e.target.value || null)}
+              onChange={(event) => event.target.value ? setActiveTaskId(event.target.value) : handleSelectSample(SAMPLE_PROJECTS[0])}
             >
-              <option value="">+ New Task Flow</option>
+              <option value="">New task</option>
               {tasksList.map((t) => (
                 <option key={t.task_id} value={t.task_id}>
                   {t.task_id} ({t.state}) — {t.brief.task.slice(0, 30)}...
@@ -635,11 +800,10 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             type="button"
             className="btn btn-secondary"
             onClick={() => {
-              setActiveTaskId(null)
-              setSelectedSample(SAMPLE_PROJECTS[0])
+              handleSelectSample(SAMPLE_PROJECTS[0])
             }}
           >
-            + Start New Task
+            + New task
           </button>
         </div>
       </header>
@@ -649,19 +813,19 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
         <div className="status-item">
           <span className={`status-dot-pulse ${ready?.provider.configured ? '' : 'offline'}`} />
           <span>
-            <strong>Provider:</strong> {ready?.provider.name || 'nebius-token-factory'} ({ready?.provider.model_id || 'mistral-nemo-12b-instruct'})
+            <strong>Model:</strong> {ready?.provider.model_id || 'Not configured'}
           </span>
         </div>
         <div className="status-item">
           <span className={`status-dot-pulse ${ready?.runner.isolated_execution_available ? '' : 'offline'}`} />
           <span>
-            <strong>Runner:</strong> {ready?.runner.mode || 'isolated'} {ready?.runner.isolated_execution_available ? '· Container Ready' : '· Host Mock'}
+            <strong>Execution:</strong> {ready?.runner.isolated_execution_available ? 'Isolated runner available' : 'Isolated runner unavailable'}
           </span>
         </div>
         <div className="status-item">
-          <span className={`status-dot-pulse ${ready?.coding?.worker_alive || ready?.worker.alive ? '' : 'offline'}`} />
+          <span className={`status-dot-pulse ${ready?.coding?.worker_alive ? '' : 'offline'}`} />
           <span>
-            <strong>Worker:</strong> {ready?.coding?.worker_alive ? 'Active & Healthy' : (ready?.worker.alive ? 'Heartbeat Online' : 'Standby')}
+            <strong>Task worker:</strong> {ready?.coding?.worker_alive ? 'Online' : 'Not confirmed'}
           </span>
         </div>
         <div className="status-item">
@@ -679,7 +843,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
       )}
 
       {/* ── Multi-stage Visual Stepper ─────────────────────────────────── */}
-      <section className="stepper-container" aria-label="Task stage progress">
+      {currentTask && <section className="stepper-container" aria-label="Task stage progress">
         {STAGES.map((st, idx) => {
           const status = getStageStatus(st.key)
           return (
@@ -696,10 +860,26 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             </React.Fragment>
           )
         })}
-      </section>
+      </section>}
+
+      {currentTask && (
+        <section className="task-context-summary" aria-label="Task instructions">
+          <div className="task-context-heading"><strong>{recipeLabel(currentTask.brief.preferences?.workflow)}</strong><span>Instructions pinned to this task</span></div>
+          {planOnlyTask && <p className="plan-only-notice">Plan only: edits and test executions are disabled for this task, including direct API requests.</p>}
+          <p className="field-help">Pinned budget: {currentTask.limits.model_calls} model calls · {currentTask.limits.patch_attempts} edits · {currentTask.limits.executions} test executions · {currentTask.limits.active_seconds} active seconds.</p>
+          <p>{currentTask.brief.task}</p>
+          {currentTask.brief.preferences?.instructions && (
+            <details><summary>Coding conventions</summary><p>{currentTask.brief.preferences.instructions}</p></details>
+          )}
+          {taskResultMessage(currentTask.result) && <p className="task-result-message" role="status">{taskResultMessage(currentTask.result)}</p>}
+          <p className="field-help">Review generated changes and test results before accepting them. Passing checks do not prove every requirement.</p>
+        </section>
+      )}
 
       {/* ── Live Control & Action Bar (When task exists) ────────────────── */}
       {currentTask && (
+        <>
+        {codingBlockedReason && <p className="composer-blocked" role="status">{codingBlockedReason}</p>}
         <section className="live-controls-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <span>Task ID: <code>{currentTask.task_id}</code></span>
@@ -712,32 +892,32 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={loadingAction === 'queue-plan'}
+                disabled={loadingAction === 'queue-plan' || !!codingBlockedReason}
                 onClick={() => void handleQueuePlan()}
               >
                 {loadingAction === 'queue-plan' ? 'Generating Plan...' : 'Generate Plan'}
               </button>
             )}
 
-            {currentTask.state === 'AWAITING_APPROVAL' && (
+            {(currentTask.state === 'AWAITING_APPROVAL' || (currentTask.state === 'APPROVED' && planEditsPending)) && (
               <button
                 type="button"
                 className="btn btn-primary"
                 disabled={loadingAction === 'approve-plan'}
                 onClick={() => void handleApprovePlan()}
               >
-                {loadingAction === 'approve-plan' ? 'Approving...' : '✓ Approve Plan & Ready Run'}
+                {loadingAction === 'approve-plan' ? 'Saving…' : planOnlyTask ? 'Save reviewed plan' : 'Approve plan'}
               </button>
             )}
 
-            {['QUEUED', 'AWAITING_APPROVAL'].includes(currentTask.state) && currentTask.approved_plan_hash && (
+            {!planOnlyTask && currentTask.state === 'APPROVED' && currentTask.approved_plan_hash && (
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={loadingAction === 'start-task'}
+                disabled={loadingAction === 'start-task' || !!codingBlockedReason || isEditingPlan || planEditsPending}
                 onClick={() => void handleStartTask()}
               >
-                {loadingAction === 'start-task' ? 'Starting...' : '▶ Start Execution Loop'}
+                {loadingAction === 'start-task' ? 'Starting…' : 'Start task'}
               </button>
             )}
 
@@ -752,14 +932,14 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               </button>
             )}
 
-            {currentTask.state === 'PAUSED' && (
+            {currentTask.state === 'PAUSED' && (!planOnlyTask || currentTask.next_stage === 'PLAN') && (
               <button
                 type="button"
                 className="btn btn-primary"
                 disabled={loadingAction === 'resume-task'}
                 onClick={() => void handleResumeTask()}
               >
-                ▶ Resume Execution
+                {planOnlyTask ? 'Resume planning' : '▶ Resume Execution'}
               </button>
             )}
 
@@ -783,6 +963,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             </button>
           </div>
         </section>
+        </>
       )}
 
       {/* ── Resource Usage Meters ─────────────────────────────────────── */}
@@ -843,13 +1024,13 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           {/* Project & Source Card */}
           <article className="workspace-card">
             <div className="card-header-row">
-              <h2>📁 Project Source Explorer</h2>
+              <h2>Your project</h2>
               <div className="sample-projects-bar">
                 {SAMPLE_PROJECTS.map((sp) => (
                   <button
                     key={sp.id}
                     type="button"
-                    className={`sample-chip ${selectedSample.id === sp.id && !activeTaskId ? 'active' : ''}`}
+                    className={`sample-chip ${selectedSample.id === sp.id && !activeTaskId && !activeProjectId ? 'active' : ''}`}
                     onClick={() => handleSelectSample(sp)}
                   >
                     <span>{sp.name}</span>
@@ -873,11 +1054,9 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                       if (!pid) return
                       const found = projectsList.find((p) => p.project_id === pid)
                       if (found) {
+                        setActiveTaskId(null)
+                        setDraftProject(null)
                         setActiveProjectId(pid)
-                        if (found.files) {
-                          setSourceFiles(found.files)
-                          setSelectedFile(Object.keys(found.files)[0] || '')
-                        }
                       }
                     }}
                   >
@@ -893,7 +1072,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             </div>
 
             <p style={{ fontSize: '0.82rem', color: 'var(--text)' }}>
-              Project files with strict policy enforcement: <code>app/</code> files are candidate-editable; <code>tests/</code> files are protected verifications.
+              Browse your source before creating a task. Select up to three <code>app/</code> files for changes; imported <code>tests/</code> stay read-only.
             </p>
 
             {/* Source Browser */}
@@ -921,7 +1100,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               <div className="code-viewer-pane">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#688998', fontSize: '0.72rem' }}>
                   <span>{selectedFile || 'Select a file'}</span>
-                  <span>{sourceFiles[selectedFile]?.length || 0} bytes</span>
+                  <span>{new TextEncoder().encode(sourceFiles[selectedFile] || '').length} bytes</span>
                 </div>
                 {selectedFile && sourceFiles[selectedFile] ? (
                   sourceFiles[selectedFile].split('\n').map((line, idx) => (
@@ -938,80 +1117,13 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           </article>
 
           {/* Task Brief & Creation Card (When in Draft / Setup) */}
-          {(!currentTask || currentTask.state === 'DRAFT') && (
-            <article className="workspace-card">
-              <div className="card-header-row">
-                <h2>📝 Task Brief & Instructions</h2>
-                <span className="badge badge-neutral">Profile: unittest</span>
-              </div>
-
-              <form className="task-form" onSubmit={(e) => { e.preventDefault(); void handleCreateTaskForSample() }}>
-                <div className="form-field">
-                  <label htmlFor="task-prompt">Instruction Prompt:</label>
-                  <textarea
-                    id="task-prompt"
-                    className="form-textarea"
-                    value={taskPrompt}
-                    onChange={(e) => setTaskPrompt(e.target.value)}
-                    placeholder="Describe the bug fix or feature change in detail..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label>Editable Paths (Max 3 files in <code>app/</code>):</label>
-                  <div className="editable-paths-group">
-                    {Object.keys(sourceFiles)
-                      .filter((p) => p.startsWith('app/'))
-                      .map((p) => {
-                        const isSelected = selectedEditablePaths.includes(p)
-                        return (
-                          <label key={p} className={`path-checkbox-label ${isSelected ? 'selected' : ''}`}>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  if (selectedEditablePaths.length < 3) {
-                                    setSelectedEditablePaths([...selectedEditablePaths, p])
-                                  } else {
-                                    notify('info', 'Maximum 3 editable paths allowed.')
-                                  }
-                                } else {
-                                  setSelectedEditablePaths(selectedEditablePaths.filter((item) => item !== p))
-                                }
-                              }}
-                            />
-                            {p}
-                          </label>
-                        )
-                      })}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                  <small style={{ color: 'var(--text)' }}>
-                    Hard limits: 4 model calls · 2 patch attempts · 4 test runs · 300s window.
-                  </small>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={loadingAction === 'create-task' || !taskPrompt.trim() || selectedEditablePaths.length === 0}
-                  >
-                    {loadingAction === 'create-task' ? 'Creating...' : 'Create Coding Task'}
-                  </button>
-                </div>
-              </form>
-            </article>
-          )}
-
           {/* Plan Review Card */}
           {currentTask && currentTask.plan && (
             <article className="workspace-card">
               <div className="card-header-row">
-                <h2>📋 Model Implementation Plan</h2>
+                <h2>Review the plan</h2>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {currentTask.state === 'AWAITING_APPROVAL' && (
+                  {['AWAITING_APPROVAL', 'APPROVED'].includes(currentTask.state) && (
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -1029,9 +1141,9 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               </div>
 
               <div className="plan-container">
-                <p className="plan-summary-text">{currentTask.plan.summary}</p>
+                <p className="plan-summary-text">{currentTask.brief.task}</p>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text)' }}>
-                  Targeted Paths: {currentTask.plan.editable_paths.map((p) => <code key={p} style={{ marginRight: '6px' }}>{p}</code>)}
+                  Files to change: {currentTask.plan.target_files.map((path) => <code key={path} style={{ marginRight: '6px' }}>{path}</code>)}
                 </div>
 
                 <ol className="plan-steps-list">
@@ -1040,6 +1152,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                       {isEditingPlan ? (
                         <input
                           type="text"
+                          maxLength={400}
                           value={step}
                           style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}
                           onChange={(e) => {
@@ -1055,7 +1168,8 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                   ))}
                 </ol>
 
-                {currentTask.state === 'AWAITING_APPROVAL' && (
+                {planEditsPending && <p className="field-help">Save and approve your edited steps before starting. The previously approved plan does not include these edits.</p>}
+                {(currentTask.state === 'AWAITING_APPROVAL' || (currentTask.state === 'APPROVED' && planEditsPending)) && (
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                     <button
                       type="button"
@@ -1063,7 +1177,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                       disabled={loadingAction === 'approve-plan'}
                       onClick={() => void handleApprovePlan()}
                     >
-                      {loadingAction === 'approve-plan' ? 'Approving...' : '✓ Approve Plan & Ready Run'}
+                      {loadingAction === 'approve-plan' ? 'Saving…' : planOnlyTask ? 'Save reviewed plan' : 'Approve plan'}
                     </button>
                   </div>
                 )}
@@ -1075,44 +1189,74 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           {taskExecutions.length > 0 && (
             <article className="workspace-card">
               <div className="card-header-row">
-                <h2>🧪 Test Execution Console ({taskExecutions.length})</h2>
-                <span className="badge badge-neutral">Isolated Docker / Runner</span>
+                <h2>Test results ({taskExecutions.length})</h2>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {taskExecutions.map((exec) => {
-                  const passed = exec.result?.passed ?? (exec.result?.exit_code === 0)
-                  return (
-                    <div key={exec.action_id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-                        <span>
-                          <strong>{exec.stage} Execution</strong> · Exit Code: <code>{exec.result?.exit_code ?? 'None'}</code>
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <span>{exec.result?.duration_ms ?? 0} ms</span>
-                          <span className={`badge ${passed ? 'badge-success' : 'badge-danger'}`}>
-                            {passed ? 'PASSED' : 'FAILED'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <pre className="terminal-output" tabIndex={0} aria-label={`Test output for ${exec.stage}`}>
-                        {exec.result?.stdout || exec.result?.stderr || 'No console output recorded for this run.'}
-                      </pre>
-                    </div>
-                  )
-                })}
-              </div>
+              <ExecutionResults records={taskExecutions} />
             </article>
           )}
         </div>
 
         {/* Right Column: Changes & Diff Viewer, Checkpoints, and Live Activity Log */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {!currentTask && (
+            <TaskComposer
+              projectName={activeProjectId ? draftProject?.name || 'Loading project…' : selectedSample.name}
+              task={taskPrompt}
+              workflow={workflow}
+              instructions={instructions}
+              savedInstructions={savedInstructions}
+              files={Object.keys(sourceFiles)}
+              editablePaths={selectedEditablePaths}
+              creating={loadingAction === 'create-task'}
+              blockedReason={draftBlockedReason || preferencesError}
+              onTaskChange={setTaskPrompt}
+              onWorkflowChange={setWorkflow}
+              onInstructionsChange={setInstructions}
+              onPathsChange={setSelectedEditablePaths}
+              onSaveInstructions={handleSaveInstructions}
+              onForgetInstructions={handleForgetInstructions}
+              onCreate={() => void handleCreateTaskForSample()}
+              agentSettings={(
+                <AgentSettings
+                  preferences={agentPreferences}
+                  profiles={agentProfiles}
+                  selectedProfileId={selectedProfileId}
+                  defaultProfileId={defaultProfileId}
+                  profileName={profileName}
+                  modified={profileModified}
+                  error={preferencesError}
+                  onChange={setAgentPreferences}
+                  onSelect={(id) => {
+                    const profile = agentProfiles.find((item) => item.id === id)
+                    if (profile) applyAgentProfile(profile)
+                    else { setSelectedProfileId(''); setProfileName('') }
+                  }}
+                  onNameChange={setProfileName}
+                  onSave={handleSaveProfile}
+                  onDuplicate={() => profileAction(() => applyAgentProfile(duplicateAgentProfile(owner, selectedProfileId)))}
+                  onDelete={() => profileAction(() => {
+                    deleteAgentProfile(owner, selectedProfileId)
+                    setSelectedProfileId('')
+                    setProfileName('')
+                    notify('info', 'Profile deleted. The current draft settings remain; existing tasks are unchanged.')
+                  })}
+                  onMakeDefault={() => profileAction(() => {
+                    setDefaultAgentProfile(owner, selectedProfileId)
+                    notify('success', 'This saved profile will be selected when you reopen the new-task workspace.')
+                  })}
+                  onClearDefault={() => profileAction(() => setDefaultAgentProfile(owner, null))}
+                  onExport={handleExportProfile}
+                  onImport={(file) => void handleImportProfile(file)}
+                />
+              )}
+            />
+          )}
+          {currentTask && <>
           {/* Changes & Unified Diff Viewer Card */}
           <article className="workspace-card">
             <div className="card-header-row">
-              <h2>🔍 Code Changes & Tested Diff</h2>
+              <h2>Code changes</h2>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {taskChanges?.tested_final && (
                   <span className="badge badge-success">TESTED FINAL PASS</span>
@@ -1133,7 +1277,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
             {taskChanges && taskChanges.diff ? (
               <div className="diff-viewer">
                 <div className="diff-toolbar">
-                  <span>Author: {taskChanges.author || 'nvidia/mistral-nemo-12b-instruct'}</span>
+                  <span>Author: {taskChanges.author || 'Not recorded'}</span>
                   <span>Base: <code>{taskChanges.base_source_hash.slice(0, 10)}...</code></span>
                 </div>
                 <div tabIndex={0} aria-label="Unified diff view">
@@ -1161,11 +1305,10 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           {currentTask && (
             <article className="workspace-card">
               <div className="card-header-row">
-                <h2>📦 Export Task Evidence Bundle</h2>
-                <span className="badge badge-neutral">Sanitized & Authenticated</span>
+                <h2>Download your work</h2>
               </div>
               <p style={{ fontSize: '0.82rem', color: 'var(--text)' }}>
-                Export contains <code>manifest.json</code>, <code>patch.diff</code>, <code>plan.json</code>, test execution reports, event trajectory, and markdown summary. Credentials strictly excluded.
+                Download the patch, plan, recorded checks and usage together. Exports are scrubbed for known secret patterns; review them before sharing.
               </p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
@@ -1192,11 +1335,10 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           {/* Checkpoint History & CAS Restore Card */}
           <article className="workspace-card">
             <div className="card-header-row">
-              <h2>⏪ Versioned Checkpoint Timeline ({taskCheckpoints.length})</h2>
-              <span className="badge badge-neutral">Monotonic Lifetime Budgets</span>
+              <h2>Checkpoints ({taskCheckpoints.length})</h2>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text)' }}>
-              Conflict-checked compare-and-swap (CAS) rollback. Restores stage & code state to <code>PAUSED</code>; lifetime resource meters never decrement.
+              Restore a saved task revision and pause there. This does not change your local repository or refund spent usage.
             </p>
 
             <div className="checkpoint-timeline">
@@ -1206,17 +1348,17 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                     <strong>Seq #{cp.sequence}</strong> · <span>{cp.stage}</span> ·{' '}
                     <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>{cp.state}</span>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text)', marginTop: '2px' }}>
-                      ID: <code>{cp.checkpoint_id}</code> · {new Date(cp.created_at).toLocaleTimeString()}
+                      ID: <code>{cp.checkpoint_id}</code> · {formatTimestamp(cp.created_at)}
                     </div>
                   </div>
 
-                  {currentTask?.state !== 'RUNNING' && (
+                  {!planOnlyTask && currentTask?.state !== 'RUNNING' && (
                     <button
                       type="button"
                       className="btn btn-secondary"
                       style={{ minHeight: '32px', padding: '4px 10px', fontSize: '0.72rem' }}
                       disabled={loadingAction === `restore-${cp.checkpoint_id}`}
-                      onClick={() => void handleRestoreCheckpoint(cp.checkpoint_id, currentTask?.checkpoint ? (currentTask.checkpoint as unknown as { checkpoint_id?: string }).checkpoint_id : undefined)}
+                      onClick={() => void handleRestoreCheckpoint(cp.checkpoint_id, taskCheckpoints.at(-1)?.checkpoint_id)}
                     >
                       Restore (Rollback)
                     </button>
@@ -1232,7 +1374,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
           {/* Live Activity & Event Stream Card */}
           <article className="workspace-card">
             <div className="card-header-row">
-              <h2>📡 Live Event Log ({filteredEvents.length})</h2>
+              <h2>Activity ({filteredEvents.length})</h2>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <select
                   value={eventFilter}
@@ -1256,10 +1398,10 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-h)' }}>{ev.event_type}</span>
                       <small style={{ color: 'var(--text)', fontSize: '0.72rem' }}>
-                        Stage: {ev.stage} {ev.payload && Object.keys(ev.payload).length > 0 ? `· ${JSON.stringify(ev.payload).slice(0, 60)}...` : ''}
+                        Stage: {String(ev.stage || ev.payload.stage || 'Task')} {ev.payload && Object.keys(ev.payload).length > 0 ? `· ${JSON.stringify(ev.payload).slice(0, 60)}...` : ''}
                       </small>
                     </div>
-                    <time>{new Date(ev.created_at).toLocaleTimeString()}</time>
+                    <time>{formatTimestamp(ev.created_at)}</time>
                   </li>
                 ))}
                 {filteredEvents.length === 0 && (
@@ -1268,6 +1410,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
               </ol>
             </div>
           </article>
+          </>}
         </div>
       </div>
 

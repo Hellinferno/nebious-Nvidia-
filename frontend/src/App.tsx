@@ -721,7 +721,7 @@ function App() {
       <nav className="topbar" aria-label="Main navigation">
         <a className="brand" href="#workspace" aria-label="BenchProof workspace">
           <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4.5 6v6c0 4.5 7.5 9 7.5 9s7.5-4.5 7.5-9V6L12 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="m8.5 12 2.2 2.2 4.8-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-          BenchProof<span className="workspace-label">Assurance workspace</span>
+          BenchProof<span className="workspace-label">Coding workspace</span>
         </a>
         <div className="topbar-actions"><span className="topbar-caption">NVIDIA inference · Nebius</span><button type="button" className="btn btn-secondary" aria-haspopup="dialog" aria-expanded={paletteOpen} onClick={() => { setPaletteIndex(0); setPaletteOpen(true) }}>Commands<span className="shortcut">Ctrl K</span></button></div>
       </nav>
@@ -734,7 +734,7 @@ function App() {
           className={`nav-tab-btn ${activeTab === 'coding' ? 'active' : ''}`}
           onClick={() => setActiveTab('coding')}
         >
-          ⚡ Autonomous Coding Agent (Primary)
+          Coding workspace
         </button>
         <button
           type="button"
@@ -743,7 +743,7 @@ function App() {
           className={`nav-tab-btn ${activeTab === 'legacy' ? 'active' : ''}`}
           onClick={() => setActiveTab('legacy')}
         >
-          📋 Legacy Assurance Audit (Historical Gate)
+          Assurance checks
         </button>
       </div>
 

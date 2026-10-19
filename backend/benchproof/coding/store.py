@@ -30,7 +30,6 @@ _HASH = re.compile(r"^[a-f0-9]{64}$")
 _PATH = re.compile(r"^(?:app|tests)/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
 _TERMINAL = {"CANCELLED", "BLOCKED", "FAILED", "STALLED", "BUDGET_EXHAUSTED", "REVIEW_READY"}
 _STAGES = {"PLAN", "BASELINE", "EDIT", "CANDIDATE", "FINAL", "DONE"}
-_LIMITS = TaskLimits()
 
 
 def _json(value: Any, maximum: int = 262_144) -> str:
@@ -178,6 +177,16 @@ class CodingStore:
             raise CodingStoreError("NOT_FOUND", "Coding task not found")
         return row
 
+    def _limits(self, task: sqlite3.Row) -> TaskLimits:
+        return TaskLimits.for_brief(CodingBrief.model_validate_json(task["brief_json"]))
+
+    def _require_implementation(self, task: sqlite3.Row) -> None:
+        brief = CodingBrief.model_validate_json(task["brief_json"])
+        if brief.preferences is not None and brief.preferences.mode == "plan_only":
+            raise CodingStoreError(
+                "PLAN_ONLY", "This task allows planning only; edits and test execution are disabled",
+            )
+
     def _event(self, connection: sqlite3.Connection, task_id: str, kind: str, payload: Any) -> None:
         connection.execute("""
             INSERT INTO coding_events(task_id,sequence,event_type,payload_json,created_at)
@@ -210,7 +219,7 @@ class CodingStore:
         row["counters"] = {name: row.pop(name) for name in (
             "model_calls", "patch_attempts", "executions", "active_seconds",
         )}
-        row["limits"] = vars(_LIMITS).copy()
+        row["limits"] = vars(TaskLimits.for_brief(CodingBrief.model_validate(row["brief"]))).copy()
         row["pause_requested"] = bool(row["pause_requested"])
         row["actions"] = []
         for action in connection.execute(
@@ -251,9 +260,10 @@ class CodingStore:
         _token(owner_ref, "owner reference")
         _hash(contract_hash)
         brief = CodingBrief.model_validate(brief)
+        brief_payload = brief.canonical_payload()
         source_json = _snapshot(source_files, brief)
         runtime_json = _json(runtime_config or {}, 4_096)
-        fingerprint = _identity({"fixture_id": fixture_id, "brief": brief.model_dump(),
+        fingerprint = _identity({"fixture_id": fixture_id, "brief": brief_payload,
                                  "source": source_files, "contract_hash": contract_hash,
                                  "runtime_config": runtime_config or {}})
         with self._transaction() as connection:
@@ -295,7 +305,7 @@ class CodingStore:
                 INSERT INTO coding_tasks(task_id,owner_ref,fixture_id,brief_json,source_json,
                                          contract_hash,runtime_config_json,state,next_stage,created_at,updated_at)
                 VALUES(?,?,?,?,?,?,?,'DRAFT','PLAN',?,?)
-            """, (task_id, owner_ref, fixture_id, _json(brief.model_dump()), source_json,
+            """, (task_id, owner_ref, fixture_id, _json(brief_payload), source_json,
                   contract_hash, runtime_json, now, now))
             self._request(connection, owner_ref, "create", idempotency_key, fingerprint, task_id)
             self._event(connection, task_id, "TASK_CREATED", {"source_hash": brief.source_hash})
@@ -336,6 +346,8 @@ class CodingStore:
         fingerprint = _identity({"task_id": task_id, "phase": phase})
         with self._transaction() as connection:
             task = self._owned(connection, owner_ref, task_id)
+            if phase == "run":
+                self._require_implementation(task)
             replay = self._replay(connection, owner_ref, f"enqueue:{phase}", idempotency_key, fingerprint)
             if replay:
                 return replay
@@ -480,7 +492,7 @@ class CodingStore:
             running = connection.execute(
                 "SELECT 1 FROM coding_actions WHERE task_id=? AND status='RUNNING'", (lease.task_id,),
             ).fetchone()
-            if not running and (task["pause_requested"] or task["active_seconds"] >= _LIMITS.active_seconds):
+            if not running and (task["pause_requested"] or task["active_seconds"] >= self._limits(task).active_seconds):
                 state = "PAUSED" if task["pause_requested"] else "BUDGET_EXHAUSTED"
                 self._release(connection, lease.task_id, state)
                 self._event(connection, lease.task_id, f"TASK_{state}", {})
@@ -517,6 +529,8 @@ class CodingStore:
             ).fetchone():
                 raise CodingStoreError("ACTION_IN_FLIGHT", "Reconcile the current action before another one")
             brief = CodingBrief.model_validate_json(task["brief_json"])
+            if kind != "PLAN":
+                self._require_implementation(task)
             checkpoint = json.loads(task["checkpoint_json"])
             valid_sources = {brief.source_hash, checkpoint.get("candidate_source_hash"),
                              checkpoint.get("candidate_hash")}
@@ -534,9 +548,10 @@ class CodingStore:
             model = int(kind in {"PLAN", "EDIT"})
             patch = int(kind == "EDIT")
             execution = int(kind == "EXECUTION")
-            if (task["model_calls"] + model > _LIMITS.model_calls
-                    or task["patch_attempts"] + patch > _LIMITS.patch_attempts
-                    or task["executions"] + execution > _LIMITS.executions):
+            limits = self._limits(task)
+            if (task["model_calls"] + model > limits.model_calls
+                    or task["patch_attempts"] + patch > limits.patch_attempts
+                    or task["executions"] + execution > limits.executions):
                 raise CodingStoreError("BUDGET_EXHAUSTED", "Task action allowance is exhausted")
             day = datetime.fromtimestamp(self.clock(), UTC).date().isoformat()
             connection.execute("INSERT OR IGNORE INTO coding_daily_usage(day) VALUES(?)", (day,))
@@ -670,6 +685,8 @@ class CodingStore:
                     self._release(connection, task_id, "PAUSED")
                 self._event(connection, task_id, "PAUSE_REQUESTED", {})
             else:
+                if task["next_stage"] != "PLAN":
+                    self._require_implementation(task)
                 if task["state"] not in {"PAUSED", "INTERRUPTED"}:
                     raise CodingStoreError("INVALID_STATE", "Task is not paused or interrupted")
                 uncertain = connection.execute("""
@@ -791,6 +808,8 @@ class CodingStore:
 
             target_checkpoint = json.loads(target["checkpoint_json"])
             restored_stage = target["stage"]
+            if restored_stage != "PLAN":
+                self._require_implementation(task)
             connection.execute("""
                 UPDATE coding_tasks
                 SET next_stage=?, checkpoint_json=?, state='PAUSED', pause_requested=0,

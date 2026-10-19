@@ -8,7 +8,7 @@ import pytest
 
 from benchproof.coding.contracts import OperatorLimits
 from benchproof.coding.engine import CodingEngine, InvoiceExecutor
-from benchproof.coding.generation import CodingBrief, CodingPlan
+from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.coding.worker import CodingWorker
 from benchproof.constraints import contract_hash
@@ -98,7 +98,7 @@ class SyntheticExecutor:
         return True
 
 
-def _setup(tmp_path, *, provider=None, executor=None, clock=None, limits=None):
+def _setup(tmp_path, *, provider=None, executor=None, clock=None, limits=None, preferences=None):
     store = CodingStore(
         tmp_path / "coding.db",
         limits or OperatorLimits(model_calls_per_day=20, executions_per_day=20),
@@ -113,6 +113,7 @@ def _setup(tmp_path, *, provider=None, executor=None, clock=None, limits=None):
         task="Repair invoice rounding while preserving the contract",
         source_hash=source_hash_for_dir(app_dir),
         editable_paths=["app/money.py"],
+        preferences=preferences,
     )
     task = store.create_task("owner", "MC-01", brief, files, contract_hash(), "create")
     provider = provider or SyntheticProvider()
@@ -137,6 +138,55 @@ def _drain(worker):
         if worker.run_once() is None:
             return
     raise AssertionError("The bounded synthetic worker did not stop")
+
+
+def test_plan_only_generates_one_plan_and_refuses_any_engine_implementation(tmp_path):
+    from benchproof.coding.generation import GenerationError
+
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, preferences=CodingPreferences(mode="plan_only"),
+    )
+    assert worker.run_once()["state"] == "AWAITING_APPROVAL"
+    assert worker.run_once() is None
+    task = store.get_task("owner", task_id)
+    prompt = json.loads(provider.calls[0]["user_prompt"])
+    assert prompt["preferences"]["mode"] == "plan_only"
+    plan = CodingPlan.model_validate(task["plan"])
+    approved = store.approve_plan("owner", task_id, plan.identity())
+    assert approved["state"] == "APPROVED"
+    for stage in ("BASELINE", "EDIT", "CANDIDATE", "FINAL"):
+        with pytest.raises(GenerationError) as error:
+            worker.engine.perform({**approved, "next_stage": stage}, operation_id="synthetic-plan-only")
+        assert error.value.code == "PLAN_ONLY"
+    assert len(provider.calls) == 1
+    assert not executor.calls
+
+
+def test_lowered_patch_limit_stops_revision_after_the_first_failed_candidate(tmp_path):
+    executor = SyntheticExecutor(["REJECTED", "REJECTED"])
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, executor=executor, preferences=CodingPreferences(limits={"patch_attempts": 1}),
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "PATCH_ATTEMPT_LIMIT"
+    assert task["counters"]["patch_attempts"] == 1
+    assert len(provider.calls) == len(executor.calls) == 2
+
+
+def test_lowered_model_call_limit_counts_planning_before_editing(tmp_path):
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, preferences=CodingPreferences(limits={"model_calls": 1}),
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BUDGET_EXHAUSTED"
+    assert task["counters"]["model_calls"] == 1
+    assert task["counters"]["patch_attempts"] == 0
+    assert len(provider.calls) == len(executor.calls) == 1
 
 
 def test_plan_requires_exact_owner_approval_before_any_execution_or_edit(tmp_path):
@@ -169,6 +219,113 @@ def test_plan_requires_exact_owner_approval_before_any_execution_or_edit(tmp_pat
     )
     assert executor.calls[1]["source_hash"] == executor.calls[2]["source_hash"]
     assert len({call["operation_id"] for call in executor.calls}) == 3
+
+
+def test_persisted_preferences_reach_both_prompt_phases_without_expanding_scope(tmp_path):
+    preferences = CodingPreferences(workflow="bugfix", instructions="Keep names descriptive")
+    store, worker, provider, executor, task_id = _setup(tmp_path, preferences=preferences)
+    _approve(store, worker, task_id)
+    _drain(worker)
+    assert len(provider.calls) == 2
+    planning = json.loads(provider.calls[0]["user_prompt"])
+    editing = json.loads(provider.calls[1]["user_prompt"])
+    assert planning["preferences"] == editing["preferences"] == preferences.prompt_context()
+    assert preferences.instructions not in provider.calls[0]["system_prompt"]
+    assert preferences.instructions not in provider.calls[1]["system_prompt"]
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "REVIEW_READY"
+    assert task["brief"]["preferences"] == preferences.canonical_payload()
+    assert task["brief"]["editable_paths"] == ["app/money.py"]
+    assert len(executor.calls) == 3
+
+
+@pytest.mark.parametrize("workflow", ["feature", "refactor"])
+def test_explicit_feature_and_refactor_continue_from_green_baseline_with_fresh_checks(tmp_path, workflow):
+    executor = SyntheticExecutor(["VERIFIED", "VERIFIED", "VERIFIED"])
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, executor=executor, preferences=CodingPreferences(workflow=workflow),
+    )
+    original = store.get_task("owner", task_id)
+    _approve(store, worker, task_id)
+    assert worker.run_once()["stage"] == "EDIT"
+    baseline = store.get_task("owner", task_id)
+    assert baseline["state"] == "QUEUED"
+    assert baseline["result"]["code"] == "BASELINE_PASSED_WORKFLOW_CONTINUES"
+    assert baseline["counters"]["model_calls"] == 1
+    assert baseline["counters"]["executions"] == 1
+    assert "patch" not in baseline["checkpoint"]
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "REVIEW_READY"
+    assert task["result"]["code"] == "CHECKS_PASSED"
+    assert task["result"]["diff"].startswith("--- a/app/money.py")
+    assert task["source_files"] == original["source_files"]
+    assert task["limits"] == original["limits"]
+    assert task["counters"]["model_calls"] == len(provider.calls) == 2
+    assert task["counters"]["patch_attempts"] == 1
+    assert task["counters"]["executions"] == len(executor.calls) == 3
+    assert executor.calls[0]["source_hash"] != executor.calls[1]["source_hash"]
+    assert executor.calls[1]["source_hash"] == executor.calls[2]["source_hash"]
+    assert len({call["operation_id"] for call in executor.calls}) == 3
+
+
+@pytest.mark.parametrize("preferences", [None, CodingPreferences(), CodingPreferences(workflow="bugfix")])
+def test_green_baseline_retains_legacy_custom_and_bugfix_stop(tmp_path, preferences):
+    executor = SyntheticExecutor(["VERIFIED"])
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, executor=executor, preferences=preferences,
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "BASELINE_ALREADY_PASSES"
+    assert task["counters"]["model_calls"] == len(provider.calls) == 1
+    assert task["counters"]["executions"] == len(executor.calls) == 1
+    assert task["counters"]["patch_attempts"] == 0
+    assert "patch" not in task["checkpoint"]
+
+
+@pytest.mark.parametrize("workflow", ["feature", "refactor"])
+def test_green_baseline_never_substitutes_for_fresh_final_checks(tmp_path, workflow):
+    executor = SyntheticExecutor(["VERIFIED", "VERIFIED", "REJECTED"])
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, executor=executor, preferences=CodingPreferences(workflow=workflow),
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "FRESH_CHECK_FAILED"
+    assert len(provider.calls) == 2
+    assert len(executor.calls) == 3
+
+
+@pytest.mark.parametrize("workflow", ["feature", "refactor"])
+def test_green_baseline_does_not_allow_empty_feature_or_refactor_edits(tmp_path, workflow):
+    class UnchangedSyntheticProvider(SyntheticProvider):
+        def complete(self, **kwargs):
+            response = super().complete(**kwargs)
+            payload = json.loads(kwargs["user_prompt"])
+            if "brief" not in payload:
+                content = json.loads(response["content"])
+                content["files"][0]["content"] = payload["source"]["app/money.py"]
+                response["content"] = json.dumps(content)
+            return response
+
+    executor = SyntheticExecutor(["VERIFIED"])
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, provider=UnchangedSyntheticProvider(), executor=executor,
+        preferences=CodingPreferences(workflow=workflow),
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "EMPTY_DIFF"
+    assert "patch" not in task["checkpoint"]
+    assert len(provider.calls) == 2
+    assert len(executor.calls) == 1
 
 
 def test_rejected_candidate_supplies_actual_failure_to_bounded_revision(tmp_path):

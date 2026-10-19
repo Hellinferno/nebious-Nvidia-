@@ -7,6 +7,84 @@
   width: 100%;
 }
 
+.coding-workspace .btn { font-size: 0.85rem; }
+.workspace-grid > div, .workspace-card { min-width: 0; }
+.code-line { white-space: pre; }
+.code-viewer-pane .line-number { color: #91a6b2; }
+
+.recipe-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.recipe-fieldset legend,
+.instruction-settings-body > label {
+  margin-bottom: 10px;
+  color: var(--text-h);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.recipe-fieldset legend span { color: var(--text); font-weight: 400; }
+.composer-eyebrow { color: var(--accent); font-size: 0.75rem; font-weight: 650; margin-bottom: 5px; }
+.composer-project { color: var(--text); font-size: 0.8rem; overflow-wrap: anywhere; }
+.task-composer .task-form { gap: 22px; }
+.task-composer .form-field label { font-size: 0.88rem; }
+.task-composer .form-textarea { font-size: 0.95rem; line-height: 1.65; }
+.task-composer .form-textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.recipe-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--bg);
+}
+.recipe-option:hover, .recipe-option:focus-within { border-color: var(--accent); }
+.recipe-option.selected { border-color: var(--accent); background: var(--accent-bg); }
+.recipe-option input { margin: 3px 0 0; accent-color: var(--accent); flex-shrink: 0; }
+.recipe-option strong { display: block; color: var(--text-h); font-size: 0.87rem; }
+.recipe-option small { display: block; margin-top: 4px; color: var(--text); font-size: 0.78rem; line-height: 1.5; }
+.field-help { display: block; color: var(--text); font-size: 0.78rem; line-height: 1.65; }
+.recipe-fieldset .field-help { margin-top: 10px; }
+.instruction-settings { border: 1px solid var(--border); border-radius: 9px; }
+.instruction-settings summary { padding: 13px; cursor: pointer; color: var(--text-h); font-size: 0.88rem; font-weight: 650; }
+.instruction-settings summary span { color: var(--text); font-size: 0.75rem; font-weight: 400; margin-left: 8px; }
+.instruction-settings-body { padding: 0 13px 14px; display: flex; flex-direction: column; gap: 9px; }
+.instruction-settings-body > label { margin-bottom: 0; }
+.instruction-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.composer-footer { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+.composer-blocked { border-left: 3px solid #bd850c; padding: 10px 12px; background: #fff8e9; color: #775713; font-size: 0.83rem; line-height: 1.6; }
+.task-context-summary { border: 1px solid var(--border); border-radius: 10px; background: var(--bg); padding: 18px 22px; display: grid; gap: 10px; }
+.task-context-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.task-context-heading strong { color: var(--accent); }
+.task-context-heading span { color: var(--text); font-size: 0.78rem; }
+.task-context-summary > p, .task-context-summary details p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; }
+.task-context-summary details summary { cursor: pointer; font-size: 0.83rem; color: var(--text-h); }
+.task-context-summary details p { margin-top: 10px; }
+.task-context-summary .task-result-message { border-left: 3px solid var(--accent); padding: 10px 12px; background: var(--accent-bg); font-size: 0.85rem; }
+.task-context-summary .plan-only-notice { border-left: 3px solid #527cb5; padding: 10px 12px; background: #f1f6ff; color: #294b79; font-size: 0.85rem; }
+
+@media (max-width: 520px) {
+  .recipe-grid { grid-template-columns: 1fr; }
+  .workspace-header, .workspace-card { padding: 18px; }
+  .task-selector { min-width: 0; width: 100%; }
+  .task-selector-group, .workspace-top-controls { width: 100%; }
+  .task-selector-group { flex-direction: column; align-items: flex-start; }
+  .tab-navigation { overflow-x: auto; }
+  .nav-tab-btn { white-space: nowrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot-pulse { animation: none; }
+}
+
 /* Header & Status Bar */
 .workspace-header {
   display: flex;

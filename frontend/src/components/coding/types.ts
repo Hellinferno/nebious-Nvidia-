@@ -3,10 +3,33 @@ export type Project = {
   name: string
   source_hash: string
   runner_profile: string
-  file_count: number
-  raw_bytes: number
-  created_at: string
+  total_files: number
+  total_bytes: number
+  created_at: number
   files?: Record<string, string>
+}
+
+export type CodingPreferences = {
+  workflow: 'custom' | 'bugfix' | 'feature' | 'refactor'
+  instructions: string
+  mode?: 'implement' | 'plan_only'
+  limits?: Partial<CodingTaskLimits>
+}
+
+export type CodingTaskLimits = {
+  model_calls: number
+  patch_attempts: number
+  executions: number
+  active_seconds: number
+}
+
+export type CodingPlan = {
+  schema_version: 'coding-plan-v1'
+  source_hash: string
+  brief_hash: string
+  steps: string[]
+  target_files: string[]
+  check_profile: 'invoice-observation-v1' | 'project-unittest-v1'
 }
 
 export type CodingTask = {
@@ -17,6 +40,7 @@ export type CodingTask = {
     task: string
     source_hash: string
     editable_paths: string[]
+    preferences?: CodingPreferences | null
   }
   contract_hash: string
   runtime_config: {
@@ -24,17 +48,13 @@ export type CodingTask = {
     max_output_tokens: number
     engine_version: string
   }
-  plan: {
-    task: string
-    summary: string
-    steps: string[]
-    editable_paths: string[]
-  } | null
+  plan: CodingPlan | null
   approved_plan_hash: string | null
   state:
     | 'DRAFT'
     | 'PLANNING'
     | 'AWAITING_APPROVAL'
+    | 'APPROVED'
     | 'QUEUED'
     | 'RUNNING'
     | 'PAUSED'
@@ -45,6 +65,7 @@ export type CodingTask = {
     | 'CANCEL_PENDING'
     | 'CANCELLED'
     | 'INTERRUPTED'
+    | 'BUDGET_EXHAUSTED'
   next_stage: 'PLAN' | 'BASELINE' | 'EDIT' | 'CANDIDATE' | 'FINAL' | 'COMPLETE'
   checkpoint: {
     stage?: string
@@ -55,7 +76,9 @@ export type CodingTask = {
     }
   } | null
   result: {
-    outcome: string
+    outcome?: string
+    code?: string
+    message?: string
     stop_reason?: string
     summary?: string
   } | null
@@ -72,16 +95,16 @@ export type CodingTask = {
     active_seconds: number
   }
   pause_requested: boolean
-  created_at: string
-  updated_at: string
+  created_at: number
+  updated_at: number
 }
 
 export type CodingEvent = {
   sequence: number
-  stage: string
+  stage?: string
   event_type: string
   payload: Record<string, unknown>
-  created_at: string
+  created_at: number
 }
 
 export type TaskChanges = {
@@ -99,6 +122,25 @@ export type ExecutionRecord = {
   status: string
   details?: Record<string, unknown>
   result?: {
+    report?: {
+      verdict?: string
+      checks?: Array<{
+        check_id: string
+        status?: string
+        outcome?: string
+        detail?: string
+        reason?: string
+        passed?: boolean
+      }>
+      execution?: {
+        exit_code?: number | null
+        duration_ms?: number
+        stdout?: string
+        stderr?: string
+        command?: string | string[]
+        timed_out?: boolean
+      }
+    }
     exit_code?: number
     passed?: boolean
     duration_ms?: number
@@ -136,7 +178,7 @@ export type CheckpointRecord = {
   sequence: number
   stage: string
   state: string
-  created_at: string
+  created_at: number
   checkpoint: Record<string, unknown>
 }
 

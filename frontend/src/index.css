@@ -29,11 +29,11 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 #root { min-height: 100svh; }
-button, input, select { font-family: inherit; }
+button, input, select, textarea { font-family: inherit; }
 button, a, input, select, summary { -webkit-tap-highlight-color: transparent; }
 button { touch-action: manipulation; }
 button, select, input { font-size: 0.875rem; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible {
   outline: 3px solid var(--accent-border);
   outline-offset: 4px;
 }

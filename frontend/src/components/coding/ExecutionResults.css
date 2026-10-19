@@ -1,0 +1,137 @@
+.execution-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.execution-results-scope,
+.execution-results-empty {
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.execution-result {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--social-bg);
+  min-width: 0;
+}
+
+.execution-result-heading,
+.execution-check-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.execution-result-heading h3 {
+  font-size: 0.95rem;
+}
+
+.execution-outcome {
+  border: 1px solid #d6dfe5;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  line-height: 1.4;
+  background: #f1f4f6;
+  color: #485b6b;
+}
+
+.execution-outcome.passed {
+  border-color: #b3d7cd;
+  background: #edf8f3;
+  color: #17654e;
+}
+
+.execution-outcome.failed {
+  border-color: #e9c0c8;
+  background: #fff1f3;
+  color: #a02a41;
+}
+
+.execution-outcome.skipped,
+.execution-outcome.unknown {
+  border-color: #e4cf9f;
+  background: #fff8e9;
+  color: #775713;
+}
+
+.execution-result-meta,
+.execution-report-meta,
+.execution-check-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+
+.execution-check-counts {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.execution-details {
+  margin-top: 12px;
+  font-size: 0.83rem;
+}
+
+.execution-details summary {
+  cursor: pointer;
+  color: var(--text-h);
+  padding: 5px 0;
+  font-weight: 600;
+}
+
+.execution-check-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.execution-check-list li {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.execution-check-list p {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+}
+
+.execution-console-group h4 {
+  margin: 12px 0 6px;
+  font-size: 0.78rem;
+  color: var(--text-h);
+}
+
+.execution-console-group pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border: 1px solid #243d4a;
+  border-radius: 7px;
+  background: #142b35;
+  color: #dfefed;
+  font: 0.78rem/1.7 var(--mono);
+}
+
+.execution-warning {
+  margin-top: 10px;
+  color: #8c4c12;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}

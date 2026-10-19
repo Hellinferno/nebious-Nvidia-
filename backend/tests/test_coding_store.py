@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,6 +12,7 @@ import pytest
 from benchproof.coding.contracts import (
     CodingBrief,
     CodingPlan,
+    CodingPreferences,
     CodingStoreError,
     OperatorLimits,
 )
@@ -100,6 +103,161 @@ def test_create_replay_uses_persisted_snapshot_after_fixture_changes(store, prep
     (prepared[0] / "core.py").write_bytes(b"VALUE = 9\n")
     assert _create(store, prepared)["source_files"] == task["source_files"]
     _error("STALE_SOURCE", _create, store, prepared, key="new-create")
+
+
+def test_legacy_create_fingerprint_and_approved_plan_survive_store_restart(store, prepared):
+    task, plan = _approved(store, prepared)
+    brief = prepared[2]
+    legacy = {
+        "schema_version": "coding-brief-v1", "task": brief.task,
+        "source_hash": brief.source_hash, "editable_paths": brief.editable_paths,
+    }
+    request = {
+        "fixture_id": "sample", "brief": legacy, "source": prepared[1],
+        "contract_hash": "c" * 64, "runtime_config": {},
+    }
+    expected = hashlib.sha256(json.dumps(
+        request, ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    with sqlite3.connect(store.db_path) as connection:
+        fingerprint = connection.execute(
+            "SELECT request_hash FROM coding_requests WHERE operation='create'",
+        ).fetchone()[0]
+    assert fingerprint == expected
+    assert task["brief"] == legacy
+    restarted = CodingStore(store.db_path, store.operator_limits, clock=store.clock)
+    replay = _create(restarted, prepared)
+    assert replay["task_id"] == task["task_id"]
+    assert replay["approved_plan_hash"] == plan.identity()
+    assert CodingBrief.model_validate(replay["brief"]).identity() == plan.brief_hash
+
+
+def test_preferences_persist_export_and_bind_create_idempotency(store, prepared):
+    preferences = CodingPreferences(workflow="feature", instructions="Preserve the existing public API")
+    brief = prepared[2].model_copy(update={"preferences": preferences})
+    task = store.create_task("owner-a", "sample", brief, prepared[1], "c" * 64, "custom")
+    restarted = CodingStore(store.db_path, store.operator_limits, clock=store.clock)
+    replay = restarted.create_task("owner-a", "sample", brief, prepared[1], "c" * 64, "custom")
+    assert replay["task_id"] == task["task_id"]
+    assert replay["brief"]["preferences"] == preferences.canonical_payload()
+    assert restarted.export_bundle("owner-a", task["task_id"])["brief"] == brief.canonical_payload()
+    changed = brief.model_copy(update={"preferences": CodingPreferences(workflow="bugfix")})
+    _error("IDEMPOTENCY_CONFLICT", restarted.create_task, "owner-a", "sample", changed,
+           prepared[1], "c" * 64, "custom")
+
+
+def test_lowered_task_limits_are_durable_and_bound_to_create_and_plan(store, prepared):
+    preferences = CodingPreferences.model_validate({"limits": {"model_calls": 2, "active_seconds": 30}})
+    brief = prepared[2].model_copy(update={"preferences": preferences})
+    task = store.create_task("owner-a", "sample", brief, prepared[1], "c" * 64, "limited")
+    assert task["limits"] == {"model_calls": 2, "patch_attempts": 2, "executions": 4, "active_seconds": 30}
+    restarted = CodingStore(store.db_path, store.operator_limits, clock=store.clock)
+    replay = restarted.create_task("owner-a", "sample", brief, prepared[1], "c" * 64, "limited")
+    assert replay["limits"] == task["limits"]
+    assert replay["brief"]["preferences"]["limits"] == {"model_calls": 2, "active_seconds": 30}
+    assert restarted.export_bundle("owner-a", task["task_id"])["brief"] == brief.canonical_payload()
+    changed = brief.model_copy(update={"preferences": CodingPreferences(limits={"model_calls": 3})})
+    _error("IDEMPOTENCY_CONFLICT", restarted.create_task, "owner-a", "sample", changed,
+           prepared[1], "c" * 64, "limited")
+
+
+def test_default_control_fields_replay_previous_preferences_without_identity_conflict(store, prepared):
+    preferences = CodingPreferences(workflow="refactor", instructions="Keep the public API")
+    brief = prepared[2].model_copy(update={"preferences": preferences})
+    task = store.create_task("owner-a", "sample", brief, prepared[1], "c" * 64, "defaults")
+    explicit = brief.model_copy(update={"preferences": CodingPreferences(
+        workflow="refactor", instructions="Keep the public API", mode="implement", limits={},
+    )})
+    replay = store.create_task("owner-a", "sample", explicit, prepared[1], "c" * 64, "defaults")
+    assert replay["task_id"] == task["task_id"]
+    assert replay["brief"] == task["brief"]
+
+
+@pytest.mark.parametrize("limit,kind,stage", [
+    ("model_calls", "PLAN", "PLAN"), ("patch_attempts", "EDIT", "EDIT"),
+    ("executions", "EXECUTION", "BASELINE"),
+])
+def test_lowered_action_allowance_blocks_the_next_reservation(store, prepared, limit, kind, stage):
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(limits={limit: 1})})
+    customized = (prepared[0], prepared[1], brief)
+    if kind == "PLAN":
+        task = _queued(store, customized)
+        plan_hash = None
+        lease = store.claim_next("first")
+    else:
+        task, plan, lease = _running(store, customized)
+        plan_hash = plan.identity()
+        store.set_checkpoint(lease, stage, {})
+    action = store.reserve_action(lease, kind, brief.source_hash, plan_hash)
+    store.finish_action(lease, action["action_id"], {}, next_stage=stage, state="QUEUED")
+    lease = store.claim_next("second")
+    _error("BUDGET_EXHAUSTED", store.reserve_action, lease, kind, brief.source_hash, plan_hash)
+    assert store.get_task("owner-a", task["task_id"])["counters"][limit] == 1
+
+
+def test_lowered_active_time_applies_across_restart_and_resume(store, prepared, clock):
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(limits={"active_seconds": 30})})
+    task = _queued(store, (prepared[0], prepared[1], brief))
+    lease = store.claim_next("first")
+    clock[0] += 12
+    store.control("owner-a", task["task_id"], "pause")
+    _error("PAUSED", store.guard, lease)
+    restarted = CodingStore(store.db_path, store.operator_limits, clock=store.clock)
+    restarted.control("owner-a", task["task_id"], "resume")
+    lease = restarted.claim_next("second")
+    clock[0] += 18
+    _error("BUDGET_EXHAUSTED", restarted.guard, lease)
+    task = restarted.get_task("owner-a", task["task_id"])
+    assert task["limits"]["active_seconds"] == task["counters"]["active_seconds"] == 30
+
+
+def test_user_allowance_does_not_override_the_operator_daily_cap(tmp_path, prepared, clock):
+    store = CodingStore(tmp_path / "operator.db", OperatorLimits(1, 1), clock=lambda: clock[0])
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(limits={"model_calls": 2})})
+    task = _queued(store, (prepared[0], prepared[1], brief))
+    lease = store.claim_next("first")
+    action = store.reserve_action(lease, "PLAN", brief.source_hash)
+    store.finish_action(lease, action["action_id"], {}, next_stage="PLAN", state="QUEUED")
+    lease = store.claim_next("second")
+    _error("OPERATOR_LIMIT", store.reserve_action, lease, "PLAN", brief.source_hash)
+    assert store.get_task("owner-a", task["task_id"])["counters"]["model_calls"] == 1
+
+
+def test_plan_only_can_save_a_reviewed_plan_but_cannot_start_resume_or_restore_execution(store, prepared):
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(mode="plan_only")})
+    task, plan = _approved(store, (prepared[0], prepared[1], brief))
+    assert task["state"] == "APPROVED"
+    assert task["approved_plan_hash"] == plan.identity()
+    _error("PLAN_ONLY", store.enqueue, "owner-a", task["task_id"], "blocked-start", phase="run")
+    for command in ("resume", "retry"):
+        _error("PLAN_ONLY", store.control, "owner-a", task["task_id"], command)
+    checkpoint = store.list_checkpoints("owner-a", task["task_id"])[-1]
+    _error("PLAN_ONLY", store.restore_checkpoint, "owner-a", task["task_id"], checkpoint["checkpoint_id"])
+    assert store.get_task("owner-a", task["task_id"])["counters"] == {
+        "model_calls": 1, "patch_attempts": 0, "executions": 0, "active_seconds": 0,
+    }
+
+
+@pytest.mark.parametrize("stage,kind", [("BASELINE", "EXECUTION"), ("EDIT", "EDIT")])
+def test_plan_only_store_rejects_action_even_if_an_execution_stage_is_queued(store, prepared, stage, kind):
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(mode="plan_only")})
+    task, plan = _approved(store, (prepared[0], prepared[1], brief))
+    with sqlite3.connect(store.db_path) as connection:
+        connection.execute("UPDATE coding_tasks SET state='QUEUED',next_stage=? WHERE task_id=?",
+                           (stage, task["task_id"]))
+    lease = store.claim_next("defense-test")
+    _error("PLAN_ONLY", store.reserve_action, lease, kind, brief.source_hash, plan.identity())
+    task = store.get_task("owner-a", task["task_id"])
+    assert task["counters"]["patch_attempts"] == task["counters"]["executions"] == 0
+
+
+def test_plan_only_can_pause_and_resume_planning_before_any_implementation(store, prepared):
+    brief = prepared[2].model_copy(update={"preferences": CodingPreferences(mode="plan_only")})
+    task = _queued(store, (prepared[0], prepared[1], brief))
+    store.control("owner-a", task["task_id"], "pause")
+    assert store.control("owner-a", task["task_id"], "resume")["next_stage"] == "PLAN"
+    lease = store.claim_next("planner")
+    assert store.reserve_action(lease, "PLAN", brief.source_hash)["kind"] == "PLAN"
 
 
 def test_create_and_queue_idempotency_conflicts(store, prepared):
