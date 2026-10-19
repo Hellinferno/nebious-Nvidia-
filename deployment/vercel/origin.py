@@ -44,6 +44,15 @@ def main() -> int:
         "BENCHPROOF_RUNNER": "docker",
         "DATABASE_PATH": "/data/benchproof/benchproof.db",
     })
+    coding = config.get("coding")
+    if coding is not None:
+        os.environ.update({
+            "BENCHPROOF_CODING_ENABLED": "true" if coding["enabled"] is True else "false",
+            "BENCHPROOF_CODING_MODEL_CALLS_PER_DAY": str(int(coding["model_calls_per_day"])),
+            "BENCHPROOF_CODING_EXECUTIONS_PER_DAY": str(int(coding["executions_per_day"])),
+            "BENCHPROOF_CODING_DEADLINE_EPOCH": str(float(coding["deadline_epoch"])),
+            "BENCHPROOF_CODING_OUTPUT_TOKENS": str(int(coding["output_tokens"])),
+        })
     working = Path("/data/benchproof/runtime")
     working.mkdir(parents=True, exist_ok=True)
     os.chdir(working)

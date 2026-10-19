@@ -50,6 +50,9 @@ export async function makePackage(root = projectRoot) {
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`Not a regular file: ${name}`);
     const bytes = await readFile(path.join(root, name));
     if (bytes.length > 2 * 1024 * 1024) throw new Error(`Runtime file too large: ${name}`);
+    if ((name.endsWith('.sh') || name.endsWith('/Dockerfile')) && bytes.includes(13)) {
+      throw new Error(`CRLF line endings are refused in Linux-executed file: ${name}`);
+    }
     entries.push({ path: name, sha256: createHash('sha256').update(bytes).digest('hex'), content: bytes.toString('base64') });
   }
   const hash = createHash('sha256').update(JSON.stringify(entries.map(({ path: name, sha256 }) => [name, sha256]))).digest('hex');

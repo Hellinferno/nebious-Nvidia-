@@ -61,6 +61,22 @@ if (sandbox.expiresAt && sandbox.expiresAt.getTime() - Date.now() < 420_000) awa
 const who = await sandbox.runCommand('id', ['-un']);
 const user = (await who.stdout()).trim();
 if (!/^[a-z_][a-z0-9_-]*$/.test(user)) throw new Error('Unexpected sandbox user');
+const codingDeadline = Number(process.env.BENCHPROOF_CODING_DEADLINE_EPOCH ?? 0);
+const coding = {
+  enabled: codingDeadline > 0,
+  model_calls_per_day: Number(process.env.BENCHPROOF_CODING_MODEL_CALLS_PER_DAY ?? 40),
+  executions_per_day: Number(process.env.BENCHPROOF_CODING_EXECUTIONS_PER_DAY ?? 60),
+  deadline_epoch: codingDeadline,
+  output_tokens: Number(process.env.BENCHPROOF_CODING_OUTPUT_TOKENS ?? 2048),
+};
+if (coding.enabled) {
+  if (!Number.isFinite(codingDeadline) || codingDeadline * 1000 - Date.now() < 3_600_000) {
+    throw new Error('BENCHPROOF_CODING_DEADLINE_EPOCH must be at least one hour in the future');
+  }
+  for (const key of ['model_calls_per_day', 'executions_per_day', 'output_tokens']) {
+    if (!Number.isInteger(coding[key]) || coding[key] <= 0) throw new Error(`Invalid coding ${key}`);
+  }
+}
 await sandbox.writeFiles([
   ...runtime.entries.map(entry => ({ path: `${APP_ROOT}/${entry.path}`, content: Buffer.from(entry.content, 'base64') })),
   { path: `${APP_ROOT}/origin-config.json`, mode: 0o600, content: JSON.stringify({
@@ -68,6 +84,7 @@ await sandbox.writeFiles([
     nebius_api_key: process.env.NEBIUS_API_KEY,
     model_id: process.env.NEBIUS_MODEL_ID,
     daily_actions: 60,
+    coding,
   }) },
 ]);
 if (!marker || upgrade) {
