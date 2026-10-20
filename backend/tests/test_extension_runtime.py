@@ -276,6 +276,27 @@ def test_mcp_transport_is_bounded_and_fails_closed(monkeypatch, mode):
     assert len(requests) == 1 and Transport.closed
     assert requests[0][0:2] == ("POST", "/mcp")
     assert "Authorization" not in requests[0][3]
+    assert requests[0][3]["MCP-Protocol-Version"] == "2026-07-28"
+    assert requests[0][3]["Mcp-Method"] == "tools/list"
+
+
+@pytest.mark.parametrize("name,expected", [("read_guide", "read_guide"), ("日本語", "=?base64?5pel5pys6Kqe?="), ("=?base64?literal?=", "=?base64?PT9iYXNlNjQ/bGl0ZXJhbD89?=")])
+def test_mcp_tool_name_header_is_encoded_without_injection(monkeypatch, name, expected):
+    monkeypatch.setattr(mcp, "public_addresses", lambda host: ["93.184.216.34"])
+    calls = []
+    class Transport:
+        sock = None
+        def __init__(self, *args): pass
+        def request(self, method, path, payload, headers): calls.append((json.loads(payload), headers))
+        def getresponse(self):
+            payload = json.dumps({"jsonrpc": "2.0", "id": calls[0][0]["id"], "result": {"content": []}}).encode()
+            return SimpleNamespace(status=200, getheader=lambda *args: "application/json", read1=io.BytesIO(payload).read)
+        def close(self): pass
+    monkeypatch.setattr(mcp, "PinnedHTTPSConnection", Transport)
+    connection = mcp.MCPConnection(id="docs", name="Docs", url="https://example.org/mcp", tools=[name])
+    mcp.rpc(connection, "tools/call", {"name": name, "arguments": {}})
+    assert calls[0][1]["Mcp-Method"] == "tools/call"
+    assert calls[0][1]["Mcp-Name"] == expected
 
 
 def test_mcp_mixed_dns_and_unsupported_schema_are_rejected(monkeypatch):

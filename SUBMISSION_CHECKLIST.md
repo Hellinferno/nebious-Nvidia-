@@ -174,7 +174,7 @@ Most AI coding assistants operate unconstrained: they suggest code that looks pl
 - Keeping trusted evaluator assets out of candidates and screening exports; do not put credentials in user instructions or reference context.
 
 ### Accomplishments We're Proud Of
-- Current verification: 602 backend tests passed in isolated Linux Docker, three Docker integration cases passed separately, and 29 frontend tests passed. See `VERIFICATION.md` for scope and remaining release limits.
+- Current verification: 611 backend tests passed in isolated Linux Docker, three Docker integration cases passed separately, 29 frontend tests and 22 deployment tests passed. The deployed demo's skills/harness/MCP draft flow passed against real APIs. See `VERIFICATION.md` for scope and remaining release limits.
 - Six scripted gold-answer regressions passed historically. Their responses and token usage are synthetic, not a live-model benchmark or holdout success rate.
 - Fast, responsive React frontend building in under 300ms with zero lint warnings.
 - Real end-to-end NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory with isolated candidate Docker verification live on production.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import http.client
 import ipaddress
@@ -56,8 +57,9 @@ class MCPQuery(BaseModel):
         return True
 
 
-def connections() -> list[MCPConnection]:
-    raw = os.getenv("BENCHPROOF_MCP_CONNECTIONS", "[]")
+def connections(raw: str | None = None) -> list[MCPConnection]:
+    if raw is None:
+        raw = os.getenv("BENCHPROOF_MCP_CONNECTIONS", "[]")
     try:
         if len(raw) > 16_384:
             raise ValueError()
@@ -114,7 +116,15 @@ def rpc(connection: MCPConnection, method: str, parameters: dict[str, Any]) -> d
     }
     payload = json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method,
                           "params": {**parameters, "_meta": metadata}}).encode("utf-8")
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {"Content-Type": "application/json", "Accept": "application/json",
+               "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": method}
+    if method == "tools/call":
+        name = parameters.get("name")
+        if not isinstance(name, str) or not 1 <= len(name) <= 100:
+            raise MCPError("Invalid MCP tool name")
+        plain = name == name.strip() and all(32 <= ord(character) <= 126 for character in name)
+        sentinel = name.startswith("=?base64?") and name.endswith("?=")
+        headers["Mcp-Name"] = name if plain and not sentinel else "=?base64?" + base64.b64encode(name.encode()).decode() + "?="
     if connection.token_env:
         token = os.getenv(connection.token_env, "")
         if not token or "\r" in token or "\n" in token:

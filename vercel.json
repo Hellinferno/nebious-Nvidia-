@@ -5,12 +5,16 @@
   "buildCommand": "npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
+    "api/mcp.mjs": {
+      "maxDuration": 10
+    },
     "api/gateway.mjs": {
       "maxDuration": 300,
       "includeFiles": "deployment/vercel/runtime-package.json"
     }
   },
   "rewrites": [
+    { "source": "/mcp", "destination": "/api/mcp" },
     { "source": "/api/:path*", "destination": "/api/gateway" }
   ]
 }

@@ -32,11 +32,33 @@ class OriginGuard:
         await self.app(scope, receive, send)
 
 
+def mcp_environment(config) -> dict[str, str]:
+    from benchproof.coding.mcp import connections
+
+    if config is None:
+        return {"BENCHPROOF_MCP_CONNECTIONS": "[]", "BENCHPROOF_MCP_QUERIES_PER_DAY": "0"}
+    if not isinstance(config, dict) or set(config) != {"connections", "queries_per_day", "credentials"}:
+        raise ValueError("Invalid private MCP configuration")
+    raw = json.dumps(config["connections"])
+    configured = connections(raw)
+    allowance = config["queries_per_day"]
+    if type(allowance) is not int or not 0 <= allowance <= 20 or (configured and allowance == 0):
+        raise ValueError("Invalid private MCP daily allowance")
+    references = {item.token_env for item in configured if item.token_env is not None}
+    credentials = config["credentials"]
+    if not isinstance(credentials, dict) or set(credentials) != references:
+        raise ValueError("Only dedicated MCP credential references may be configured")
+    if any(not isinstance(token, str) or not 1 <= len(token) <= 8192 or "\r" in token or "\n" in token for token in credentials.values()):
+        raise ValueError("Dedicated MCP credential is invalid")
+    return {"BENCHPROOF_MCP_CONNECTIONS": raw, "BENCHPROOF_MCP_QUERIES_PER_DAY": str(allowance), **credentials}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
+    os.environ.update(mcp_environment(config.get("mcp")))
     os.environ.update({
         "NEBIUS_API_KEY": config["nebius_api_key"],
         "NEBIUS_BASE_URL": "https://api.tokenfactory.nebius.com/v1/",

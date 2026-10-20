@@ -27,8 +27,8 @@ The legacy assurance audit dashboard remains available as a secondary tab in the
 ## Public Demo & Status
 
 Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel with persistent storage and Nebius Token Factory inference.
-Latest verification: **602 backend tests passed in isolated Linux Docker; the three intentionally skipped Docker cases passed separately; 29 frontend tests passed**. Browser checks, live-call scope and remaining release limits are recorded in [VERIFICATION.md](VERIFICATION.md).
-Frontend: TypeScript / React 19. Local changes are not automatically deployed; the public URL may lag the working tree.
+Latest verification: **611 backend tests passed in isolated Linux Docker; three Docker integration cases passed separately; 29 frontend and 22 deployment tests passed**. The latest demo includes skills, harness choices and a working read-only documentation MCP connection. Real public API, desktop/mobile UI, cold-resume, protected checks and replay passed. See [VERIFICATION.md](VERIFICATION.md) for evidence and scope.
+Frontend: TypeScript / React 19. The public demo is deployed; future Git pushes do not automatically upgrade its trusted Sandbox runtime. The public documentation MCP endpoint is `/mcp`, with `read_guide` as its only tool. The application bridge allows five MCP queries per UTC day.
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
 source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP

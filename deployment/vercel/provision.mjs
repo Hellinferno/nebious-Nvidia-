@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { APP_ROOT, readPackage, runtimeUpgrade, startOrigin } from './runtime.mjs';
 import { verifyHobby } from './account.mjs';
+import { mcpConfig } from './mcp-config.mjs';
 
 const root = new URL('../../', import.meta.url);
 for (const filename of ['.env', '.env.local']) {
@@ -14,6 +15,7 @@ const metadata = JSON.parse(await readFile(new URL('.vercel/project.json', root)
 const account = verifyHobby(metadata.orgId);
 if (!process.env.VERCEL_OIDC_TOKEN) throw new Error('Run vercel env pull .env.local first');
 if (!process.env.NEBIUS_API_KEY || !process.env.NEBIUS_MODEL_ID) throw new Error('Nebius settings missing');
+const mcp = mcpConfig();
 const runtime = await readPackage();
 const stateFile = new URL('.vercel/sandbox-state.json', root);
 const secretsFile = new URL('.vercel/runtime-secrets.json', root);
@@ -85,6 +87,7 @@ await sandbox.writeFiles([
     model_id: process.env.NEBIUS_MODEL_ID,
     daily_actions: 60,
     coding,
+    mcp,
   }) },
 ]);
 if (!marker || upgrade) {

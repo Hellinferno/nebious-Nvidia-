@@ -2,7 +2,7 @@
 
 The [DeepSeek Harness README](https://github.com/deepseek-ai/deepseek-harness/blob/master/README.md) describes an everything-is-a-plugin architecture and links to the Web guide and architecture documentation. Following those links, the [base bundle documentation](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/bundle/base/README.md) describes named profiles, configurable defaults, permission policies and optional components. BenchProof adapts those ideas into bounded user controls. It does not install Harness, replace NVIDIA/Nebius, or introduce executable third-party plugins.
 
-## Available locally
+## Available in the demo and locally
 
 ### Named agent profiles
 
@@ -100,6 +100,8 @@ These are real orchestration policies, bound to the task's brief and plan approv
 
 ## Read-only MCP reference bridge
 
+The hosted demo includes **BenchProof public guides**, a read-only documentation server at `https://benchproof.vercel.app/mcp`. Its `read_guide` tool accepts `{}` for workflow guidance, or an optional topic: `workflow`, `skills`, `harness`, `mcp`, or `budgets`. Example: `{"topic":"skills"}`. It returns static public guides only: no project source, filesystem access, execution or model inference. The deployed bridge has a shared allowance of **five queries per UTC day**. No additional MCP account or API key is needed for this built-in connection.
+
 The **MCP reference context** panel explicitly loads the operator-approved catalog. Pick a connection and tool, enter JSON arguments and consent to sending those exact arguments. No project source is attached automatically. Review up to two returned text snapshots before task creation. Snapshots are hashed, included in planning/editing and task exports, and excluded from portable profiles. Treat all reference text as untrusted input, not acceptance evidence; never include secrets.
 
 This is a limited stateless HTTPS context bridge, **not** a general MCP agent client. It supports protocol `2026-07-28` JSON responses, `tools/list` and allowlisted `tools/call`. It does not support older initialization/session flows, SSE, stdio servers, OAuth setup, arbitrary user URLs, sampling or automatic model-selected tool calls. Only operator-approved tools also advertising `readOnlyHint: true` are callable. Tool annotations are claims, not proof: operators must trust the endpoint's actual behavior.
@@ -113,6 +115,10 @@ BENCHPROOF_MCP_TOKEN_DOCS=<optional dedicated server credential>
 ```
 
 Use a real trusted endpoint; the example hostname is a placeholder. The default catalog is empty and calls are disabled. Configure the trusted backend environment, not browser/Vite variables. A separate MCP credential cannot select the Nebius key. Endpoints must use HTTPS/443 with no embedded credentials or query string; every resolved address must be public, and connections pin the checked address while verifying TLS against the original hostname. No redirects or automatic retries are followed. Socket waits, response size (32 KiB), argument size (2 KiB) and returned context (2,000 characters) are bounded. System DNS resolution has no separate application deadline.
+
+Those empty/disabled defaults apply to an unconfigured installation, not the configured hosted demo. On Vercel, supply both MCP configuration variables when running `deployment/vercel/provision.mjs`; it validates the allowlist and writes the dedicated credentials into private Sandbox configuration. Adding variables only to the public gateway does not configure the Sandbox. Origin startup validates credential references again and passes only the dedicated MCP variables to the trusted backend. Candidate containers retain their cleared environment. The public `/mcp` route is a separate static-guide function, not a proxy to the private origin.
+
+The bridge mirrors protocol version, method and safely encoded tool name into HTTP headers as specified by the [modern HTTP binding](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http). This does not remove its documented JSON-only, schema-subset and legacy-protocol limitations.
 
 One query reserves a shared daily allowance before up to two RPC requests; failures still count. Supported argument schemas are a deliberately restricted subset (primitive types, objects, arrays, enum and basic bounds); unsupported validation keywords fail closed. No schema URLs are fetched. Arbitrary external server compatibility and production credential setup are not implied by passing mocked tests.
 
