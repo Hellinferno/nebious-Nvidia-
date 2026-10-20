@@ -1,30 +1,24 @@
-"""Run Coding Agent Evaluation Suite (C-09 Rehearsal Harness).
-
-Executes the frozen 6-task evaluation suite, saving results, exact token counts,
-execution durations, and test verdicts to artifacts/rehearsals/.
-"""
+"""Run scripted gold-answer regressions in Docker, not a live-model benchmark."""
 
 from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from benchproof.coding.contracts import CodingBrief, CodingPlan, OperatorLimits
 from benchproof.coding.evaluation import EVAL_SUITE_V1, CodingEvalTask, run_eval_suite
+from benchproof.coding.generation import CompletionClient
 from benchproof.coding.store import CodingStore
 from benchproof.execution.project_runner import (
     ProjectExecutor,
-    ProjectSnapshot,
-    ExecutionResult,
 )
-from benchproof.coding.generation import CompletionClient
 from benchproof.projects.store import ProjectStore
 
 
@@ -62,7 +56,7 @@ class ScriptedEvalClient(CompletionClient):
         prompt = kwargs.get("user_prompt", "")
         try:
             payload = json.loads(str(prompt))
-        except Exception:
+        except (ValueError, TypeError):
             payload = {}
         content = self.plan_obj.model_dump_json() if "brief" in payload else self.edit_json
         return {
@@ -72,60 +66,9 @@ class ScriptedEvalClient(CompletionClient):
         }
 
 
-LAUNCHER_SCRIPT = Path(__file__).resolve().parents[1] / "runner" / "launcher" / "run_project_tests.py"
-OBSERVATION_SCHEMA = "benchproof/project-observations-v1"
-
-
-def _run_launcher_subprocess(snapshot: ProjectSnapshot, timeout_s: int = 30) -> ExecutionResult:
-    """Run run_project_tests.py in an isolated child process using snapshot."""
-    import subprocess
-    cmd = [
-        sys.executable,
-        str(LAUNCHER_SCRIPT),
-        "--candidate",
-        str(snapshot.candidate_dir),
-        "--out",
-        str(snapshot.out_dir),
-        "--child-timeout",
-        str(min(timeout_s, 20)),
-    ]
-
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    stdout, stderr = proc.communicate(timeout=timeout_s)
-
-    observations = None
-    for line in reversed(stdout.splitlines()):
-        line = line.strip()
-        if not line.startswith("{"):
-            continue
-        try:
-            parsed = json.loads(line)
-            if isinstance(parsed, dict) and parsed.get("schema") == OBSERVATION_SCHEMA:
-                observations = parsed
-                break
-        except ValueError:
-            continue
-
-    return ExecutionResult(
-        runner="local-subprocess-isolated",
-        run_id=snapshot.run_id,
-        exit_code=proc.returncode,
-        timed_out=False,
-        duration_ms=100,
-        stdout=stdout,
-        stderr=stderr,
-        observations=observations,
-        isolation={"enforced": True, "sandbox": "child-process"},
-    )
-
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run Coding Agent Evaluation Suite (C-09)")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--scripted-smoke", action="store_true", help="Acknowledge gold-answer responses and synthetic token usage")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -133,6 +76,8 @@ def main() -> int:
         help="Directory to save evaluation artifacts",
     )
     args = parser.parse_args()
+    if not args.scripted_smoke:
+        parser.error("This is a scripted regression, not measured model performance; pass --scripted-smoke")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -140,9 +85,9 @@ def main() -> int:
         db_path = Path(tmp_db_dir) / "eval_run.db"
         store = CodingStore(db_path, OperatorLimits(model_calls_per_day=500, executions_per_day=500))
         proj_store = ProjectStore(db_path)
-        executor = ProjectExecutor(synthetic_runner=_run_launcher_subprocess)
+        executor = ProjectExecutor()
 
-        print(f"Starting Coding Agent Evaluation Suite ({len(EVAL_SUITE_V1)} tasks)...")
+        print(f"Starting scripted gold-answer regression ({len(EVAL_SUITE_V1)} tasks, Docker only)...")
         report = run_eval_suite(
             store,
             proj_store,
@@ -156,6 +101,9 @@ def main() -> int:
         md_path = args.output_dir / f"coding_eval_report_{timestamp_str}.md"
 
         data = {
+            "evidence_kind": "scripted-regression",
+            "usage_kind": "synthetic",
+            "live_model_benchmark": False,
             "schema_version": report.schema_version,
             "suite_id": report.suite_id,
             "timestamp": report.timestamp,
@@ -170,9 +118,10 @@ def main() -> int:
         }
 
         json_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        md_path.write_text(report.summary_markdown(), encoding="utf-8")
+        summary = "Scripted gold-answer regression; token usage is synthetic. Not a live-model benchmark.\n\n" + report.summary_markdown()
+        md_path.write_text(summary, encoding="utf-8")
 
-        print("\n" + report.summary_markdown())
+        print("\n" + summary)
         print(f"\nArtifacts saved to:\n  - {json_path}\n  - {md_path}")
 
         return 0 if report.tasks_failed == 0 else 1

@@ -1,5 +1,6 @@
 import { AGENT_INSTRUCTION_MODULES } from './agentProfiles'
 import type { AgentPreferences, AgentProfile } from './agentProfiles'
+import type { ReactNode } from 'react'
 import './AgentSettings.css'
 
 type AgentSettingsProps = {
@@ -20,6 +21,7 @@ type AgentSettingsProps = {
   onClearDefault: () => void
   onExport: () => void
   onImport: (file: File) => void
+  extensions?: ReactNode
 }
 
 const BUDGET_FIELDS = [
@@ -50,6 +52,7 @@ export function AgentSettings(props: AgentSettingsProps) {
       <details className="agent-customization-details">
         <summary>Customize agent <span>{preferences.mode === 'plan_only' ? 'Plan only' : 'Approval before implementation'} · {preferences.instruction_modules.length} instruction modules</span></summary>
         <div className="agent-settings-body">
+          {props.extensions}
           <fieldset className="recipe-fieldset">
             <legend>What may this agent do?</legend>
             <div className="agent-mode-options">

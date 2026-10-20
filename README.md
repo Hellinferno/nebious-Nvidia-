@@ -5,6 +5,8 @@ synthetic Python invoice service against human-approved executable constraints,
 uses NVIDIA model inference on Nebius for bounded investigation and repair, and
 accepts a patch only through a deterministic protected evaluator.
 
+That protected gate applies to the curated invoice profile. Imported projects use their supplied unittest checks; passing them is scoped evidence, not independent proof of every requirement.
+
 The full specification and plan live in [BenchProof_MD_Pack](BenchProof_MD_Pack/README.md).
 Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning/PROGRESS_LOG.md).
 
@@ -13,19 +15,20 @@ Status and evidence are tracked in [PROGRESS_LOG.md](BenchProof_MD_Pack/planning
 BenchProof provides an end-to-end autonomous coding workflow:
 **Project Intake -> Reviewed Plan -> Human Approval -> Isolated Candidate Execution -> Test Observation -> Bounded Multi-Turn Revision -> Checkpoint Rollback -> Verifiable Unified Diff**.
 
-All milestones **C-01 through C-10** are completed and verified:
+Implemented milestone areas (evidence scope matters):
 - **C-01 to C-03**: Real model generation on Nebius, protected candidate execution, multi-turn revision feedback, and repeated-candidate stall detection.
 - **C-04 & C-05**: Constrained project intake (manifest fingerprinting, path/secret protection), generic `unittest` runner, and verified bug fix & feature workflows.
 - **C-06 & C-07**: Checkpoint history with CAS restore, pause/resume/cancel controls, unified diff viewer, test terminal console, and evidence ZIP export.
-- **C-08 to C-10**: Cloud failure mode acceptance suite (lease recovery, quotas, backup/restore), frozen 6-task evaluation harness with rehearsals (100% pass rate), and complete clean-clone submission checklist ([SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md)).
+- **C-08 to C-10**: Mocked cloud failure-mode regressions, a frozen six-task scripted gold-answer regression, a recorded walkthrough, and a submission checklist ([SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md)). The scripted pass rate is not measured model performance; full held-out live-model evaluation remains open.
+- **Customization**: Browser-local profiles, instruction-only SKILL.md import/export, reviewed versioned harness strategies, and an operator-allowlisted read-only MCP context bridge. See [AGENT_CUSTOMIZATION.md](AGENT_CUSTOMIZATION.md) for limits and setup.
 
 The legacy assurance audit dashboard remains available as a secondary tab in the web interface.
 
 ## Public Demo & Status
 
 Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel with persistent storage and Nebius Token Factory inference.
-Full automated test suite: **541 backend passed, 3 skipped, 0 failed; 24 frontend tests passed**.
-Frontend: TypeScript / React 19, **0 lint warnings / 0 errors**, clean production build in ~280ms.
+Latest verification: **602 backend tests passed in isolated Linux Docker; the three intentionally skipped Docker cases passed separately; 29 frontend tests passed**. Browser checks, live-call scope and remaining release limits are recorded in [VERIFICATION.md](VERIFICATION.md).
+Frontend: TypeScript / React 19. Local changes are not automatically deployed; the public URL may lag the working tree.
 audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
 source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP
@@ -151,7 +154,7 @@ the API.
 ```powershell
 Set-Location backend
 .\venv\Scripts\python.exe -m pytest                                   # 467 passed; full backend test suite
-.\venv\Scripts\python.exe scripts\run_coding_eval.py                  # runs frozen 6-task evaluation harness; reports saved to artifacts/rehearsals/
+.\venv\Scripts\python.exe scripts\run_coding_eval.py --scripted-smoke # gold-answer regression, Docker required; not a live-model benchmark
 .\venv\Scripts\python.exe scripts\run_coding_loop.py                  # runs end-to-end coding loop verification with isolated runner
 .\venv\Scripts\python.exe scripts\backup_restore.py backup --db-path benchproof.db --backup-dir ./backups  # WAL-consistent SQLite backup
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2

@@ -1,3 +1,6 @@
+import { validateSkill } from './agentSkills.ts'
+import type { AgentSkill } from './agentSkills.ts'
+
 export type AgentWorkflow = 'custom' | 'bugfix' | 'feature' | 'refactor'
 export type AgentMode = 'implement' | 'plan_only'
 export type AgentInstructionModuleId = 'compatibility' | 'stdlib' | 'typing' | 'error_handling' | 'concise_changes'
@@ -15,6 +18,8 @@ export type AgentPreferences = {
   mode: AgentMode
   limits: TaskLimits
   instruction_modules: AgentInstructionModuleId[]
+  harness?: 'bounded-v1' | 'single-pass-v1'
+  skills?: AgentSkill[]
 }
 
 export type AgentProfileConfiguration = {
@@ -29,6 +34,8 @@ export type CompiledAgentPreferences = {
   instructions: string
   mode?: 'plan_only'
   limits?: TaskLimits
+  harness?: 'single-pass-v1'
+  skills?: AgentSkill[]
 }
 
 export const MAX_AGENT_PROFILES = 10
@@ -96,7 +103,7 @@ const LIMIT_BOUNDS: Record<keyof TaskLimits, readonly [number, number]> = {
   active_seconds: [30, 300],
 }
 
-function record(value: unknown, label: string, keys: string[]): Record<string, unknown> {
+function record(value: unknown, label: string, keys: string[], optional: string[] = []): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`)
   }
@@ -105,7 +112,7 @@ function record(value: unknown, label: string, keys: string[]): Record<string, u
     throw new Error(`${label} must be a plain configuration object.`)
   }
   const result = value as Record<string, unknown>
-  if (Object.keys(result).some((key) => !keys.includes(key)) || keys.some((key) => !Object.hasOwn(result, key))) {
+  if (Object.keys(result).some((key) => !keys.includes(key) && !optional.includes(key)) || keys.some((key) => !Object.hasOwn(result, key))) {
     throw new Error(`${label} contains missing or unsupported fields.`)
   }
   return result
@@ -119,7 +126,7 @@ function profileName(value: unknown): string {
 }
 
 export function validateAgentPreferences(value: unknown): AgentPreferences {
-  const preferences = record(value, 'Agent preferences', ['workflow', 'instructions', 'mode', 'limits', 'instruction_modules'])
+  const preferences = record(value, 'Agent preferences', ['workflow', 'instructions', 'mode', 'limits', 'instruction_modules'], ['harness', 'skills'])
   if (!['custom', 'bugfix', 'feature', 'refactor'].includes(preferences.workflow as string)) {
     throw new Error('Choose a supported workflow.')
   }
@@ -146,12 +153,21 @@ export function validateAgentPreferences(value: unknown): AgentPreferences {
   if (modules.some((moduleId) => typeof moduleId !== 'string' || !AGENT_INSTRUCTION_MODULES.some((module) => module.id === moduleId))) {
     throw new Error('Unknown instruction module. Only built-in prompt guidance is supported.')
   }
+  if (preferences.harness !== undefined && !['bounded-v1', 'single-pass-v1'].includes(preferences.harness as string)) throw new Error('Choose a reviewed built-in harness.')
+  let skills: AgentSkill[] = []
+  if (preferences.skills !== undefined) {
+    if (!Array.isArray(preferences.skills) || preferences.skills.length > 3) throw new Error('Select at most three instruction-only skills.')
+    skills = preferences.skills.map(validateSkill)
+    if (new Set(skills.map((skill) => skill.name)).size !== skills.length) throw new Error('Selected skill names must be unique.')
+  }
   return {
     workflow: preferences.workflow as AgentWorkflow,
     instructions: preferences.instructions,
     mode: preferences.mode,
     limits,
     instruction_modules: [...modules] as AgentInstructionModuleId[],
+    ...(preferences.harness === 'single-pass-v1' ? { harness: 'single-pass-v1' as const } : {}),
+    ...(skills.length ? { skills } : {}),
   }
 }
 
@@ -166,6 +182,8 @@ export function compileAgentPreferences(value: unknown): CompiledAgentPreference
     throw new Error('Custom instructions and selected modules together exceed 2,000 characters. Shorten the instructions or deselect a module.')
   }
   const result: CompiledAgentPreferences = { workflow: preferences.workflow, instructions }
+  if (preferences.harness === 'single-pass-v1') result.harness = 'single-pass-v1'
+  if (preferences.skills?.length) result.skills = preferences.skills
   if (preferences.mode === 'plan_only') result.mode = 'plan_only'
   if ((Object.keys(DEFAULT_TASK_LIMITS) as Array<keyof TaskLimits>).some((key) => preferences.limits[key] !== DEFAULT_TASK_LIMITS[key])) {
     result.limits = { ...preferences.limits }
@@ -199,7 +217,7 @@ export function parseProfileImport(contents: string): AgentProfileConfiguration 
     throw new Error('Profile file must contain valid JSON.')
   }
   const envelope = record(parsed, 'Imported profile', ['schema_version', 'name', 'preferences'])
-  if (envelope.schema_version !== PROFILE_SCHEMA) {
+  if (![PROFILE_SCHEMA, 'benchproof-agent-profile-v2'].includes(envelope.schema_version as string)) {
     throw new Error('Unsupported profile version. Import a benchproof-agent-profile-v1 file.')
   }
   return validateConfiguration({ name: envelope.name, preferences: envelope.preferences })
@@ -207,7 +225,8 @@ export function parseProfileImport(contents: string): AgentProfileConfiguration 
 
 export function exportAgentProfile(value: AgentProfile): string {
   const profile = validateAgentProfile(value)
-  return JSON.stringify({ schema_version: PROFILE_SCHEMA, name: profile.name, preferences: profile.preferences }, null, 2)
+  const version = profile.preferences.skills?.length || profile.preferences.harness ? 'benchproof-agent-profile-v2' : PROFILE_SCHEMA
+  return JSON.stringify({ schema_version: version, name: profile.name, preferences: profile.preferences }, null, 2)
 }
 
 export function agentProfileStorageKey(owner: string): string {

@@ -31,11 +31,18 @@ def fixture_dir(fixture_id: str) -> Path:
 
     The id must be a plain token: no separators, no `..`, and no drive or
     scheme characters (`C:x` would otherwise escape the root on Windows).
+    Existing names match case-insensitively, but ambiguous names are refused.
     """
     if not fixture_id or ".." in fixture_id or not _FIXTURE_ID.fullmatch(fixture_id):
         raise ValueError("INVALID_INPUT: unsafe fixture id")
     root = fixtures_root()
-    candidate = root / fixture_id
+    matches = (
+        [path for path in root.iterdir() if path.name.casefold() == fixture_id.casefold()]
+        if root.is_dir() else []
+    )
+    if len(matches) > 1:
+        raise ValueError("INVALID_INPUT: ambiguous fixture id")
+    candidate = matches[0] if matches else root / fixture_id
     if candidate.resolve().parent != root.resolve():
         raise ValueError("INVALID_INPUT: unsafe fixture id")
     return candidate

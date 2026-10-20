@@ -85,8 +85,41 @@ Feature and refactor recipes may proceed when baseline checks already pass; a no
 
 This is architectural inspiration, not copied upstream implementation or an integration claim. DeepSeek's [safety guidance](https://github.com/deepseek-ai/deepseek-harness/blob/master/SAFETY.md) also makes clear that its experimental runtime is not a substitute for an execution security boundary.
 
-## Still separate release work
+## Instruction-only skills
 
-This increment does not claim a deployed release, an open plugin marketplace, arbitrary shell access, new model support, a live-model benchmark, or a competition win. The previously identified worker routing, generic runner cancellation/verification, cloud acceptance, and production deployment gaps still need their own fixes and evidence before opening untrusted project execution to users. All validation for these customization controls uses synthetic providers and local mocked browser APIs, not paid inference or candidate execution.
+The **Skills manager** creates, edits, imports and exports a restricted instruction-only `SKILL.md` format: required scalar `name` and `description` frontmatter followed by Markdown instructions. Optional scalar `license` and `compatibility` metadata is accepted but not executed or retained. Nested YAML, executable permissions, scripts, linked references, assets and archives are not supported. This is not complete Agent Skills runtime compatibility.
+
+Save up to ten uniquely named skills in this browser and select up to three for a new task. Each skill has at most 2,000 instruction characters. Skill text is kept as an immutable snapshot, not silently updated when its library entry changes. Deselect/reselect to use edited text. New portable profiles use version 2 when they contain skills or a nondefault harness; existing version-1 profiles remain compatible. The shared model-context byte limit still applies before inference; combining many large inputs can be rejected.
+
+## Reviewed harness strategies
+
+- `bounded-v1`: the existing bounded loop with up to two candidate attempts.
+- `single-pass-v1`: one candidate; a failed candidate stops without an automatic revision. Both the task allowance and engine enforce this restriction.
+
+These are real orchestration policies, bound to the task's brief and plan approval. Neither grants permissions, resets quotas or loads arbitrary Python/JavaScript plugins. Replacing the underlying runtime or adding another strategy requires reviewed server code and tests, not a profile import.
+
+## Read-only MCP reference bridge
+
+The **MCP reference context** panel explicitly loads the operator-approved catalog. Pick a connection and tool, enter JSON arguments and consent to sending those exact arguments. No project source is attached automatically. Review up to two returned text snapshots before task creation. Snapshots are hashed, included in planning/editing and task exports, and excluded from portable profiles. Treat all reference text as untrusted input, not acceptance evidence; never include secrets.
+
+This is a limited stateless HTTPS context bridge, **not** a general MCP agent client. It supports protocol `2026-07-28` JSON responses, `tools/list` and allowlisted `tools/call`. It does not support older initialization/session flows, SSE, stdio servers, OAuth setup, arbitrary user URLs, sampling or automatic model-selected tool calls. Only operator-approved tools also advertising `readOnlyHint: true` are callable. Tool annotations are claims, not proof: operators must trust the endpoint's actual behavior.
+
+Operator configuration (server-side only):
+
+```text
+BENCHPROOF_MCP_CONNECTIONS=[{"id":"docs","name":"Docs","url":"https://your-approved-server.example/mcp","tools":["search"],"token_env":"BENCHPROOF_MCP_TOKEN_DOCS"}]
+BENCHPROOF_MCP_QUERIES_PER_DAY=5
+BENCHPROOF_MCP_TOKEN_DOCS=<optional dedicated server credential>
+```
+
+Use a real trusted endpoint; the example hostname is a placeholder. The default catalog is empty and calls are disabled. Configure the trusted backend environment, not browser/Vite variables. A separate MCP credential cannot select the Nebius key. Endpoints must use HTTPS/443 with no embedded credentials or query string; every resolved address must be public, and connections pin the checked address while verifying TLS against the original hostname. No redirects or automatic retries are followed. Socket waits, response size (32 KiB), argument size (2 KiB) and returned context (2,000 characters) are bounded. System DNS resolution has no separate application deadline.
+
+One query reserves a shared daily allowance before up to two RPC requests; failures still count. Supported argument schemas are a deliberately restricted subset (primitive types, objects, arrays, enum and basic bounds); unsupported validation keywords fail closed. No schema URLs are fetched. Arbitrary external server compatibility and production credential setup are not implied by passing mocked tests.
+
+## Runner and release scope
+
+Imported projects now dispatch by their approved check profile, not filenames. Their launcher uses the shared Docker controls and cancellation identifier. Skipped, missing, duplicated or malformed check results cannot produce a passing project verdict. Ordinary project tests remain user-supplied checks, not the independent protected invoice gate. The scripted evaluation CLI requires explicit acknowledgement and Docker; it never substitutes a host subprocess for isolation or labels synthetic usage as measured model performance.
+
+See [VERIFICATION.md](VERIFICATION.md) for current test results, live-call evidence and remaining release limitations. An open plugin marketplace, arbitrary shell access, complete MCP interoperability, a held-out model benchmark and a competition win are not claimed. Public deployment is a separate operation from local verification and Git push.
 
 Further competitive work should build on a reliable vertical slice: richer source/context selection, reviewed regression-test proposals, a concise resumable activity stream, and a genuinely measured end-to-end demo. Do not add those by weakening the runner or presenting scripted evaluation as model performance.

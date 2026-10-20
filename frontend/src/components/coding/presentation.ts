@@ -108,6 +108,7 @@ export function formatTimestamp(value: string | number | null | undefined): stri
 export function taskResultMessage(result: { code?: string; message?: string; summary?: string; stop_reason?: string } | null): string | null {
   if (!result) return null
   const messages: Record<string, string> = {
+    HARNESS_STOPPED: 'The selected single-pass harness stopped after its first failed candidate. Review the preserved changes and checks; no automatic revision was made.',
     BASELINE_ALREADY_PASSES: 'The starting code already passes its checks. For changes that begin with passing tests, choose Add a feature or Refactor in a new task.',
     CHECKS_PASSED: 'The declared checks passed on the final candidate. Review the patch and any requirements those checks do not cover.',
     CHECKS_INCONCLUSIVE: 'The runner could not establish a complete check result. Review the recorded output; this is not a passing result.',

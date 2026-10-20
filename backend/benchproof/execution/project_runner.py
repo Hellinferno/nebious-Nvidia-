@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
+import re
 import tempfile
 import threading
 import uuid
@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 from benchproof.execution.base import (
-    LAUNCHER_DIR,
     ExecutionResult,
     RunnerUnavailable,
     Snapshot,
@@ -44,38 +43,48 @@ def prepare_project_snapshot(
     base_dir: Path | None = None,
 ) -> ProjectSnapshot:
     """Create a temporary directory structure with app/ and tests/ from project files or directory."""
+    path_pattern = re.compile(r"^(app|tests)/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
+    if not isinstance(target, dict):
+        source_root = target.parent if target.name == "app" else target
+        source = {}
+        if source_root.is_symlink():
+            raise ValueError("Linked project roots are unsupported")
+        for tree in (source_root / "app", source_root / "tests"):
+            if tree.is_symlink():
+                raise ValueError("Linked project directories are unsupported")
+            if tree.exists():
+                for path in tree.rglob("*"):
+                    if path.is_symlink():
+                        raise ValueError("Linked project files are unsupported")
+                    if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
+                        if path.stat().st_size > 24_576 or len(source) >= 20:
+                            raise ValueError("Project snapshot exceeds its file allowance")
+                        source[path.relative_to(source_root).as_posix()] = path.read_text(encoding="utf-8")
+        target = source
+    if len(target) > 20 or any(not isinstance(path, str) or not path_pattern.fullmatch(path) or not isinstance(content, str) or "\x00" in content or len(content.encode("utf-8")) > 24_576 for path, content in target.items()):
+        raise ValueError("Unsupported project snapshot paths or content")
+    if sum(len(content.encode("utf-8")) for content in target.values()) > 131_072:
+        raise ValueError("Project snapshot exceeds its total byte allowance")
+    if len({path.casefold() for path in target}) != len(target):
+        raise ValueError("Case-colliding snapshot paths are unsupported")
     run_id = f"run-{uuid.uuid4().hex[:12]}"
     root = Path(tempfile.mkdtemp(prefix=f"bp-proj-{run_id}-", dir=str(base_dir) if base_dir else None))
     candidate = root / "candidate"
     app_dir = candidate / "app"
     tests_dir = candidate / "tests"
     out_dir = root / "out"
-
     out_dir.mkdir(parents=True, exist_ok=True)
     out_dir.chmod(0o777)
 
     manifest: dict[str, str] = {}
-    if isinstance(target, dict):
-        app_dir.mkdir(parents=True, exist_ok=True)
-        tests_dir.mkdir(parents=True, exist_ok=True)
-        for rel_path, content in target.items():
-            dest = candidate / rel_path
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            canonical = content.replace("\r\n", "\n")
-            dest.write_text(canonical, encoding="utf-8")
-            manifest[rel_path] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-    else:
-        src_root = target.parent if (target.name == "app" and (target.parent / "tests").exists()) else target
-        if (src_root / "app").exists():
-            shutil.copytree(src_root / "app", app_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        if (src_root / "tests").exists():
-            shutil.copytree(src_root / "tests", tests_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-
-        for file_path in candidate.rglob("*"):
-            if file_path.is_file() and not file_path.name.endswith(".pyc"):
-                rel = file_path.relative_to(candidate).as_posix()
-                text = file_path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
-                manifest[rel] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    app_dir.mkdir(parents=True, exist_ok=True)
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    for rel_path, content in target.items():
+        dest = candidate / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        canonical = content.replace("\r\n", "\n")
+        dest.write_text(canonical, encoding="utf-8", newline="\n")
+        manifest[rel_path] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     manifest_json = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
     source_hash = hashlib.sha256(manifest_json.encode("utf-8")).hexdigest()
@@ -125,6 +134,8 @@ class ProjectExecutor:
                     operation_id=operation_id,
                     should_cancel=lambda: cancelled.is_set() or bool(should_cancel and should_cancel()),
                 )
+                if not result.isolation.get("enforced") and not result.error:
+                    raise RunnerUnavailable("Project execution isolation was not enforced")
 
             return self._evaluate_project_result(snapshot, result, runner_profile)
         finally:
@@ -140,81 +151,11 @@ class ProjectExecutor:
         operation_id: str,
         should_cancel: Callable[[], bool],
     ) -> ExecutionResult:
-        # Check docker availability
-        ok, detail = self.runner.available()
-        if not ok:
-            raise RunnerUnavailable(f"Docker runner unavailable: {detail}")
-
-        # Execute container running run_project_tests.py
-        # Docker command runs: python /launcher/run_project_tests.py --candidate /candidate --out /out
-        import subprocess
-        import time
-
-        start_time = time.monotonic()
-        cid = f"bp-proj-{operation_id[:24]}"
-        cmd = [
-            "docker", "run", "--rm",
-            "--name", cid,
-            "--network", "none",
-            "--read-only",
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
-            "--memory", "256m",
-            "--memory-swap", "256m",
-            "--cpus", "1.0",
-            "--pids-limit", "64",
-            "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges",
-            "-v", f"{snapshot.candidate_dir}:/candidate:ro",
-            "-v", f"{LAUNCHER_DIR}:/launcher:ro",
-            "-v", f"{snapshot.out_dir}:/out:rw",
-            "-w", "/out",
-            "benchproof-candidate:dev",
-            "python", f"/launcher/{PROJECT_LAUNCHER_FILE}",
-            "--candidate", "/candidate",
-            "--out", "/out",
-        ]
-
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-        timed_out = False
-        try:
-            stdout, stderr = proc.communicate(timeout=timeout_s)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            subprocess.run(["docker", "kill", cid], capture_output=True, check=False)
-            stdout, stderr = proc.communicate()
-
-        duration_ms = int((time.monotonic() - start_time) * 1000)
-
-        # Parse observation from stdout
-        observations = None
-        for line in reversed(stdout.splitlines()):
-            line = line.strip()
-            if not line.startswith("{"):
-                continue
-            try:
-                parsed = json.loads(line)
-                if isinstance(parsed, dict) and parsed.get("schema") == OBSERVATION_SCHEMA:
-                    observations = parsed
-                    break
-            except ValueError:
-                continue
-
-        return ExecutionResult(
-            runner="docker",
-            run_id=operation_id,
-            exit_code=proc.returncode,
-            timed_out=timed_out,
-            duration_ms=duration_ms,
-            stdout=stdout,
-            stderr=stderr,
-            observations=observations,
-            isolation={"enforced": True, "network_none": True},
+        return self.runner.run_observation(
+            snapshot, timeout_s=timeout_s, operation_id=operation_id,
+            should_cancel=should_cancel, launcher_file=PROJECT_LAUNCHER_FILE,
+            launcher_args=["--candidate", "/candidate", "--out", "/out",
+                           "--child-timeout", str(max(1, timeout_s - 2))],
         )
 
     def _evaluate_project_result(
@@ -226,6 +167,9 @@ class ProjectExecutor:
         """Convert raw test observations into a structured check report."""
         obs = result.observations or {}
         test_results = obs.get("test_results", obs)
+        invalid_record = not isinstance(test_results, dict)
+        if invalid_record:
+            test_results = {}
 
         test_count = test_results.get("test_count", 0)
         passed_tests = test_results.get("passed", [])
@@ -233,6 +177,14 @@ class ProjectExecutor:
         errors = test_results.get("errors", [])
         skipped = test_results.get("skipped", [])
         obs_error = test_results.get("error")
+        invalid_record = invalid_record or type(test_count) is not int or not 0 <= test_count <= 200
+        invalid_record = invalid_record or not isinstance(passed_tests, list) or any(not isinstance(item, str) for item in passed_tests)
+        for entries in (failures, errors, skipped):
+            if not isinstance(entries, list) or len(entries) > 200 or any(not isinstance(item, dict) or not isinstance(item.get("test_id"), str) for item in entries):
+                invalid_record = True
+        if invalid_record:
+            test_count, passed_tests, failures, errors, skipped = 0, [], [], [], []
+            obs_error = "INVALID_CHECK_RECORD"
 
         checks: list[dict[str, Any]] = []
 
@@ -279,13 +231,17 @@ class ProjectExecutor:
                     "check_id": item["test_id"],
                     "status": "SKIPPED",
                     "detail": item.get("reason", "Skipped"),
-                    "passed": True,
+                    "passed": False,
                 })
 
-            all_passed = (len(failures) == 0 and len(errors) == 0 and test_count > 0)
+            all_passed = (
+                not failures and not errors and not skipped and type(test_count) is int
+                and test_count > 0 and len(passed_tests) == test_count
+                and len(set(passed_tests)) == test_count
+            )
             verdict = "VERIFIED" if all_passed else "REJECTED"
 
-        if result.error or result.timed_out or result.exit_code != 0:
+        if invalid_record or result.error or result.timed_out or result.exit_code != 0:
             verdict = "INCONCLUSIVE"
 
         execution_record = result.to_record()
@@ -297,6 +253,7 @@ class ProjectExecutor:
 
         return {
             "profile": f"project-{runner_profile}-v1",
+            "assurance": "user-supplied-project-checks-only",
             "source_hash": snapshot.source_hash,
             "contract_hash": PROJECT_CONTRACT_HASH,
             "evaluator_hash": hashlib.sha256(

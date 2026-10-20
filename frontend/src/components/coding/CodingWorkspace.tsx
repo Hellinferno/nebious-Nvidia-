@@ -5,6 +5,7 @@ import { SAMPLE_PROJECTS } from './sampleProjects'
 import type { SampleProjectDef } from './sampleProjects'
 import { TaskComposer } from './TaskComposer'
 import { AgentSettings } from './AgentSettings'
+import { AgentExtensions } from './AgentExtensions'
 import {
   compileAgentPreferences, DEFAULT_AGENT_PREFERENCES, deleteAgentProfile, duplicateAgentProfile,
   exportAgentProfile, MAX_PROFILE_IMPORT_LENGTH, parseProfileImport, readAgentProfiles,
@@ -73,6 +74,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
   const [selectedProfileId, setSelectedProfileId] = useState(initialProfile?.id || '')
   const [defaultProfileId, setDefaultProfileId] = useState<string | null>(initialProfile?.id || null)
   const [profileName, setProfileName] = useState(initialProfile?.name || '')
+  const [externalContext, setExternalContext] = useState<NonNullable<CodingPreferences['context']>>([])
   const [savedInstructions, setSavedInstructions] = useState<string | null>(() => readSavedInstructions(owner))
 
   // Plan Editing State
@@ -299,6 +301,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
 
   // Sample Selection Handlers
   const handleSelectSample = (sample: SampleProjectDef) => {
+    setExternalContext([])
     setActiveTaskId(null)
     setActiveProjectId(null)
     setDraftProject(null)
@@ -385,7 +388,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
     }
     setLoadingAction('create-task')
     try {
-      const preferences = compileAgentPreferences(agentPreferences)
+      const preferences: CodingPreferences = { ...compileAgentPreferences(agentPreferences), ...(externalContext.length ? { context: externalContext } : {}) }
       let targetProjectId: string | undefined
       let targetFixtureId: string | undefined
       let currentSourceHash = ''
@@ -478,6 +481,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
         files: filesDict,
       })
       notify('success', `Custom project "${res.data.name}" created!`)
+      setExternalContext([])
       setActiveProjectId(res.data.project_id)
       setActiveTaskId(null)
       setDraftProject(res.data)
@@ -866,6 +870,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
         <section className="task-context-summary" aria-label="Task instructions">
           <div className="task-context-heading"><strong>{recipeLabel(currentTask.brief.preferences?.workflow)}</strong><span>Instructions pinned to this task</span></div>
           {planOnlyTask && <p className="plan-only-notice">Plan only: edits and test executions are disabled for this task, including direct API requests.</p>}
+          <p className="field-help">Harness: {currentTask.brief.preferences?.harness || 'bounded-v1'} · Skills: {currentTask.brief.preferences?.skills?.map((skill) => skill.name).join(', ') || 'none'} · MCP snapshots: {currentTask.brief.preferences?.context?.length || 0}</p>
           <p className="field-help">Pinned budget: {currentTask.limits.model_calls} model calls · {currentTask.limits.patch_attempts} edits · {currentTask.limits.executions} test executions · {currentTask.limits.active_seconds} active seconds.</p>
           <p>{currentTask.brief.task}</p>
           {currentTask.brief.preferences?.instructions && (
@@ -1054,6 +1059,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                       if (!pid) return
                       const found = projectsList.find((p) => p.project_id === pid)
                       if (found) {
+                        setExternalContext([])
                         setActiveTaskId(null)
                         setDraftProject(null)
                         setActiveProjectId(pid)
@@ -1248,6 +1254,7 @@ export const CodingWorkspace: React.FC<CodingWorkspaceProps> = ({ api, ready, ow
                   onClearDefault={() => profileAction(() => setDefaultAgentProfile(owner, null))}
                   onExport={handleExportProfile}
                   onImport={(file) => void handleImportProfile(file)}
+                  extensions={<AgentExtensions api={api} owner={owner} preferences={agentPreferences} onChange={setAgentPreferences} context={externalContext} onContext={setExternalContext} />}
                 />
               )}
             />

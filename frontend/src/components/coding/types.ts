@@ -14,6 +14,9 @@ export type CodingPreferences = {
   instructions: string
   mode?: 'implement' | 'plan_only'
   limits?: Partial<CodingTaskLimits>
+  harness?: 'bounded-v1' | 'single-pass-v1'
+  skills?: Array<{ name: string; description: string; instructions: string }>
+  context?: Array<{ connection: string; tool: string; content: string; sha256: string }>
 }
 
 export type CodingTaskLimits = {

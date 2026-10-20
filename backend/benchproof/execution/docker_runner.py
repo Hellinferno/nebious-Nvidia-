@@ -63,7 +63,7 @@ def _captured_text(data: bytearray, seen: int) -> str:
 OBSERVATION_SCHEMA = "benchproof/observations-v1"
 
 
-def _last_record(stdout: str) -> dict[str, Any] | None:
+def _last_record(stdout: str, schema: str = OBSERVATION_SCHEMA) -> dict[str, Any] | None:
     """The launcher parent prints the observation record as its final stdout line."""
     for line in reversed(stdout.splitlines()):
         line = line.strip()
@@ -73,7 +73,7 @@ def _last_record(stdout: str) -> dict[str, Any] | None:
             parsed = json.loads(line)
         except ValueError:
             continue
-        if isinstance(parsed, dict) and parsed.get("schema") == OBSERVATION_SCHEMA:
+        if isinstance(parsed, dict) and parsed.get("schema") == schema:
             return parsed
     return None
 
@@ -146,15 +146,20 @@ class DockerRunner:
         launcher_args: list[str] | None = None,
         operation_id: str | None = None,
         should_cancel: Callable[[], bool] | None = None,
+        launcher_file: str = LAUNCHER_FILE,
         **_: Any,
     ) -> ExecutionResult:
+        schemas = {LAUNCHER_FILE: OBSERVATION_SCHEMA, "run_project_tests.py": "benchproof/project-observations-v1"}
+        if launcher_file not in schemas:
+            raise ValueError("Unsupported protected launcher")
+        observation_schema = schemas[launcher_file]
         if operation_id is not None and not CODING_OPERATION.fullmatch(operation_id):
             raise ValueError("Invalid coding container operation ID")
         ok, why = self.available()
         if not ok:
             raise RunnerUnavailable(why)
-        if not (LAUNCHER_DIR / LAUNCHER_FILE).exists():
-            raise RunnerUnavailable(f"launcher missing: {LAUNCHER_DIR / LAUNCHER_FILE}")
+        if not (LAUNCHER_DIR / launcher_file).exists():
+            raise RunnerUnavailable(f"launcher missing: {LAUNCHER_DIR / launcher_file}")
 
         name = operation_id or f"bp-{snapshot.run_id}-{uuid.uuid4().hex[:6]}"
         isolation = {
@@ -186,10 +191,11 @@ class DockerRunner:
             self.image,
             # env -i: drop every inherited variable (the python base image exports GPG_KEY)
             "env", "-i", "PATH=/usr/local/bin:/usr/bin:/bin", "PYTHONDONTWRITEBYTECODE=1",
-            "python", f"/launcher/{LAUNCHER_FILE}", *(launcher_args or []),
+            "python", f"/launcher/{launcher_file}", *(launcher_args or []),
         ]
         started = time.perf_counter()
         timed_out = False
+        cancelled = False
         exit_code: int | None = None
         stdout = stderr = ""
         if should_cancel and should_cancel():
@@ -221,7 +227,25 @@ class DockerRunner:
             for reader in readers:
                 reader.start()
             try:
-                exit_code = proc.wait(timeout=timeout_s)
+                deadline = time.perf_counter() + timeout_s
+                while True:
+                    if should_cancel and should_cancel():
+                        cancelled = True
+                        if operation_id:
+                            self.cancel_operation(name)
+                        else:
+                            self.cancel(snapshot.run_id)
+                        proc.kill()
+                        proc.wait(timeout=5)
+                        break
+                    remaining = deadline - time.perf_counter()
+                    if remaining <= 0:
+                        raise subprocess.TimeoutExpired(cmd, timeout_s)
+                    try:
+                        exit_code = proc.wait(timeout=min(0.25, remaining))
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
             except subprocess.TimeoutExpired:
                 timed_out = True
                 self.cancel(snapshot.run_id)
@@ -248,10 +272,10 @@ class DockerRunner:
             else:
                 try:
                     parsed = json.loads(obs_file.read_text(encoding="utf-8"))
-                    if not isinstance(parsed, dict) or parsed.get("schema") != OBSERVATION_SCHEMA:
+                    if not isinstance(parsed, dict) or parsed.get("schema") != observation_schema:
                         error = "observations.json has an unapproved schema"
                     else:
-                        observations, error = reconcile_records(parsed, _last_record(stdout))
+                        observations, error = reconcile_records(parsed, _last_record(stdout, observation_schema))
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
                     error = f"observations.json malformed: {type(e).__name__}"
         elif not timed_out:
@@ -259,6 +283,10 @@ class DockerRunner:
         if timed_out:
             observations = None
             error = f"timed out after {timeout_s}s; container killed"
+        if cancelled:
+            observations = None
+            error = "Execution cancelled; no check result accepted"
+            isolation["cancelled"] = True
 
         artifacts = self.collect_artifacts(snapshot)
         artifact_bytes = sum(path.stat().st_size for path in artifacts)

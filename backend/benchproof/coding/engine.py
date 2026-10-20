@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import shutil
 import tempfile
 import threading
 from collections.abc import Callable
@@ -14,6 +13,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from benchproof.coding.contracts import CodingStoreError
+from benchproof.coding.extensions import harness_policy
 from benchproof.coding.generation import (
     MAX_CONTEXT_BYTES,
     CodingBrief,
@@ -150,9 +150,11 @@ class DispatchingExecutor:
         operation_id: str,
         timeout_s: int = 30,
         should_cancel: Callable[[], bool] | None = None,
+        check_profile: str | None = None,
     ) -> dict[str, Any]:
-        # If worker.py exists in app_dir, it is a curated invoice fixture. Otherwise, it is a general project.
-        if (app_dir / "worker.py").is_file():
+        if check_profile not in {"invoice-observation-v1", "project-unittest-v1"}:
+            raise GenerationError("STALE_CHECKS", "An explicit approved check profile is required")
+        if check_profile == "invoice-observation-v1":
             return self.invoice.run(
                 app_dir,
                 operation_id=operation_id,
@@ -169,7 +171,7 @@ class DispatchingExecutor:
     def cancel(self, operation_id: str) -> bool:
         c1 = self.invoice.cancel(operation_id)
         c2 = self.project.cancel(operation_id)
-        return c1 or c2
+        return c1 and c2
 
 
 @dataclass(frozen=True)
@@ -219,7 +221,9 @@ def _feedback(report: dict[str, Any]) -> dict[str, Any]:
         "source_hash": report.get("source_hash"),
         "verdict": report.get("verdict"),
         "checks": [
-            {key: check.get(key) for key in ("check_id", "outcome", "reason")}
+            {"check_id": check.get("check_id"),
+             "outcome": check.get("outcome") or check.get("status"),
+             "reason": check.get("reason") or check.get("detail")}
             for check in report.get("checks", [])
         ],
         "execution": {key: execution.get(key) for key in ("exit_code", "timed_out", "error")},
@@ -486,10 +490,12 @@ class CodingEngine:
                 operation_id=operation_id,
                 timeout_s=timeout_s,
                 should_cancel=should_cancel,
+                **({"check_profile": task["plan"]["check_profile"]}
+                   if isinstance(self.executor, DispatchingExecutor) else {}),
             )
             is_project = task["fixture_id"].startswith("proj-")
             if is_project:
-                if report.get("contract_hash") != task["contract_hash"]:
+                if report.get("contract_hash") != task["contract_hash"] or report.get("source_hash") != source_hash_for_dir(app_dir):
                     raise GenerationError(
                         "STALE_CHECKS", "The check report does not match the candidate and contract"
                     )
@@ -547,6 +553,10 @@ class CodingEngine:
                     checkpoint,
                     "CANDIDATE",
                     "BLOCKED",
+                )
+            if brief.preferences and not harness_policy(brief.preferences.harness).allows_revision(task["counters"]["patch_attempts"]):
+                return ActionOutcome(
+                    {"code": "HARNESS_STOPPED", "report": report}, checkpoint, "CANDIDATE", "BLOCKED",
                 )
             if task["counters"]["patch_attempts"] >= task.get("limits", {}).get("patch_attempts", 2):
                 return ActionOutcome(

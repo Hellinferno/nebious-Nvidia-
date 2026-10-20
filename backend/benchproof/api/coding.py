@@ -10,7 +10,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from benchproof.coding.extensions import HARNESSES
 from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences, SourceHash
+from benchproof.coding.mcp import MCPError, MCPQuery, connections, query_context
 from benchproof.coding.runtime import ADMISSION_MESSAGES, CodingRuntimeConfig
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.constraints import contract_hash
@@ -131,6 +133,22 @@ def coding_router(
             "model_id": model_id(), "max_output_tokens": runtime_config().max_output_tokens,
             "engine_version": "coding-engine-v1",
         }
+
+    @router.get("/extensions/catalog")
+    def extension_catalog(owner: str = Depends(owner_dependency)) -> dict[str, Any]:
+        try:
+            configured = [{"id": item.id, "name": item.name, "tools": item.tools} for item in connections()]
+        except MCPError as exc:
+            raise HTTPException(503, detail={"code": "MCP_UNAVAILABLE", "message": str(exc)}) from exc
+        return {"harnesses": [{"id": policy.harness_id, "name": policy.title, "description": policy.description} for policy in HARNESSES.values()],
+                "mcp_connections": configured, "skills": {"instruction_only": True, "max_selected": 3}}
+
+    @router.post("/extensions/mcp-context")
+    def mcp_context(body: MCPQuery, owner: str = Depends(owner_dependency)) -> dict[str, Any]:
+        try:
+            return query_context(database_path(), owner, body).model_dump()
+        except MCPError as exc:
+            raise HTTPException(409, detail={"code": "MCP_CONTEXT_REJECTED", "message": str(exc)}) from exc
 
     @router.post("", status_code=201)
     def create_task(

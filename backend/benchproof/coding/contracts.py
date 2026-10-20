@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from benchproof.coding.extensions import harness_policy
 from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences
 
 TaskState = Literal[
@@ -39,7 +40,10 @@ class TaskLimits:
     @classmethod
     def for_brief(cls, brief: CodingBrief) -> TaskLimits:
         requested = brief.preferences.limits if brief.preferences is not None else None
-        return cls(**requested.model_dump()) if requested is not None else cls()
+        limits = requested.model_dump() if requested is not None else vars(cls()).copy()
+        if brief.preferences is not None:
+            limits["patch_attempts"] = min(limits["patch_attempts"], harness_policy(brief.preferences.harness).max_patch_attempts)
+        return cls(**limits)
 
 
 @dataclass(frozen=True)

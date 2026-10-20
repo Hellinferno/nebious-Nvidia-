@@ -8,20 +8,18 @@ and correctness without holdout tuning or host pollution.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-import hashlib
-import json
 import time
-from typing import Any, Callable, Literal
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
-from benchproof.coding.contracts import CodingBrief, CodingPlan, OperatorLimits
+from benchproof.coding.contracts import CodingBrief, CodingPlan
 from benchproof.coding.engine import CodingEngine
 from benchproof.coding.store import CodingStore
 from benchproof.coding.worker import CodingWorker
 from benchproof.execution.project_runner import PROJECT_CONTRACT_HASH, ProjectExecutor
 from benchproof.projects.intake import validate_project_intake
 from benchproof.projects.store import ProjectStore
-
 
 # ── 1. The Six Frozen Evaluation Tasks ───────────────────────────────────────
 
@@ -671,7 +669,7 @@ def evaluate_task(
     checks = last_cand.get("checks", [])
     checks_total = last_cand.get("checks_total") or len(checks)
     checks_passed = last_cand.get("checks_passed") or sum(1 for c in checks if c.get("passed"))
-    tokens_used = sum((a.get("usage") or {}).get("total_tokens", 0) for a in final_task.get("actions", []))
+    tokens_used = sum(((a.get("usage") or {}).get("usage") or a.get("usage") or {}).get("total_tokens", 0) for a in final_task.get("actions", []))
 
     return CodingEvalTaskResult(
         task_id=task_def.task_id,

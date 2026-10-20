@@ -52,7 +52,7 @@ cd ..
 
 ### Step 4: Run Automated Verification Tests
 ```powershell
-# Run complete test suite (541 tests)
+# Run the complete backend test suite (Docker integration requires a working daemon)
 cd backend
 python -m pytest
 
@@ -74,7 +74,7 @@ cd ..
 ```powershell
 # Executes the 6 frozen benchmark tasks and produces JSON/Markdown reports
 cd backend
-python scripts/run_coding_eval.py
+python scripts/run_coding_eval.py --scripted-smoke
 cd ..
 # Inspect generated report in artifacts/rehearsals/
 ```
@@ -116,7 +116,7 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
 | **C-06** | Checkpoint log, CAS restore, pause/resume/cancel, sanitized bundle | 21–22 Oct | **DONE** | `backend/tests/test_coding_checkpoints.py` |
 | **C-07** | Primary Task Workspace UI, diff viewer, test terminal, export | 22–23 Oct | **DONE** | `frontend/src/components/coding/CodingWorkspace.tsx` |
 | **C-08** | Cloud acceptance, lease recovery, quotas, backup/restore | 23–24 Oct | **DONE** | `backend/tests/test_cloud_acceptance.py` (7/7 pass) |
-| **C-09** | Versioned task suite, evaluation harness, genuine rehearsals | 24–26 Oct | **DONE** | `backend/scripts/run_coding_eval.py` (6/6 tasks pass) |
+| **C-09** | Versioned task suite and regression harness | 24–26 Oct | **PARTIAL** | Six scripted gold-answer tasks; held-out live-model benchmark remains open |
 | **C-10** | Clean-clone, rights/attribution, video storyboard, submission prep | 26–28 Oct | **DONE** | `SUBMISSION_CHECKLIST.md`, clean build & tests |
 
 ---
@@ -171,11 +171,11 @@ Most AI coding assistants operate unconstrained: they suggest code that looks pl
 ### Challenges We Overcame
 - Preventing candidate loops from wasting inference quota when generating duplicate edits.
 - Enforcing monotonic worker fencing tokens to recover from cloud worker crashes without double-execution.
-- Ensuring zero test leaks or secret disclosure in exported evidence bundles.
+- Keeping trusted evaluator assets out of candidates and screening exports; do not put credentials in user instructions or reference context.
 
 ### Accomplishments We're Proud Of
-- 541 automated backend tests and 24 frontend tests passing with 0 failures across core runtime, coding loop, cloud acceptance, and agent customization suites.
-- 100% pass rate across the 6 frozen rehearsal benchmark tasks without holdout tuning.
+- Current verification: 602 backend tests passed in isolated Linux Docker, three Docker integration cases passed separately, and 29 frontend tests passed. See `VERIFICATION.md` for scope and remaining release limits.
+- Six scripted gold-answer regressions passed historically. Their responses and token usage are synthetic, not a live-model benchmark or holdout success rate.
 - Fast, responsive React frontend building in under 300ms with zero lint warnings.
 - Real end-to-end NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory with isolated candidate Docker verification live on production.
 

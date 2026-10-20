@@ -7,6 +7,12 @@
 .agent-customization-details > summary { padding: 13px; color: var(--text-h); font-size: 0.9rem; font-weight: 650; cursor: pointer; }
 .agent-customization-details > summary > span { display: block; margin: 6px 0 0 15px; color: var(--text); font-size: 0.76rem; font-weight: 400; }
 .agent-settings-body { display: grid; gap: 24px; padding: 5px 14px 18px; }
+.extension-settings { padding: 0; min-width: 0; }
+.extension-settings select, .extension-settings input:not([type=checkbox]):not([type=file]) { display: block; width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
+.extension-settings label { font-size: 0.8rem; line-height: 1.6; color: var(--text-h); }
+.extension-settings textarea { display: block; width: 100%; }
+.skill-library-row { display: grid; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.external-context-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 250px; overflow: auto; font: 0.8rem/1.6 var(--mono); }
 .agent-mode-options, .instruction-module-list { display: grid; gap: 10px; }
 .agent-mode-options label, .instruction-module-list label { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; }
 .agent-mode-options label:has(input:checked), .instruction-module-list label:has(input:checked) { border-color: var(--accent-border); background: var(--accent-bg); }
