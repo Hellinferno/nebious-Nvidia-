@@ -108,8 +108,9 @@ The primary demo is [BenchProof on Vercel](https://benchproof.vercel.app), with 
 UI/API, persistent cloud storage, one action at a time and a shared daily action ceiling.
 See [Vercel deployment](VERCEL_DEPLOYMENT.md) for operations and verification.
 The [laptop/ngrok route](DEMO_HOSTING.md) remains an optional fallback only. Backup/restore,
-judging-period availability, confirmed credit reserve, broader trials, clean-clone
-acceptance and actual submission remain release work. The corrected 2:18 walkthrough
+judging-period availability, confirmed credit reserve, broader trials, owner review
+and actual submission remain release work. No-spend clean-clone API/worker/UI startup
+and desktop/mobile checks pass. The corrected 2:18 walkthrough
 labels its saved-task review and dated customization-rehearsal screenshot; exports
 are not signed. See [video provenance](recordings/README.md); owner review remains open.
 

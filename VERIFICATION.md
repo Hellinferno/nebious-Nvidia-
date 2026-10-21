@@ -22,8 +22,8 @@ Current-source verification:
   and editable project into a new cloud Python environment, then repeats the full
   suite in non-root, networkless Docker: **631 passed, three skipped** again.
   This is the same source hash and is not additive. Clean root `npm ci
-  --ignore-scripts` and CLI/toolchain checks also pass. A post-publication Git
-  clean-clone/three-process launch is still a separate acceptance gate.
+  --ignore-scripts` and CLI/toolchain checks also pass. The independent Git clone
+  and no-spend three-process/browser launch below close the setup smoke gate.
 - Frontend **29 passed**, deployment/toolchain **23 passed**; changed Python lint,
   frontend lint, TypeScript/Vite production build and CLI version smoke pass.
 - Rebuilt UI mocked-browser regressions: **15 workspace**, **17 profile**, **nine
@@ -113,7 +113,27 @@ completed without inference/network calls. The clip truthfully describes saved-t
 review, not a newly recorded inference/approval/rollback. See [recordings/README.md](recordings/README.md).
 The legacy recording script no longer hardcodes its sample owner capability.
 
-Open gates: upstream development advisories, clean-clone launch/publication,
+### Independent clean-clone setup smoke
+
+An independent local Git clone of `7b7349aeaedbc9d98891492a306b554c57a6efd7`
+installed the locked Python requirements, editable backend and both npm lockfiles.
+`pip check` reports no broken requirements. API, separately disabled worker and
+Vite development UI start together on loopback. Real desktop/mobile browser checks
+pass, including CORS, honest disabled-coding messaging and no overflow/errors.
+The clone's tracked tree remains clean. Its database has zero coding tasks/actions;
+provider is unconfigured, coding disabled and model allowance zero. This is not a
+local Docker or paid live-mode reproduction; cloud execution has separate evidence.
+
+The first browser attempt blocked localhost CORS OPTIONS preflights in its test
+allowlist. That failure is retained; allowing only the necessary local preflight
+requests makes the check pass. Task/model POSTs remain blocked. No product workaround,
+model retry or sensitive `.env` copy was used. Local test processes were stopped.
+Records: `artifacts/release-hardening-20261020/clean-clone-smoke.json`,
+`clean-clone-smoke-preflight-blocked.json`, `clone-*-install.log`, and
+`artifacts/coding/customization-20261017/clean-clone-no-spend-1792590419941/`.
+Follow-up release edits after that tested commit are documentation only.
+
+Open gates: upstream development advisories,
 owner final video viewing, broader live evaluation/user sessions,
 judging credit/access reserve, final rights review and owner submission confirmation.
 Do not infer their completion from test counts or this single rehearsal.

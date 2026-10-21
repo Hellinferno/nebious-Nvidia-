@@ -108,8 +108,11 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
 
 The copied environment defaults to no-spend mock mode. Follow **Enable live coding
 deliberately** in the root README before enabling real plans/execution. API and worker
-must share the same root environment/database. Full fresh-clone reproduction of the
-updated instructions is a release gate, not inferred from an existing environment.
+must share the same root environment/database. The no-spend setup was verified on
+21 October in an independent clone of `7b7349a`, including locked dependency
+installation, API/worker/UI startup and real desktop/mobile browser checks. No
+candidate code or inference ran on the laptop. Real isolated execution is separately
+verified in the cloud runtime, not inferred from the clone smoke. See [VERIFICATION.md](VERIFICATION.md).
 
 ---
 
@@ -126,7 +129,7 @@ updated instructions is a release gate, not inferred from an existing environmen
 | **C-07** | Primary Task Workspace UI, diff viewer, test terminal, export | 22–23 Oct | **DONE** | `frontend/src/components/coding/CodingWorkspace.tsx` |
 | **C-08** | Cloud acceptance, lease recovery, quotas, backup/restore | 23–24 Oct | **DONE** | `backend/tests/test_cloud_acceptance.py` (7/7 pass) |
 | **C-09** | Versioned task suite and regression harness | 24–26 Oct | **PARTIAL** | Six scripted gold-answer tasks; held-out live-model benchmark remains open |
-| **C-10** | Clean-clone, rights/attribution, video and owner submission | 26–28 Oct | **PARTIAL** | Corrected video/checklist exist; clean-clone verification, owner final video/rights review and submitted-status evidence remain |
+| **C-10** | Clean-clone, rights/attribution, video and owner submission | 26–28 Oct | **PARTIAL** | No-spend clean-clone startup/browser and corrected media checks pass; owner final video/rights review and submitted-status evidence remain |
 
 ---
 
