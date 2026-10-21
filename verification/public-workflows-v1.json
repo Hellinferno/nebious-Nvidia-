@@ -1,0 +1,35 @@
+{
+  "schema_version": "benchproof/public-rehearsal-cases-v1",
+  "suite_id": "public-workflows-v1",
+  "evidence_kind": "public-integration-rehearsal",
+  "held_out": false,
+  "comparative_benchmark": false,
+  "cases": [
+    {
+      "id": "bank-transfer-feature",
+      "name": "BankAccount bounded transfer feature",
+      "workflow": "feature",
+      "task": "Implement BankAccount.transfer(target: BankAccount, amount: int). Reject non-positive amounts and insufficient funds before changing either balance. On success withdraw from self and deposit into target. Preserve constructor, deposit and withdraw behavior. Modify only app/account.py; do not edit tests or add dependencies.",
+      "editable_paths": ["app/account.py"],
+      "files": {
+        "app/account.py": "class BankAccount:\n    def __init__(self, owner: str, initial_balance: int = 0) -> None:\n        if initial_balance < 0:\n            raise ValueError('Initial balance cannot be negative')\n        self.owner = owner\n        self.balance = initial_balance\n\n    def deposit(self, amount: int) -> int:\n        if amount <= 0:\n            raise ValueError('Deposit amount must be positive')\n        self.balance += amount\n        return self.balance\n\n    def withdraw(self, amount: int) -> int:\n        if amount <= 0:\n            raise ValueError('Withdrawal amount must be positive')\n        if amount > self.balance:\n            raise ValueError('Insufficient funds')\n        self.balance -= amount\n        return self.balance\n",
+        "tests/test_account.py": "import unittest\nfrom app.account import BankAccount\n\nclass TestBankAccount(unittest.TestCase):\n    def test_transfer(self):\n        sender = BankAccount('Sender', 100)\n        target = BankAccount('Target', 50)\n        sender.transfer(target, 40)\n        self.assertEqual((sender.balance, target.balance), (60, 90))\n\n    def test_insufficient_transfer_keeps_balances(self):\n        sender = BankAccount('Sender', 30)\n        target = BankAccount('Target', 50)\n        with self.assertRaises(ValueError):\n            sender.transfer(target, 40)\n        self.assertEqual((sender.balance, target.balance), (30, 50))\n\n    def test_nonpositive_transfer_keeps_balances(self):\n        for amount in (0, -1):\n            sender = BankAccount('Sender', 100)\n            target = BankAccount('Target', 50)\n            with self.assertRaises(ValueError):\n                sender.transfer(target, amount)\n            self.assertEqual((sender.balance, target.balance), (100, 50))\n\n    def test_existing_deposit_and_withdraw(self):\n        account = BankAccount('Owner', 10)\n        self.assertEqual(account.deposit(5), 15)\n        self.assertEqual(account.withdraw(4), 11)\n\n    def test_invalid_existing_operations(self):\n        account = BankAccount('Owner', 10)\n        for amount in (0, -1):\n            with self.assertRaises(ValueError):\n                account.deposit(amount)\n            with self.assertRaises(ValueError):\n                account.withdraw(amount)\n        with self.assertRaises(ValueError):\n            account.withdraw(11)\n        self.assertEqual(account.balance, 10)\n\n    def test_negative_initial_balance(self):\n        with self.assertRaises(ValueError):\n            BankAccount('Owner', -1)\n"
+      },
+      "limits": {"model_calls": 2, "patch_attempts": 1, "executions": 3, "active_seconds": 300},
+      "expected": {"state": "REVIEW_READY", "code": "CHECKS_PASSED", "model_calls": 2, "patch_attempts": 1, "executions": 3, "checks": 6, "patch_required": true}
+    },
+    {
+      "id": "correct-total-no-change",
+      "name": "Correct total function no-change control",
+      "workflow": "bugfix",
+      "task": "Check total() with the declared unittest suite. If the baseline already passes, stop without changing any source. Do not invent a bug, change semantics or add features. Only app/totals.py may ever be edited; tests must remain unchanged.",
+      "editable_paths": ["app/totals.py"],
+      "files": {
+        "app/totals.py": "def total(values: list[int]) -> int:\n    return sum(values)\n",
+        "tests/test_totals.py": "import unittest\nfrom app.totals import total\n\nclass TestTotal(unittest.TestCase):\n    def test_empty(self):\n        self.assertEqual(total([]), 0)\n\n    def test_positive(self):\n        self.assertEqual(total([1, 2, 3]), 6)\n\n    def test_negative_and_zero(self):\n        self.assertEqual(total([-3, 0, 2]), -1)\n"
+      },
+      "limits": {"model_calls": 1, "patch_attempts": 1, "executions": 1, "active_seconds": 300},
+      "expected": {"state": "BLOCKED", "code": "BASELINE_ALREADY_PASSES", "model_calls": 1, "patch_attempts": 0, "executions": 1, "checks": 3, "patch_required": false}
+    }
+  ]
+}

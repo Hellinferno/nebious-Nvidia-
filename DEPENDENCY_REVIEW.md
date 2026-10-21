@@ -32,6 +32,15 @@ dependencies are unchanged. No forced major upgrade or automatic audit fix was a
 
 ## Remaining risk
 
+The 21 October public-workflow verification repeated all three audits: root
+23 high / zero critical or moderate, root production-only zero, frontend zero.
+Reports are retained in `artifacts/evaluation-batch-20261021/`. Registry metadata
+now lists CLI 65.0.0, but it still directly declares undici 5.29.0; it was not
+installed or compatibility/audit-tested. This is not evidence that a major upgrade
+fixes the remaining advisories. Current braces 3.0.3 and busboy 2.1.1 metadata do
+not supply a reviewed compatible fix. Keep R-03 partial rather than forcing an
+unvalidated dependency replacement.
+
 The initial root audit reported 33 advisories (one critical, 24 high, eight moderate).
 After compatible patches it reports **23 high, zero critical and zero moderate**;
 the root production-only audit reports **zero**. Counts include transitive packages

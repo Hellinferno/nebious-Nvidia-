@@ -1,6 +1,50 @@
 # Progress and evidence log
 
-## Current status — 3 October 2026
+## Current status — 21 October 2026
+
+The task-centered unittest agent, bounded customization and isolation/storage
+hardening are deployed at https://benchproof.vercel.app. Current runtime is
+`49337c3683310a7c137e898459dd38ab3927a2c3cd7cc3588e6523596127bcd3`.
+Latest complete cloud checks pass 635 backend tests plus three separate Docker
+integrations; frontend 29 and deployment 29 pass. Four new static public-input
+tests and six read-only judging-window tests account for the increases.
+
+The customized real bugfix passes, but the additional frozen two-case live batch
+matches one expected outcome of two: the feature fails import, the clean control
+stops untouched. Its separately approved bounded follow-up fails on revision
+truncation after the same import error. No failed outcome is removed or renamed
+success. See [verification](../../verification/README.md). C-05/C-09/C-10 remain
+partial, not universally done.
+
+Remaining: review model output/prompt policy under a new regression identity,
+volunteer sessions/held-out comparison, upstream CLI development advisories,
+judging access beyond the November 30 admission cutoff, owner rights/eligibility,
+public YouTube video URL and actual submitted entry status. Submission closes
+October 30, but judging is in December. No hosting setting changed. Source
+publication status is the actual Git history, not an inferred deployment.
+
+### 21 October — additional public verification
+
+- Changes: froze public inputs and sanitized positive/negative outcomes; added a
+  read-only judging-window checker and six regressions; corrected stale DONE
+  claims, partial rights inventory and YouTube/date requirements.
+- Evidence: `artifacts/evaluation-batch-20261021/`; complete cloud source snapshot
+  `3174d3ff7f39b36a8e0c6c2887c1820bf9d4be835295ba07afaad618a9f9fd1e`.
+  Candidate code never ran on the laptop. Original project snapshots stay unchanged.
+- Spend: original batch three calls / three isolated executions / 7,536 tokens;
+  separate bounded follow-up three calls / two executions / 9,933 tokens. Listed
+  estimates $0.00112464 and $0.0014679 are not actual charges. No SDK retry;
+  the authorized model revision is counted. No further inference authorization.
+- Browser: desktop/mobile blocked-state/clean-control review, export and reload
+  without added spend pass. Pre-spend default-harness assertion/Chrome crash and
+  read-only unsafe-loopback-port failure are retained; no duplicated paid task.
+- Validation: full isolated suite 635/three skipped then three Docker passes,
+  29 frontend, 29 deployment, lint/build. Eight sandbox EACCES socket failures
+  passed with loopback permitted. Runtime package reproduces the deployed hash.
+- Next: C-05 reliability/output-policy review, then remaining C-09/C-10 gates.
+  Account/rights/submission actions require owner evidence, not invented approval.
+
+## Historical baseline — 3 October 2026
 
 Completed documentation work: recovered the coding-agent research, verified primary product capabilities, revised the execution pack to the assurance runtime, replaced the active ML-only plan and created separated benchmark protocols. This is planning/research evidence only.
 

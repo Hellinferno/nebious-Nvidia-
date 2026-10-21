@@ -2,6 +2,69 @@
 
 ## Current status
 
+### Additional public workflows and release checks
+
+The deployed runtime remains `49337c3683310a7c137e898459dd38ab3927a2c3cd7cc3588e6523596127bcd3`.
+No hosting setting, prompt, model, output limit or candidate boundary changed.
+New frozen inputs, sanitized public outcomes and scope/reproduction notes are in
+[verification](verification/README.md).
+
+- Original owner-approved four-call batch used **three calls / three executions**.
+  BankAccount feature `coding-84661e72c57d4f0e` is **BLOCKED / HARNESS_STOPPED**:
+  its candidate used an unquoted self-class annotation and failed import on Python
+  3.12. No final check ran. Correct-total control `coding-0958ac9e8ad94048` is
+  **BLOCKED / BASELINE_ALREADY_PASSES**, with three baseline checks passing and
+  zero edits. **One of two expected outcomes**, zero completed features.
+- Separately approved known-sample follow-up `coding-9f3d69e13e1d4862` used
+  `bounded-v1` with at most three calls, two edits and four executions, rather
+  than the original single-pass budget. It consumed **three calls / two edit
+  reservations / two executions**, again failed class import, then stopped
+  **BLOCKED / MODEL_OUTPUT_TRUNCATED** when the revision hit 2,048 output tokens.
+  No partial revision was accepted/executed and no fresh final check ran. It is
+  not a matched comparison or a successful feature implementation.
+- Provider reconciliation: original batch **3,800 input + 3,736 output = 7,536
+  tokens**, listed-price estimate **$0.00112464**; separate follow-up **5,089 +
+  4,844 = 9,933 tokens**, estimate **$0.0014679**. Actual billed charges/current
+  balance remain unknown. All requests count, including the truncated revision;
+  SDK retries are zero. No further inference is authorized by these checks.
+- The follow-up checker initially expected an explicit default harness field;
+  production intentionally omits `bounded-v1` during normalization. Corrected the
+  checker and continued the same zero-counter draft; no duplicate planning.
+  A Chrome crash occurred before planning. Later read-only browser inspection
+  first hit a Chrome-unsafe ephemeral loopback port; allowing that test port in
+  the isolated Chrome process fixed the harness. These are retained checker
+  failures, not additional model attempts.
+- Desktop/mobile retained-result inspection, original-project immutability,
+  ZIP export and reload without extra usage pass on both failed feature tasks
+  and the clean control. Zero browser errors in completed checks. These safety
+  passes do not erase either feature failure. All three ZIPs match their retained
+  JSON manifests/plans/counters/diffs under non-executing inspection.
+- Latest complete non-root, networkless cloud suite: **635 passed / three skipped**;
+  those **three Docker integrations passed separately** on source snapshot
+  `3174d3ff7f39b36a8e0c6c2887c1820bf9d4be835295ba07afaad618a9f9fd1e`.
+  Four static public-input tests account for the increase from 631. This run
+  reused the tested cloud dependencies; the prior fresh locked install remains
+  a distinct 631-test result. Candidate code never ran on the laptop.
+- Frontend **29**, deployment/toolchain **29** pass; Python lint, frontend lint
+  and production build pass. Eight deployment socket tests first failed with
+  sandbox EACCES, then all 29 passed with loopback permitted. The build exactly
+  reproduces the deployed 129-file runtime hash; no deployment is needed.
+- Read-only judging configuration check correctly returns
+  **ADMISSION_ENDS_BEFORE_JUDGING**: admission ends 30 November 23:59 IST, while
+  published judging ends 16 December 01:30 IST. Submission closes 30 October
+  22:30 IST. No extension/limit change is approved or performed. This is not a
+  website shutdown date or an uptime guarantee. See the
+  [official rules](https://nebiusglobalaihackathon.devpost.com/rules).
+
+Records: `artifacts/evaluation-batch-20261021/` (frozen records, original case
+folders, separate `bank-transfer-bounded-followup/`, provider reconciliation,
+ZIP inspection, browser reports and judging check) and
+`artifacts/release-hardening-20261020/cloud-full-suite-1792591758895.json` / `.xml`.
+Raw private state stays ignored. The public summaries contain no owner capability.
+Live feature reliability, volunteer sessions/held-out evaluation, upstream CLI
+advisories, judging access, rights signoff, public YouTube URL and actual entry
+submission remain open; C-05, C-09 and C-10 are not all complete.
+
 ### Deployed hardening revision
 
 The R-series plan in `BUILD_PLAN.md` separates implemented, tested, deployed,
@@ -9,7 +72,7 @@ measured and submitted states. Current production rejects unsupported pytest pro
 profiles before task/model/executor dispatch and adds non-destructive global project
 count/payload plus database/free-disk admission checks. See `DATA_RETENTION.md`.
 
-Current-source verification:
+Earlier hardening-source verification (superseded test totals above):
 
 - Focused no-inference/no-candidate backend tests: **213 passed**, including 20 new
   runner/storage regressions. The initial test invocation lacked its temporary

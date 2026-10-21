@@ -11,6 +11,28 @@
 
 ---
 
+## Remaining Owner Gates — 21 October
+
+- [ ] Review eligibility, originality, package/model/service/container terms and
+  video/voice/asset rights. The attribution inventory is partial, not legal signoff.
+- [ ] Upload the corrected 2:18.28 video to **public YouTube** and supply that URL
+  in the entry. A local MP4 or GitHub asset alone does not complete this requirement.
+- [ ] Approve and verify judging-period coding access. Current admission ends
+  **30 November 2026 at 23:59 IST**, before judging ends **16 December at 01:30 IST**.
+  No deadline extension or daily-limit change is approved or applied. The website
+  may remain reachable while new coding tasks are refused.
+- [ ] Verify provider credits/hosting capacity and appropriate shared judge quotas.
+  The owner reported $59; the intended $50 reserve is not independently verified
+  or enforced as a hard currency limit.
+- [ ] Complete track, description, required platform/tool feedback, public source,
+  video/demo links and submit the actual entry; record its submitted URL/status.
+
+The [official rules](https://nebiusglobalaihackathon.devpost.com/rules), checked
+21 October, close submission **30 October 2026 at 22:30 IST**, but schedule judging
+**1–15 December Pacific time** and require free project access through judging.
+The read-only `node deployment/vercel/judging-check.mjs` detects the current date
+gap; it cannot guarantee access or submit the entry. C-09/C-10 remain partial.
+
 ## 2. Clean-Clone Setup & Reproduction Guide
 
 ### Prerequisites
@@ -124,7 +146,7 @@ verified in the cloud runtime, not inferred from the clone smoke. See [VERIFICAT
 | **C-02** | Versioned contracts, durable store, leased worker, admission limits | 17–18 Oct | **DONE** | `backend/benchproof/coding/store.py`, `worker.py` |
 | **C-03** | End-to-end coding loop, revision feedback, repeated-candidate stall | 18 Oct | **DONE** | `backend/scripts/run_coding_loop.py` |
 | **C-04** | Project intake limits, manifest fingerprints, isolated runner | 19–20 Oct | **DONE** | `backend/benchproof/intake/`, `backend/runner/` |
-| **C-05** | Real bug fix & feature on imported projects, protected test refusal | 20–21 Oct | **DONE** | `backend/tests/test_project_tasks.py` |
+| **C-05** | Real bug fix & feature on imported projects, protected test refusal | 20–21 Oct | **PARTIAL** | Scripted boundaries and live bugfix pass; latest real feature and separate bounded follow-up fail. See `verification/README.md` |
 | **C-06** | Checkpoint log, CAS restore, pause/resume/cancel, sanitized bundle | 21–22 Oct | **DONE** | `backend/tests/test_coding_checkpoints.py` |
 | **C-07** | Primary Task Workspace UI, diff viewer, test terminal, export | 22–23 Oct | **DONE** | `frontend/src/components/coding/CodingWorkspace.tsx` |
 | **C-08** | Cloud acceptance, lease recovery, quotas, backup/restore | 23–24 Oct | **DONE** | `backend/tests/test_cloud_acceptance.py` (7/7 pass) |
@@ -194,7 +216,7 @@ Plausible edits still need testing and review, and unattended retries can consum
 - Keeping trusted evaluator assets out of candidates and screening exports; do not put credentials in user instructions or reference context.
 
 ### Accomplishments We're Proud Of
-- Current deployed release: 631 backend, three separate Docker integration cases, 29 frontend and 23 deployment/toolchain tests pass. Real public acceptance and a customized two-call live model task pass, including desktop/mobile export and reload. See `VERIFICATION.md` and `RELEASE_REHEARSAL.md` for scope and remaining gates.
+- Latest scoped checks: 635 backend, three separate Docker integration cases, 29 frontend and 29 deployment/toolchain tests pass. The runtime is unchanged. A customized two-call live bugfix passes; the additional live feature and its bounded follow-up fail safely, while the clean control stops unchanged. See `VERIFICATION.md`, `RELEASE_REHEARSAL.md` and `verification/README.md`; do not imply all live workflows pass.
 - Six scripted gold-answer regressions passed historically. Their responses and token usage are synthetic, not a live-model benchmark or holdout success rate.
 - Responsive React workspace with passing lint/build and checked desktop/mobile layouts.
 - Real end-to-end NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory with isolated candidate Docker verification live on production.

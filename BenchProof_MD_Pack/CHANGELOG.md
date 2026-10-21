@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-21 — Public workflow results and remaining submission gates
+
+- Added frozen public feature/no-change inputs, four static regressions and
+  sanitized real-model outcomes. Original batch matches one expected outcome
+  out of two; the feature fails class import. Separate owner-approved bounded
+  follow-up also fails, ending on output truncation. Preserve both failures,
+  actual provider usage and differing attempt budgets; no benchmark claim.
+- Added read-only judging-window assessment with six tests. Current November 30
+  coding admission cutoff precedes December judging; no settings changed. Made
+  October 30 submission deadline, public YouTube upload, partial rights review,
+  owner account checks and actual submitted status explicit remaining gates.
+- Corrected stale C-05/C-09/C-10 completion claims and progress baseline. Latest
+  full isolated suite: 635 passes plus three separate Docker integrations;
+  frontend 29 and deployment 29 pass, lint/build pass. Browser export/reload and
+  original snapshot preservation pass even for blocked tasks; this is not feature
+  success. Raw failures/capabilities stay private; public summaries are sanitized.
+- Runtime hash remains `49337c36…`; no new runtime deployment, hosting upgrade,
+  unlimited inference authorization or actual competition submission is claimed.
+  Git records source publication separately. Development npm advisories remain
+  23 high; production-only and frontend audits remain zero.
+
 ## 2026-10-17 — First coding-agent implementation increment
 
 - Implemented shared fail-closed completion validation and distinct transport/protocol/truncation/incomplete/size/schema failures. Removed diagnosis JSON-ending guesses and invented required fields. The configured model/output allowance is honored; no automatic paid/format retry or mock substitution. Safe provider errors exclude raw transport exception text.

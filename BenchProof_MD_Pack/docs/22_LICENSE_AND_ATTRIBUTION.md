@@ -1,6 +1,9 @@
 # License, ownership, and attribution work
 
-Status: Verified for C-10 release. First-party Apache-2.0 `LICENSE` and `NOTICE` confirmed at repository root. Third-party direct and transitive dependency licenses, container runtime images, synthetic benchmarks, and model API terms reviewed.
+Status: PARTIAL, rechecked 21 October 2026. First-party `LICENSE`/`NOTICE` exist and
+the direct-package metadata below was inspected. This is not a complete transitive,
+container, service-terms or ownership sign-off. Earlier checked boxes had no linked
+owner attestation and are not relied upon as evidence. C-10 remains incomplete.
 
 ## First-party license
 
@@ -12,27 +15,31 @@ Keep first-party code, fixture generation, UI assets, and original documentation
 
 | Component | Source/version | License or terms | How used | Required notices | Checked |
 | --- | --- | --- | --- | --- | --- |
-| First-party BenchProof code | Repository root | Apache-2.0 | Application | Top-level LICENSE/NOTICE | Verified |
-| NVIDIA model inference | Nebius Token Factory (`nvidia/*`) | NVIDIA Open Model License / Nebius terms | Remote inference | Interoperability disclaimer in NOTICE | Verified |
-| Python direct runtime packages | FastAPI 0.142.2, Pydantic 2.13.5, pydantic-settings 2.15.0 | MIT | Backend | Preserve package license | Verified |
-| Python network/server packages | Uvicorn 0.54.0, HTTPX 0.28.1, python-dotenv 1.2.4 | BSD-3-Clause | Backend | Preserve package license | Verified |
-| OpenAI Python client | Installed 3.24.0 | Apache-2.0 | Nebius-compatible API client | Preserve package license | Verified |
-| JavaScript direct packages | React/react-dom 19.3.0, Axios 1.20.0, Vite 8.3.2, oxlint 1.86.0 | MIT | UI/build | Preserve package notices | Verified |
-| TypeScript | Lockfile 6.0.3 | Apache-2.0 | UI type checking/build | Preserve package notices | Verified |
-| Vercel Sandbox / CLI | `@vercel/sandbox` 3.8.0, Vercel CLI 64.3.1 | Apache-2.0 | Hosted cloud runner | Preserve package notices | Verified |
-| Container base image | `python:3.12-slim` | PSF / Debian DFSG | Isolated runner | Included in runner Dockerfile | Verified |
-| Synthetic tasks & fixtures | `StringCalculator`, `BankAccount`, `StockManager`, etc. | Apache-2.0 | Test benchmarks | First-party synthetic disclosure | Verified |
-| Icons / UI media | First-party SVG | Apache-2.0 | UI rendering | First-party assets | Verified |
+| First-party BenchProof code | Repository root | Apache-2.0 declared | Application | Top-level LICENSE/NOTICE | Files present; ownership attestation pending |
+| NVIDIA model inference | Token Factory, `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | Exact model/service terms require owner review | Remote inference only; no weights redistributed | Review applicable model and account terms | Not signed off |
+| Python direct runtime packages | FastAPI 0.142.2, Pydantic 2.13.5, pydantic-settings 2.15.0 | MIT | Backend | Preserve upstream notices as applicable | Installed metadata checked |
+| Python network/server packages | Uvicorn 0.54.0, HTTPX 0.28.1, python-dotenv 1.2.4 | BSD-3-Clause | Backend | Preserve upstream notices as applicable | Installed metadata checked |
+| OpenAI Python client | 3.24.0 | Apache-2.0 | Nebius-compatible API client | Preserve upstream notices as applicable | Installed metadata checked |
+| Contree SDK/client | contree-sdk 0.3.6, contree-client 0.4.0 | Apache-2.0 | Installed alternative runner dependencies | Preserve upstream notices as applicable | Installed metadata checked; hosted route uses Docker |
+| JavaScript direct packages | React/react-dom 19.3.0, Axios 1.20.0, Vite 8.3.3, oxlint 1.86.0 | MIT | UI/build | Preserve upstream notices as applicable | Installed package metadata checked |
+| TypeScript | 6.0.3 | Apache-2.0 | UI build | Preserve upstream notices as applicable | Installed package metadata checked |
+| Vercel Sandbox / CLI | `@vercel/sandbox` 3.8.0, CLI 64.7.0 | Apache-2.0 | Cloud runtime/development tooling | Preserve upstream notices as applicable | Installed package metadata checked |
+| Container and installed packages | Dockerfile uses `python:3.12-slim`; actual built image identity is in execution evidence | Multiple component-specific terms | Isolated runner | Complete image/package review remains | Not signed off; a tag is not a digest pin |
+| Synthetic fixtures / first-party SVG | Repository source | Apache-2.0 declared | Public samples and UI | Original/synthetic disclosure | Owner provenance attestation pending |
+| Demo video / voice | Saved-task footage, dated screenshot, local Microsoft David narration | Asset/service rights require owner review | Submission media | Provenance in `recordings/README.md` | Technical media checks pass; rights not signed off |
 
 ## Ownership checks
 
-- [x] Ravi owns or has suitable rights to the first-party submission components.
-- [x] Any copied code is attributed and used consistently with its license.
-- [x] Model/service access complies with actual Nebius Token Factory terms.
-- [x] Synthetic fixtures contain no private competition data, personal records, or copied restricted notebooks.
-- [x] Demo footage and assets have appropriate rights.
-- [x] Public release contains no credentials, private source snapshots, or hidden evaluation truth whose publication is restricted.
-- [x] Any pre-existing components have an honest in-period contribution record.
+- [ ] Owner confirms suitable rights to first-party submission components.
+- [ ] Owner reviews copied code, source provenance and required attributions.
+- [ ] Owner reviews applicable model and Nebius account/service terms.
+- [ ] Owner confirms no restricted/private data in fixtures or submission materials.
+- [ ] Owner reviews demo footage, synthetic-voice and other asset rights.
+- [ ] Final public release content is reviewed for restricted information. Known-secret scans are scoped checks, not proof that every historical commit is secret-free.
+- [ ] Owner confirms any pre-existing components and the in-period contribution statement.
+
+Do not tick these on the owner's behalf. Direct metadata is useful inventory, not
+a legal conclusion or proof that every transitive notice has been fulfilled.
 
 ## AI-assisted development record
 
@@ -40,7 +47,10 @@ Record source review and final responsibility for generated code. Follow the eve
 
 ## Publication gate
 
-Open a fresh browser session on the final repository. Confirm source, release tag, installation instructions, detected license, source assets, and attribution inventory. A repository existing on Ravi's machine is not evidence of public access.
+The prior published baseline was confirmed at `a735384` and an independent
+no-spend clean-clone startup/browser check passes. There is no release tag or actual
+submitted-entry confirmation recorded. Check the final public source/assets,
+detected license and owner attestations rather than inferring them from a local tree.
 
 The exact event obligations and original-work provisions remain in the [official rules](https://nebiusglobalaihackathon.devpost.com/rules). This file is a practical inventory, not a substitute for reading them.
 
@@ -52,4 +62,7 @@ Record provenance/license for fixture source, constraint/check code, graph manif
 
 Official product documentation is cited by link in the research register. Paraphrase capabilities briefly; do not reproduce proprietary documentation, hidden prompts, logos or transcripts without applicable permission. A provider-neutral adapter does not imply affiliation or authorization from that product. Review any future tool transcript/patch publication under its terms and source rights.
 
-The proposed first-party Apache-2.0 license does not license third-party model weights, SDKs, images or dependencies automatically. Add actual LICENSE/notice files in the implementation release, verify detectable licensing and record final model/image terms. The Markdown pack is not proof the future source has been licensed.
+The repository's first-party Apache-2.0 declaration does not license third-party
+weights, SDKs, images, dependencies or assets automatically. Root LICENSE/NOTICE
+files are present; final model/image/service/asset review remains. This inventory
+is not a legal opinion or owner eligibility/ownership attestation.

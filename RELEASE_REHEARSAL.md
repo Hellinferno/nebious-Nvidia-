@@ -1,5 +1,10 @@
 # Customized live rehearsal — 21 October 2026
 
+Later the same day, a separate public feature/no-change batch and an explicitly
+approved bounded feature follow-up were run. The clean control stopped unchanged,
+but both feature runs failed safely. Their [separate complete records](verification/README.md)
+do not overwrite this successful bugfix or justify an all-workflows-pass claim.
+
 ## Scope
 
 One genuine end-to-end public sample completed at
