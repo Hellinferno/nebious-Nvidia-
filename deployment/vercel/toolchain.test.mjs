@@ -5,6 +5,10 @@ import { test } from 'node:test';
 test('deployment toolchain locks reviewed compatible patches without changing production dependencies', async () => {
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
   const lock = JSON.parse(await readFile(new URL('../../package-lock.json', import.meta.url), 'utf8'));
+  const frontend = JSON.parse(await readFile(new URL('../../frontend/package.json', import.meta.url), 'utf8'));
+  const frontendLock = JSON.parse(await readFile(new URL('../../frontend/package-lock.json', import.meta.url), 'utf8'));
+  assert.equal(frontend.devDependencies.vite, '8.3.3');
+  assert.equal(frontendLock.packages['node_modules/vite'].version, frontend.devDependencies.vite);
   assert.equal(manifest.devDependencies.vercel, '64.7.0');
   assert.equal(lock.packages['node_modules/vercel'].version, manifest.devDependencies.vercel);
   assert.deepEqual(manifest.dependencies, { '@vercel/sandbox': '3.8.0' });

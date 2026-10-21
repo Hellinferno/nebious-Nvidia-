@@ -34,6 +34,11 @@ Current-source verification:
 - Compatible development toolchain patches reduce npm advisories from 33 to
   **23 high, zero critical/moderate**; root production-only audit remains zero.
   Remaining upstream/incompatible-major paths are documented in `DEPENDENCY_REVIEW.md`.
+- The clean-clone install surfaced a frontend Vite advisory despite an earlier
+  zero report. Pinned compatible Vite 8.3.3 and a lock regression resolve that path;
+  fresh frontend audit is zero, 29 frontend / 23 deployment tests and lint/build
+  pass again. Generated assets/package exactly reproduce deployed hash `49337c36…`;
+  no new backend source, deployment or model call was needed for this tool patch.
 - Exactly two new inference calls were used for the separately recorded live
   rehearsal below. No automatic cleanup, paid hosting upgrade or inference retry.
 

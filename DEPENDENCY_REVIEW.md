@@ -1,12 +1,20 @@
 # Deployment dependency review — 21 October 2026
 
 This is a scoped npm advisory remediation, not a full security certification.
-The production `@vercel/sandbox` dependency stays at 3.8.0; frontend dependencies
-are unchanged. No forced major upgrade or automatic audit fix was applied.
+The production `@vercel/sandbox` dependency stays at 3.8.0; frontend runtime
+dependencies are unchanged. No forced major upgrade or automatic audit fix was applied.
 
 ## Reviewed deployed changes
 
 - Vercel CLI 64.3.1 → 64.7.0, within the existing major release.
+- Fresh clean-clone installation additionally exposed a Vite development-server
+  advisory missed by the earlier frontend audit. Vite 8.3.2 → pinned 8.3.3 fixes
+  that compatible patch path. The [maintainer release](https://github.com/vitejs/vite/releases/tag/v8.3.3)
+  updates launch-editor to 2.14.2; npm registry integrity and the lockfile are checked.
+  The patched frontend audit reports zero; 29 frontend and 23 deployment/toolchain
+  cases, lint/build pass. The build reproduces the exact deployed runtime hash,
+  so no runtime replacement or repeated inference was needed. Do not expose the
+  development server beyond loopback or treat the scoped audit as certification.
 - Root overrides apply only below the Vercel development dependency: ajv 8.20.0,
   js-yaml 4.3.2, minimatch 10.2.6, path-to-regexp 6.3.0/8.4.2, smol-toml 1.9.1,
   tar 7.5.22, and undici 5.29.0. Existing dependency major versions are preserved.
