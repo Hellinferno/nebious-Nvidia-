@@ -186,7 +186,7 @@ class CodingWorker:
                 operation_id = action["details"]["operation_id"]
                 stopped = self.engine.cancel(operation_id)
                 self.store.reconcile_execution(lease.task_id, operation_id, stopped=stopped)
-            elif action is None and exc.code in {"OPERATOR_LIMIT", "BUDGET_EXHAUSTED"}:
+            elif action is None and exc.code in {"OPERATOR_LIMIT", "BUDGET_EXHAUSTED", "UNSUPPORTED_RUNNER"}:
                 try:
                     self.store.finish_task(
                         lease,

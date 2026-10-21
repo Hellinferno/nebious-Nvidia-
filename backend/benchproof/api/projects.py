@@ -17,7 +17,7 @@ class CreateProjectRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     name: str = Field(min_length=1, max_length=100)
-    runner_profile: str = Field(default="unittest", pattern=r"^(unittest|pytest)$")
+    runner_profile: str = Field(default="unittest", pattern=r"^unittest$")
     files: dict[str, str] = Field(min_length=1, max_length=20)
 
 

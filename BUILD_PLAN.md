@@ -1,7 +1,43 @@
 # BenchProof coding-agent build plan
 
-Version: coding-agent v3 planning baseline, 17 October 2026 (IST).
-Status: implementation started. C-01 development acceptance is recorded below; the new coding-agent application workflow is not shipped.
+Version: release-readiness revision, 21 October 2026 (IST).
+Status: the unittest-based coding-agent MVP, customization and runner/storage hardening are deployed. One bounded customized live rehearsal passed; broader evaluation, final video and submission are not complete. This section supersedes the historical 17 October baseline retained below.
+
+## Current evidence and scope
+
+- Live demo: https://benchproof.vercel.app. Deployment `dpl_7SPDgfYC3M5HLPCThyCMWEPBRgi7`; trusted runtime `49337c3683310a7c137e898459dd38ab3927a2c3cd7cc3588e6523596127bcd3`. Source publication is a separate final gate below.
+- Implemented: owner-scoped project/task storage, leased coding worker, reviewed plans, isolated candidate checks, bounded revisions, checkpoints, export, browser-local profiles, instruction-only skills, two reviewed harnesses and read-only documentation MCP.
+- Latest complete isolated Linux suite: 631 passed, three Docker cases skipped and passed separately, including a fresh locked-dependency backend installation. Frontend 29 and deployment/toolchain 23 cases pass; lint/build and the actual Linux deployment install/build pass. These are scoped test results, not a model benchmark.
+- Current production cloud/public acceptance passes. A real browser task with a pinned skill, single-pass harness and documentation MCP snapshot reached REVIEW_READY: two model calls, one patch, three isolated executions, unchanged original project, ZIP download and reload verified. See [RELEASE_REHEARSAL.md](RELEASE_REHEARSAL.md); this public sample with agent-assisted plan review is not a held-out benchmark or user study.
+- The existing 2:03 video and genuine earlier inference/patch evidence exist. The six-task evaluation uses scripted gold answers and is not live-model performance.
+- Detailed audit: `artifacts/remaining-audit-20261020/REPORT.md`. Release evidence: [VERIFICATION.md](VERIFICATION.md).
+
+## Ordered execution plan
+
+| ID | Priority / status | Work | Completion gate |
+| --- | --- | --- | --- |
+| R-01 | P0 · DEPLOYED / VERIFIED | Unittest-only intake, owned task creation, legacy project admission/action reservation and executor dispatch now reject unsupported profiles. Invalid legacy queues terminate BLOCKED without spending or holding the active slot. | Focused regressions, complete 631-pass isolated suite and current production acceptance pass. |
+| R-02 | P0 · DEPLOYED / VERIFIED | Transactional 100-project / 16 MiB payload admission plus database/free-disk reservation checks for new projects/tasks. Retention policy explicitly avoids automatic deletion. | Cross-owner/concurrent limits, encoded-byte/free-space boundaries, probe failures, idempotent replay, API denials and preserved task snapshots pass. See DATA_RETENTION.md; admission is not a hard total-disk quota. |
+| R-03 | P1 · PARTIAL | CLI updated within major; scoped compatible patches remove critical/moderate advisories. Remaining 23 high development-tool advisories require upstream or separately validated major fixes. | Deployment/toolchain tests, production build and CLI smoke pass; production-only npm audit is zero. See DEPENDENCY_REVIEW.md; no forced major replacement. |
+| R-04 | P1 · PARTIAL | Setup/runtime docs, worker opt-in example, C-10 status, export wording and retention policy corrected. Actual MP4 narration/embedded subtitles corrected; dated current-rehearsal still added. | Fresh locked backend installation, clean root npm installation and actual Linux deployment build pass. Corrected 2:18 video decodes, embedded captions match, final scene inspected; saved-task review is explicitly labelled. Clean-clone launch and owner final video/rights review remain separate gates. |
+| R-05 | P1 · DEPLOYED / PUBLIC ACCEPTANCE PASS | Focused/full isolated tests, Docker integration, package, mocked browser flows, private WAL-consistent backup, exact rollback package, explicit idle upgrade and restart/public checks pass. Source publication follows verified acceptance. | 631 backend + three separate Docker cases, 29 frontend, 23 deployment tests; browser 15/17/9 assertions; public audit `audit-646e9823447f`. Initial Linux lockfile failure retained; missing optional peers fixed and actual deployment build passed. |
+| R-06 | P1 · ONE REHEARSAL PASS / EVALUATION PARTIAL | Task `coding-d6450f348202421a`: genuine model plan and edit, skill/harness/MCP snapshot, one patch and three isolated checks. Exactly two calls, 2,048 output tokens/call allowance, zero retries. Browser harness label timeout recovered on the same task without repeating planning. | 2,773 prompt + 1,341 completion = 4,114 recorded tokens; estimated $0.00048822 at the verified listed rates, not an invoiced charge. User-reported balance $59; intended judging reserve $50 is not provider-enforced or independently verified. Broader benchmark, matched baselines and user sessions remain open. |
+| R-07 | OWNER / ACCOUNT GATE | Confirm credit reserve, judging-period access, rights/attribution, factual final video and actual competition submission. | Owner/account evidence of credits/access and submitted entry URL/status. A saved draft or checklist does not complete this gate. |
+
+Prior approval to publish only after tests and browser verification still applies. Those runtime gates now pass; finish source review/clean-clone checks and publication without a force push. No further paid inference is part of the completed two-call rehearsal. Where account access or user participation is required, record the missing evidence instead of marking the item complete.
+
+## Release rules and cut lines
+
+- Keep Python/unittest, the fixed Docker boundary, protected imported tests and lower-only budgets. Disable unsupported pytest; implementing a new runner is not required for this release.
+- Existing shared daily mutation and provider/execution limits remain. New storage admission complements them; client-generated owner capabilities are not production identity authentication.
+- Never run candidate/legacy fixture tests directly on the laptop. Full legacy/project suites execute inside dedicated non-root, networkless cloud test containers; socket-dependent tests run separately through the trusted Docker boundary.
+- No forced dependency upgrades, paid hosting upgrade, automatic deletion, arbitrary MCP/harness plugins or claim of unlimited free hosting.
+- Use layered evidence: implemented, locally tested, cloud-tested, deployed, live-model measured and submitted are separate states. C-09 and final C-10 acceptance remain incomplete until their actual gates pass.
+- Do not claim a competition win, signature verification, superiority over other coding agents or a full MCP implementation without supporting work and evidence.
+
+## Historical 17 October planning baseline
+
+The material below preserves original requirements, targets and early acceptance. Statements such as “not deployed”, “worker not implemented”, and “first implementation session” describe that historical baseline, not current product status. Use the R-series plan above for current execution order.
 
 ### First implementation increment — 17 October
 

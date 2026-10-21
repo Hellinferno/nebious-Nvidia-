@@ -26,7 +26,7 @@ MAX_FILE_BYTES = 24_576       # 24 KiB
 MAX_TOTAL_BYTES = 131_072     # 128 KiB
 MAX_ENCODED_BODY_BYTES = 262_144  # 256 KiB
 MANIFEST_VERSION = "project-manifest-v1"
-SUPPORTED_RUNNER_PROFILES = {"unittest", "pytest"}
+SUPPORTED_RUNNER_PROFILES = {"unittest"}
 
 _DISALLOWED_EXACT_NAMES = {
     ".env", ".git", ".gitignore", ".gitattributes", ".dockerignore", "Dockerfile",

@@ -13,8 +13,16 @@ from typing import Any
 
 from benchproof.projects.intake import validate_project_intake
 from benchproof.projects.models import ProjectManifest, ProjectRecord
+from benchproof.storage.admission import (
+    DEFAULT_STORAGE_LIMITS,
+    StorageAdmissionError,
+    StorageAdmissionLimits,
+    check_storage_admission,
+)
 
 MAX_PROJECTS_PER_OWNER = 10
+MAX_PROJECTS = 100
+MAX_PROJECT_PAYLOAD_BYTES = 16 * 1024 * 1024
 
 
 class ProjectStoreError(Exception):
@@ -31,10 +39,20 @@ class ProjectStore:
         *,
         clock: Callable[[], float] = time.time,
         max_projects_per_owner: int = MAX_PROJECTS_PER_OWNER,
+        max_projects: int = MAX_PROJECTS,
+        max_payload_bytes: int = MAX_PROJECT_PAYLOAD_BYTES,
+        storage_limits: StorageAdmissionLimits = DEFAULT_STORAGE_LIMITS,
     ) -> None:
+        if any(type(value) is not int or value < 1 for value in (
+            max_projects_per_owner, max_projects, max_payload_bytes,
+        )):
+            raise ValueError("Project storage limits must be positive integers")
         self.db_path = Path(db_path)
         self.clock = clock
         self.max_projects_per_owner = max_projects_per_owner
+        self.max_projects = max_projects
+        self.max_payload_bytes = max_payload_bytes
+        self.storage_limits = storage_limits
 
         with closing(self._connect()) as connection:
             connection.executescript("""
@@ -106,6 +124,17 @@ class ProjectStore:
 
             manifest_json = json.dumps(manifest.to_dict(), separators=(",", ":"))
             files_json = json.dumps(validated_files, separators=(",", ":"))
+            payload_bytes = len((manifest_json + files_json).encode("utf-8"))
+            usage = connection.execute(
+                "SELECT COUNT(*), COALESCE(SUM(length(CAST(manifest_json AS BLOB)) "
+                "+ length(CAST(files_json AS BLOB))), 0) FROM coding_projects"
+            ).fetchone()
+            if usage[0] >= self.max_projects or usage[1] + payload_bytes > self.max_payload_bytes:
+                raise ProjectStoreError("STORAGE_LIMIT", "The shared project storage allowance is reached")
+            try:
+                check_storage_admission(self.db_path, payload_bytes + 16_384, self.storage_limits)
+            except StorageAdmissionError as exc:
+                raise ProjectStoreError("STORAGE_LIMIT", str(exc)) from exc
 
             connection.execute(
                 """

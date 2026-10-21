@@ -1,18 +1,31 @@
-# Coding runtime: first implementation increment
+# Coding runtime
 
-Implemented on 17 October 2026; **not a finished application workflow**.
+Current runtime: durable owner-scoped tasks, a separately configured leased worker,
+reviewed plans, bounded model edits, isolated checks, checkpoints and export are
+implemented. The public deployment and its evidence are described in the root
+`VERIFICATION.md`; local changes are not deployed just by editing or pushing files.
 
 `generation.py` defines development `coding-brief-v1`, `coding-plan-v1` and
 `coding-edit-v1` contracts. Plans bind the task's exact identity, source and editable
 paths; edits bind the approved plan revision. The current check profile is the
-legacy `invoice-observation-v1`, not a general project runner.
+curated `invoice-observation-v1`, or `project-unittest-v1` for imported projects.
+Only unittest is supported; unsupported runner labels must fail before paid work
+or candidate execution. Imported project checks are user-supplied evidence, not
+the stronger independent protected invoice gate.
 
 `generate_edits` makes one bounded provider request, validates the completion and
 complete-file edits, builds a deterministic modify-only diff, checks its round trip
 and enforces the existing patch policy. It does not apply or execute source. The
 caller must durably reserve the paid action first. These contracts are primitives
-for C-02; no coding-task API, durable task worker or user-facing plan approval exists
-yet. Do not expose this function directly as an unmetered public request handler.
+used by the durable task API/store/worker. Do not expose this function directly as
+an unmetered public request handler. `store.py` owns action reservations and
+idempotency; `worker.py` owns leases/reconciliation; `engine.py` performs bounded
+planning/edit/check stages. `runtime.py` requires explicit enabled/provider/runner,
+daily allowance and deadline settings before admission.
+
+The root README documents API + worker + frontend startup and no-spend defaults.
+`AGENT_CUSTOMIZATION.md` documents frozen skills, reviewed harnesses and the bounded
+MCP reference bridge. `DATA_RETENTION.md` defines current admission/deletion scope.
 
 The shared structured-output boundary rejects length-limited, interrupted, empty,
 oversized, schema-invalid and duplicate-key responses without guessing missing
@@ -20,7 +33,7 @@ claims, source locations or JSON endings. No automatic format retry or mock
 fallback occurs. Recorded usage remains available on rejected responses; a
 transport failure's usage is UNKNOWN, not zero.
 
-## Development checks
+## Historical first-increment generation checks
 
 From the repository root, with the existing backend environment:
 
@@ -69,7 +82,7 @@ seven protected checks in the existing Vercel Docker runner. Audit
 the original fixture was unchanged. This is one development acceptance sample,
 not a benchmark, general-project support or proof of all requirements.
 
-Next: owner-scoped durable task/action/usage storage and fenced worker processing
-(C-02), followed by the application-connected bounded generation/test/revision
-loop (C-03). Project intake, generic tests, task UI, checkpoints and release work
-remain in the main build plan.
+This historical sample does not substitute for current-release full browser
+rehearsals or held-out model evaluation. Follow the R-series release plan in the
+root `BUILD_PLAN.md`; C-09 measurement and actual competition submission remain
+separate acceptance gates.

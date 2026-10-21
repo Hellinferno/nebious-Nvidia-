@@ -7,7 +7,7 @@
 - **Tagline**: Autonomous coding agent and engineering assurance runtime with isolated test execution and guarded task revision.
 - **Public Demo**: [https://benchproof.vercel.app](https://benchproof.vercel.app)
 - **License**: Apache 2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE))
-- **Head Repository Commit**: Verified clean tree on active branch
+- **Release Evidence**: [VERIFICATION.md](VERIFICATION.md); verify `git rev-parse HEAD` and a clean tree at publication, not merely from this checklist.
 
 ---
 
@@ -15,9 +15,9 @@
 
 ### Prerequisites
 - Python 3.12+ (tested with 3.12.10)
-- Node.js 20+ (tested with 24.12.0) & npm 10+
+- Node.js 24.x (tested with 24.12.0) & npm 11+
 - Git
-- Optional: Docker Desktop (for isolated container runner)
+- Docker is required for real candidate execution (local Docker or the dedicated cloud runner); mock mode is exploration-only.
 
 ### Step 1: Clone Repository
 ```bash
@@ -52,15 +52,15 @@ cd ..
 
 ### Step 4: Run Automated Verification Tests
 ```powershell
-# Run the complete backend test suite (Docker integration requires a working daemon)
+# Selected no-inference/no-candidate regressions
 cd backend
-python -m pytest
+python -m pytest tests/test_release_admission.py tests/test_coding_store.py tests/test_coding_api.py
 
 # Run C-08 Cloud Failure Mode Acceptance Suite
 python -m pytest tests/test_cloud_acceptance.py -v
 
-# Run C-09 Frozen Evaluation Suite
-python -m pytest tests/test_coding_evaluation.py -v
+# The full suite includes fixture execution: run it only in an isolated test container.
+# Scripted evaluation also requires Docker and is not a live-model benchmark.
 cd ..
 
 # Run frontend tests and linter
@@ -96,11 +96,20 @@ cd ..
 cd backend
 python -m uvicorn benchproof.api.main:app --host 127.0.0.1 --port 8000
 
-# Terminal 2 — Frontend UI
+# Terminal 2 — Coding worker (only after configuring approved budgets/deadline)
+cd backend
+python scripts/start_worker.py
+
+# Terminal 3 — Frontend UI
 cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
+
+The copied environment defaults to no-spend mock mode. Follow **Enable live coding
+deliberately** in the root README before enabling real plans/execution. API and worker
+must share the same root environment/database. Full fresh-clone reproduction of the
+updated instructions is a release gate, not inferred from an existing environment.
 
 ---
 
@@ -117,28 +126,35 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
 | **C-07** | Primary Task Workspace UI, diff viewer, test terminal, export | 22–23 Oct | **DONE** | `frontend/src/components/coding/CodingWorkspace.tsx` |
 | **C-08** | Cloud acceptance, lease recovery, quotas, backup/restore | 23–24 Oct | **DONE** | `backend/tests/test_cloud_acceptance.py` (7/7 pass) |
 | **C-09** | Versioned task suite and regression harness | 24–26 Oct | **PARTIAL** | Six scripted gold-answer tasks; held-out live-model benchmark remains open |
-| **C-10** | Clean-clone, rights/attribution, video storyboard, submission prep | 26–28 Oct | **DONE** | `SUBMISSION_CHECKLIST.md`, clean build & tests |
+| **C-10** | Clean-clone, rights/attribution, video and owner submission | 26–28 Oct | **PARTIAL** | Corrected video/checklist exist; clean-clone verification, owner final video/rights review and submitted-status evidence remain |
 
 ---
 
-## 4. Video Recording Walkthrough (<= 3 Minutes) — COMPLETE
+## 4. Existing Video Recording Walkthrough (<= 3 Minutes)
 
-- **File Path**: [`recordings/benchproof_demo_walkthrough.mp4`](file:///d:/Nvidia%20hackathon/recordings/benchproof_demo_walkthrough.mp4)
-- **Duration**: **02:03** (123.27 seconds) — strictly complies with the &le; 3 minutes (180s) competition limit.
+The 21 October correction replaces the actual MP4 narration and embedded/standalone
+subtitles, removes the incorrect signed-ZIP claim and adds a dated current-release
+rehearsal still. The main footage reviews a saved completed task: it is not a fresh
+continuous live inference/approval/rollback recording. See [provenance](recordings/README.md).
+Full decode and caption consistency pass; owner final viewing/rights approval remains.
+
+- **File Path**: [`recordings/benchproof_demo_walkthrough.mp4`](recordings/benchproof_demo_walkthrough.mp4)
+- **Duration**: **02:18.28** (138.28 seconds), below three minutes; owner must confirm final event requirements.
 - **Resolution**: 1280x720 (720p HD @ 25 fps, H.264/AVC)
 - **Audio**: AAC 192kbps stereo with Microsoft David narrative voiceover
-- **Subtitles**: Embedded timed subtitle track (`mov_text`) + standalone [`recordings/subtitles.srt`](file:///d:/Nvidia%20hackathon/recordings/subtitles.srt)
+- **Subtitles**: Embedded timed subtitle track (`mov_text`) + standalone [`recordings/subtitles.srt`](recordings/subtitles.srt)
 - **Production URL Demonstrated**: `https://benchproof.vercel.app`
-- **Methodology**: Real browser screen recording using Playwright-Core + Google Chrome against live production, driven by NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory.
+- **Methodology**: Browser footage reviewing saved production task evidence, locally synthesized narration and one dated still from the separate two-call customized rehearsal; not a user study or continuous new live run.
 
 | Time Window | Scene / Screen | Narrative Key Points | Verified Visual Artifact |
 |---|---|---|---|
-| **0:00 – 0:25** | Architecture overview & problem statement | LLMs often hallucinate repairs and overwrite test suites. BenchProof enforces guarded engineering, immutable manifests, and isolated execution. | [`frame_scene1.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene1.png) |
-| **0:25 – 0:46** | Interactive Project Intake & Boundary Protection | Selecting StringCalculator. Editable `app/` files vs immutable, protected `tests/`. Crafting the negative number task brief. | [`frame_scene2.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene2.png) |
-| **0:46 – 1:04** | Cryptographic Planning & Human Approval | NVIDIA Nemotron multi-step plan generation. Immutable plan hash and explicit human approval before code mutation. | [`frame_scene3.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene3.png) |
-| **1:04 – 1:27** | Stepper Execution & Isolated Test Runner | 8-stage stepper progress: Baseline failure -> Nemotron surgical edit -> Candidate re-test in container (network denied, limits enforced) -> REVIEW_READY. | [`frame_scene4.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene4.png) |
-| **1:27 – 1:44** | Unified Diff Review & Checkpoint Rollback | Syntax-highlighted diff of `app/calculator.py`. Compare-and-swap (CAS) checkpoint timeline with instant rollback without budget reset. | [`frame_scene5.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene5.png) |
-| **1:44 – 2:03** | Evidence Bundle Export & Live Deployment | Complete verifiable signed `.zip` export (diffs, test logs, event trace). Accessible live on production at `benchproof.vercel.app`. | [`frame_scene6.png`](file:///d:/Nvidia%20hackathon/recordings/frame_scene6.png) |
+| **0:00 – 0:25** | Overview | Guarded workflow and explicit saved-task-review disclosure. | [`frame_scene1.png`](recordings/frame_scene1.png) |
+| **0:25 – 0:46** | Intake boundaries | StringCalculator, editable `app/` vs protected imported `tests/`. | [`frame_scene2.png`](recordings/frame_scene2.png) |
+| **0:46 – 1:04** | Saved plan review | Recorded model plan and approval/source binding; not a new approval. | [`frame_scene3.png`](recordings/frame_scene3.png) |
+| **1:04 – 1:27** | Recorded test results | Failing baseline, passing candidate/final checks and scoped REVIEW_READY. | [`frame_scene4.png`](recordings/frame_scene4.png) |
+| **1:27 – 1:44** | Diff and checkpoint controls | Exact patch and saved revision controls; no newly executed rollback claimed. | [`frame_scene5.png`](recordings/frame_scene5.png) |
+| **1:44 – 2:03** | Export | Diff, plan, checks and trace; ZIP explicitly not digitally signed. | [`frame_scene6.png`](recordings/frame_scene6.png) |
+| **2:03 – 2:18** | Dated 21 October still | Separate customized rehearsal: skill, harness, MCP snapshot, two model calls and three isolated executions. | [`frame_scene7.png`](recordings/frame_scene7.png) |
 
 ---
 
@@ -151,22 +167,23 @@ BenchProof: Autonomous Coding Agent & Engineering Assurance Runtime
 Task-centered coding agent with human-approved plans, isolated candidate test execution, bounded multi-turn revision, and verifiable diff review.
 
 ### Inspiration
-Most AI coding assistants operate unconstrained: they suggest code that looks plausible but fails silently, overwrite test assertions to fake green results, or loop indefinitely when encountering runtime errors. We built BenchProof to solve this problem by treating code generation as a guarded engineering process with deterministic test isolation, protected test immutability, and auditable checkpoint rollbacks.
+Plausible edits still need testing and review, and unattended retries can consume resources without useful progress. We built BenchProof around a guarded coding workflow: approved plans, immutable imported tests, isolated execution, bounded retries and reviewable checkpoints. These safeguards are design choices, not evidence of superiority over other assistants.
 
 ### What It Does
 1. **Constrained Project Intake**: Safely ingests Python projects with path-traversal prevention, file size enforcement, secret screening, and manifest fingerprinting.
 2. **Human-in-the-Loop Plan Review**: The agent inspects the code, produces a step-by-step implementation plan, and waits for explicit user approval before mutating any file.
 3. **Protected Test Boundaries**: Test files (`tests/`) are strictly protected from modification, preventing the agent from "fixing" bugs by weakening assertions.
-4. **Isolated Candidate Execution**: Candidate code executes in an isolated runner process or container with network denied, timeouts, and resource limits.
+4. **Isolated Candidate Execution**: Candidate code executes in an isolated Docker container with network denied, timeouts, and resource limits; no host-process fallback is used for real tasks.
 5. **Bounded Multi-Turn Revision**: Test failures provide real compiler and test feedback to the model for bounded revision attempts, with automatic repeated-candidate stall detection.
 6. **Compare-and-Swap Checkpoint Rollback**: Every state mutation is checkpointed; users can rollback to any prior checkpoint without resetting consumed resource budgets.
-7. **Verifiable Export Bundles**: Produces complete cryptographic evidence bundles containing unified diffs, test logs, plans, and event traces.
+7. **Reviewable Export Bundles**: Exports unified diffs, recorded checks, plans and event traces. Source/plan hashes bind recorded versions; archives are not digitally signed or proof of every requirement.
+8. **Bounded Customization**: Browser-local profiles, instruction-only skills, two reviewed harness policies and a consented read-only documentation MCP snapshot. Arbitrary executable plugins and unrestricted MCP tools are not supported.
 
 ### How We Built It
 - **Inference**: NVIDIA Nemotron models hosted on Nebius Token Factory for planning, diagnosis, and code generation.
-- **Backend**: FastAPI, Python 3.12, SQLite with WAL checkpointing, Pydantic v2 schemas, and isolated child process/container test runners.
+- **Backend**: FastAPI, Python 3.12, SQLite with WAL checkpointing, Pydantic v2 schemas, and isolated Docker candidate execution.
 - **Frontend**: React 19, TypeScript, Vite, with custom unified diff viewer, test terminal console, 8-stage execution stepper, and budget gauges.
-- **Assurance**: Automated evaluation suite with 6 frozen benchmark tasks, cloud failure mode acceptance suite, and cryptographic evidence exports.
+- **Assurance**: Six frozen scripted gold-answer regressions, cloud failure-mode tests and version-linked evidence exports; not a held-out live-model benchmark.
 
 ### Challenges We Overcame
 - Preventing candidate loops from wasting inference quota when generating duplicate edits.
@@ -174,13 +191,13 @@ Most AI coding assistants operate unconstrained: they suggest code that looks pl
 - Keeping trusted evaluator assets out of candidates and screening exports; do not put credentials in user instructions or reference context.
 
 ### Accomplishments We're Proud Of
-- Current verification: 611 backend tests passed in isolated Linux Docker, three Docker integration cases passed separately, 29 frontend tests and 22 deployment tests passed. The deployed demo's skills/harness/MCP draft flow passed against real APIs. See `VERIFICATION.md` for scope and remaining release limits.
+- Current deployed release: 631 backend, three separate Docker integration cases, 29 frontend and 23 deployment/toolchain tests pass. Real public acceptance and a customized two-call live model task pass, including desktop/mobile export and reload. See `VERIFICATION.md` and `RELEASE_REHEARSAL.md` for scope and remaining gates.
 - Six scripted gold-answer regressions passed historically. Their responses and token usage are synthetic, not a live-model benchmark or holdout success rate.
-- Fast, responsive React frontend building in under 300ms with zero lint warnings.
+- Responsive React workspace with passing lint/build and checked desktop/mobile layouts.
 - Real end-to-end NVIDIA Nemotron-3-Nano-30B-A3B inference on Nebius Token Factory with isolated candidate Docker verification live on production.
 
 ### What We Learned
-Deterministic test isolation combined with human-reviewed execution plans dramatically reduces model hallucinations and makes autonomous coding predictable and safe.
+Passing supplied checks is useful but does not prove every requirement. Explicit approval, resource limits, recorded failures and reviewable diffs make the workflow inspectable; their effect on model error rates still requires a fair evaluation.
 
 ### What's Next
 - Extended multi-language support (TypeScript, Go, Rust).

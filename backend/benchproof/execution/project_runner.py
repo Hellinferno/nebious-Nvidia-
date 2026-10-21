@@ -1,6 +1,6 @@
 """Project test execution adapter (C-04).
 
-Executes unittest/pytest test suites for user-provided projects inside
+Executes unittest test suites for user-provided projects inside
 the isolated container runner, strictly bounding runtime and output.
 """
 
@@ -115,6 +115,8 @@ class ProjectExecutor:
         runner_profile: str = "unittest",
         should_cancel: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
+        if runner_profile != "unittest":
+            raise ValueError("Only the unittest project profile is supported")
         with self._lock:
             cancelled = self._cancelled.setdefault(operation_id, threading.Event())
 

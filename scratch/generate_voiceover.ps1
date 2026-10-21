@@ -3,27 +3,31 @@ Add-Type -AssemblyName System.Speech
 $narratives = @(
     @{
         file = "recordings\scene1_intro.wav"
-        text = "Most AI coding assistants operate unconstrained: they suggest code that looks plausible but fails silently, overwrite test assertions to fake green results, or loop indefinitely on runtime errors. BenchProof treats code generation as a guarded engineering process with deterministic test isolation and immutable test protection, powered by NVIDIA Nemotron on Nebius Token Factory."
+        text = "Plausible code still needs tests and review. BenchProof is a coding agent for small Python projects, powered by NVIDIA Nemotron on Nebius Token Factory. This walkthrough reviews a saved sample task, rather than claiming a new live run. Plans, protected imported tests, isolated execution and bounded retries keep its work inspectable."
     },
     @{
         file = "recordings\scene2_intake.wav"
-        text = "Here we select the StringCalculator project. Notice the strict boundary: application code in the app directory is editable, while test files in tests are completely protected and immutable. This prevents the model from cheating by weakening test assertions. We submit our task brief to fix negative number handling."
+        text = "Here we select the StringCalculator sample. Application files in the app directory can be approved for editing. Imported tests stay protected from agent changes. The task asks for negative numbers to raise ValueError, while preserving empty input and positive sums. Only the calculator module is editable."
     },
     @{
         file = "recordings\scene3_plan.wav"
-        text = "Before modifying any file, the agent inspects the code and queries NVIDIA Nemotron to generate a step-by-step implementation plan. We review the plan steps and approve it with an immutable cryptographic plan hash. Code cannot be mutated without explicit human approval."
+        text = "The saved task includes a model-generated implementation plan. Review the proposed steps and editable files before approval. The approved plan is bound to a recorded hash and source version. Implementation waits for approval; this recording is reviewing that completed task."
     },
     @{
         file = "recordings\scene4_exec.wav"
-        text = "The task runner executes a baseline check in an isolated Docker container, confirming the failing assertion. Next, NVIDIA Nemotron generates a surgical edit. The candidate is re-tested in a fresh container with network denied, strict memory limits, and process isolation. All tests pass, and the task reaches Review Ready."
+        text = "The recorded baseline fails its negative-number check. A real model edit is then tested in fresh Docker containers with network denied and resource limits. Candidate and fresh final checks pass, reaching Review Ready. Passing these supplied checks does not prove every requirement, so the patch still needs review."
     },
     @{
         file = "recordings\scene5_diff.wav"
-        text = "We can inspect the unified diff showing the exact changes made to raise ValueError with the list of negative numbers. Every state mutation is recorded in a compare-and-swap checkpoint log, allowing instant rollback to any prior state without resetting budget limits."
+        text = "The unified diff shows the negative-number validation and ValueError message. Saved checkpoints let the user restore a recorded task revision without resetting consumed budgets. This changes the task snapshot, not the user's local Git repository."
     },
     @{
         file = "recordings\scene6_bundle.wav"
-        text = "Finally, we export the complete verifiable evidence bundle: a signed ZIP archive containing the diff, full test logs, approved plan, and event trace. BenchProof is deployed and accessible live at benchproof.vercel.app, delivering reliable, guarded autonomous coding."
+        text = "Download the diff, approved plan, recorded checks and event trace together. The ZIP is not digitally signed; review its contents before sharing. BenchProof runs at benchproof dot vercel dot app. Skills, harness choices and read-only documentation context are also available in the newer release."
+    }
+    @{
+        file = "recordings\scene7_customization.wav"
+        text = "This dated screenshot shows the separate October twenty-first rehearsal. A pinned skill, single-pass harness and consented documentation reference accompanied two genuine model calls, one patch and three isolated executions. It is one public sample, not a held-out benchmark."
     }
 )
 

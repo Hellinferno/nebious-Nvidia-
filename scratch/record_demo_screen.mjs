@@ -83,6 +83,11 @@ async function smoothScroll(page, targetY, steps = 25, delayMs = 20) {
 }
 
 async function record() {
+  const demoOwner = process.env.BENCHPROOF_DEMO_OWNER;
+  const demoTask = process.env.BENCHPROOF_DEMO_TASK;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(demoOwner ?? '') || !/^coding-[a-f0-9]{16}$/.test(demoTask ?? '')) {
+    throw new Error('Set a private sample owner capability and completed demo task in the process environment before recording');
+  }
   const rawDir = path.resolve('recordings/raw');
   if (!fs.existsSync(rawDir)) {
     fs.mkdirSync(rawDir, { recursive: true });
@@ -190,10 +195,10 @@ async function record() {
   await sleep(2500);
 
   // Transition to active completed task
-  await page.evaluate(() => {
-    localStorage.setItem('benchproof.owner-capability', 'live-e2e-tester-d28c1e92');
-    localStorage.setItem('benchproof.active-coding-task', 'coding-0cd40777a9f549a4');
-  });
+  await page.evaluate(({ owner, task }) => {
+    localStorage.setItem('benchproof.owner-capability', owner);
+    localStorage.setItem('benchproof.active-coding-task', task);
+  }, { owner: demoOwner, task: demoTask });
   await page.reload({ waitUntil: 'networkidle' });
   await injectCursor(page);
   await page.evaluate(() => window.scrollTo(0, 0));

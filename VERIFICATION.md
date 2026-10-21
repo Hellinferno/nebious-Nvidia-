@@ -1,12 +1,128 @@
-# Verification — 20 October 2026
+# Verification — 21 October 2026
 
 ## Current status
 
-The approved portability fix and the latest customization release are deployed at **https://benchproof.vercel.app**. The latest full backend run has **611 passing cases and three intentionally skipped Docker cases**; those three cases passed separately, and the deployed runtime additionally passed fresh isolation, resource-limit, timeout and replay checks. Frontend, deployment, public API and real desktop/mobile browser checks pass.
+### Deployed hardening revision
+
+The R-series plan in `BUILD_PLAN.md` separates implemented, tested, deployed,
+measured and submitted states. Current production rejects unsupported pytest project
+profiles before task/model/executor dispatch and adds non-destructive global project
+count/payload plus database/free-disk admission checks. See `DATA_RETENTION.md`.
+
+Current-source verification:
+
+- Focused no-inference/no-candidate backend tests: **213 passed**, including 20 new
+  runner/storage regressions. The initial test invocation lacked its temporary
+  parent directory; corrected runs pass and failed artifacts are retained.
+- Complete backend suite in dedicated non-root, networkless Linux Docker:
+  **631 passed, three skipped**. All three skipped Docker integration cases passed
+  separately on the same source snapshot, with candidates still Docker-isolated.
+- Source snapshot identity: `3f4960b40eaa0fe219bb09d7af05089e9b8eefd205e048e1db321c9af5ae9b36`.
+- Fresh setup verification additionally installs the locked backend requirements
+  and editable project into a new cloud Python environment, then repeats the full
+  suite in non-root, networkless Docker: **631 passed, three skipped** again.
+  This is the same source hash and is not additive. Clean root `npm ci
+  --ignore-scripts` and CLI/toolchain checks also pass. A post-publication Git
+  clean-clone/three-process launch is still a separate acceptance gate.
+- Frontend **29 passed**, deployment/toolchain **23 passed**; changed Python lint,
+  frontend lint, TypeScript/Vite production build and CLI version smoke pass.
+- Rebuilt UI mocked-browser regressions: **15 workspace**, **17 profile**, **nine
+  extension** assertions pass, with zero browser errors and external requests
+  blocked. These are not live-model or updated-production acceptance tests.
+- Deployed package: `49337c3683310a7c137e898459dd38ab3927a2c3cd7cc3588e6523596127bcd3`,
+  129 allowlisted files; UI asset `index-Bh_QKpW8.js`.
+- Compatible development toolchain patches reduce npm advisories from 33 to
+  **23 high, zero critical/moderate**; root production-only audit remains zero.
+  Remaining upstream/incompatible-major paths are documented in `DEPENDENCY_REVIEW.md`.
+- Exactly two new inference calls were used for the separately recorded live
+  rehearsal below. No automatic cleanup, paid hosting upgrade or inference retry.
+
+New artifacts: `artifacts/release-hardening-20261020/targeted-4.xml`,
+`cloud-full-suite.json` / `.xml`, `cloud-docker-integration.json` / `.xml`, and
+`npm-audit-all.json` / `npm-audit-production.json`. Full-suite temporary scratch
+uses 256 MiB so tests have headroom above the new 128 MiB free-space reserve;
+candidate production limits remain unchanged.
+
+### Production rollout and public acceptance
+
+- Production: [benchproof.vercel.app](https://benchproof.vercel.app).
+- Deployment `dpl_7SPDgfYC3M5HLPCThyCMWEPBRgi7` is READY and owns the production alias.
+  Verified existing Hobby account; private provider/origin secrets, MCP allowlist,
+  40-call/60-execution daily coding limits, 2,048 output-token allowance and original
+  admission deadline preserved. No Git integration: a source push is not deployment.
+- Before replacement, verified no active task/action, database integrity, private
+  WAL-consistent database/limits/config backups and a reconstructed exact rollback
+  package for old runtime `ebdb1ff5143c47bbee1407cfbc22f243e502eaa8544357c61a40d91893cb43e9`.
+  Explicit reviewed-hash upgrade was used; historical task/evidence state retained.
+- The first gateway deployment `dpl_6dmZjEdYRXbBvbGT6faLUv4QtWnD` failed Linux
+  `npm ci`: optional peers `@emnapi/core` / `@emnapi/runtime` 1.11.3 were absent
+  from the Windows-generated lockfile. Verified registry entries and a lockfile
+  regression fix this. The subsequent actual Linux install/build/deployment passes;
+  the failed deployment is retained, not described as a successful first attempt.
+- Cloud acceptance passes: audit `audit-e98139f31c21`, including isolation,
+  enforced memory/OOM negative, timeout cleanup, origin/owner restrictions,
+  gate/export/validation/replay and stop/resume persistence.
+- Fresh public acceptance on 21 October passes: audit `audit-646e9823447f`,
+  readiness 9,349 ms, clean/faulty checks, bundle validation/replay, SSE, ownership,
+  oversize and secret-path denials. This measurement is not an explicit cold-stop
+  latency benchmark. Provider testing was skipped in this API check, then covered
+  by the separately authorized live task below.
+
+Rollout/public records: `artifacts/release-live-20261020/preflight.json`,
+`artifacts/vercel/cloud-check-1792511226077.json`, and
+`artifacts/vercel/public-check-1792588247301.json`. Backups contain private state and
+must remain private. Full runtime verification is not an unrestricted security audit.
+
+### Customized live browser rehearsal
+
+Task `coding-d6450f348202421a` completed REVIEW_READY using a pinned instruction
+skill, `single-pass-v1` harness and consented documentation MCP workflow snapshot.
+The public StringCalculator baseline failed its negative-number check; a genuine
+model-generated edit changed only `app/calculator.py`. All three candidate/fresh
+final checks passed with protected imported tests and the original project unchanged.
+Desktop/mobile layout, export download, ZIP inspection and reload/counter persistence
+pass with no browser errors. The ZIP is not digitally signed.
+
+Exactly two live Nebius/NVIDIA calls, zero retries: 2,773 prompt + 1,341 completion
+= 4,114 tokens, one patch attempt and three isolated executions. The first browser
+harness timed out on an underscore-versus-space state label after planning succeeded;
+read-only reconciliation and continuation of the same task avoided repeating spend.
+At the checked listed prices the estimated inference charge is $0.00048822; actual
+billed charge, updated balance and enforcement of the intended $50 judging reserve
+are UNKNOWN. The user reported $59 before the run. See [RELEASE_REHEARSAL.md](RELEASE_REHEARSAL.md)
+for identities, recorded usage, failure retention and local evidence. Plan review was
+agent-assisted under the owner's authorization, not a human user study. This one
+public sample is not a held-out live-model benchmark or proof of every workflow.
+
+### Corrected walkthrough
+
+The actual tracked MP4 now has corrected local synthetic narration and embedded /
+standalone captions, plus a dated still of the separate customized rehearsal.
+Duration 138.28 seconds, H.264 1280×720, AAC stereo, mov_text subtitles. Full media
+decode passes; all 17 embedded captions match the standalone SRT and the new final
+frame is visually checked. SHA-256:
+`0786795b7eeda243125e82d5f1674f44df3a6da2456743ae83908aca8ccc6d46`.
+The original is retained privately. The first speech attempt was blocked by local
+sandbox voice access; using the installed Windows voice outside that boundary
+completed without inference/network calls. The clip truthfully describes saved-task
+review, not a newly recorded inference/approval/rollback. See [recordings/README.md](recordings/README.md).
+The legacy recording script no longer hardcodes its sample owner capability.
+
+Open gates: upstream development advisories, clean-clone launch/publication,
+owner final video viewing, broader live evaluation/user sessions,
+judging credit/access reserve, final rights review and owner submission confirmation.
+Do not infer their completion from test counts or this single rehearsal.
+
+## Historical 20 October customization release
+
+The following records describe the prior runtime and counts, not the current
+hardening deployment. Later evidence and remaining gates are above.
+
+The approved portability fix and the customization release are deployed at **https://benchproof.vercel.app**. That published release's recorded full backend run has **611 passing cases and three intentionally skipped Docker cases**; those three cases passed separately, and the deployed runtime additionally passed isolation, resource-limit, timeout and replay checks. Frontend, deployment, public API and real desktop/mobile browser checks passed for that release.
 
 The public demo now includes skills, reviewed harness choices and **BenchProof public guides**, a read-only MCP documentation connection. The bridge is configured for five queries per UTC day. The public `/mcp` function exposes only static guides, not private source or execution. Additional third-party MCP servers still require operator review/configuration and compatible protocols.
 
-## Checks performed
+### Historical checks performed
 
 | Check | Result | Scope |
 | --- | --- | --- |
@@ -32,7 +148,7 @@ The public demo now includes skills, reviewed harness choices and **BenchProof p
 
 Counts from overlapping test selections are not additive. Mocked failure-mode tests are not claims of physically reproducing every cloud outage. The full-suite container intentionally has no Docker socket. All three skipped cases passed in the separate integration run: clean/faulty fixture execution, recorded isolation findings and timeout cleanup. The generic project runner additionally passed baseline/candidate execution and cancellation checks.
 
-## Live evidence
+### Earlier live evidence
 
 - Provider/model: Nebius Token Factory, `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`.
 - Provider-reported usage: 985 prompt tokens, 932 completion tokens, 1,917 total. Monetary charge and remaining balance were not measured.
@@ -40,13 +156,13 @@ Counts from overlapping test selections are not additive. Mocked failure-mode te
 - Cloud audit: `audit-082f1e22bae9`; patch: `patch-268c0b142dfd`.
 - Ordinary imported-project unittest success is scoped to user-supplied checks. It is not equivalent to the protected invoice acceptance gate.
 
-## Resolved portability failure
+### Resolved portability failure
 
 The previous full run found six bundle cases requesting `mc-01`, while the committed directory is `backend/fixtures/development/MC-01`. Windows tolerated the mismatch but Linux did not. Fixture lookup now resolves the unique case-insensitive name to its canonical directory, rejects case collisions, and retains traversal/link containment checks. Existing bundle tests are unchanged and pass. Fifteen new lookup cases verify canonical names and hashes, invalid paths, missing fixtures, collisions and escaping links; all run in Linux, while three OS-dependent cases are skipped by the separate Windows-only lookup run.
 
 Earlier attempts exposed test-harness packaging/output restrictions and transient Chrome navigation/screenshot races. These were corrected or retried before the successful checks; failed artifacts are retained. The subsequent production upgrade uses the existing verified Hobby project and Sandbox. Private WAL-consistent database/configuration backups and a rollback package were retained before replacement; no active coding tasks were interrupted. Existing coding limits remain 40 model calls/day, 60 executions/day and 2,048 output tokens/call, with the original session deadline. The Vercel project has no Git integration, so future Git pushes do not themselves deploy the runtime.
 
-## Deployed release
+### Previous deployed release
 
 - Production: [benchproof.vercel.app](https://benchproof.vercel.app).
 - Deployment ID: `dpl_F6mnYCBAfR6i9zktWXVscS9NufrE`.
@@ -57,7 +173,7 @@ Earlier attempts exposed test-harness packaging/output restrictions and transien
 
 The build reports **33 existing development/toolchain npm advisories** (including one critical). A separate production-only `npm audit --omit=dev` query reported **zero** advisories, and the frontend install audit reported zero. Development advisories were not remediated in this deployment; this is not an exhaustive security certification.
 
-## Local evidence files
+### Previous local evidence files
 
 Generated records are intentionally Git-ignored and available in this workspace:
 
@@ -84,7 +200,7 @@ Generated records are intentionally Git-ignored and available in this workspace:
 
 Browser directories also contain screenshots. Local mocked flows block external requests. The earlier public read-only check allows only GET/HEAD; the deployed customization check additionally allowlists only MCP-context, project and draft creation POSTs, blocking plan/start calls. No API keys, owner capabilities, private runtime configuration or raw credential files should be added to Git with these artifacts.
 
-## Release limitations
+### Previous release limitations
 
 - The portability fix, runtime upgrade and production acceptance are complete. Source publication follows the successful deployed checks.
 - The configured MCP endpoint is owned by this project and exposes only public guides. Third-party servers, older protocol initialization, OAuth, SSE and arbitrary tool/harness plugins are not claimed to work.

@@ -1,9 +1,10 @@
-# BenchProof — Agentic Engineering Assurance Runtime
+# BenchProof — Task-Centered Coding Agent
 
-Hackathon build for the Coding and Agentic Engineering track. The runtime audits a
-synthetic Python invoice service against human-approved executable constraints,
-uses NVIDIA model inference on Nebius for bounded investigation and repair, and
-accepts a patch only through a deterministic protected evaluator.
+Hackathon build for the Coding and Agentic Engineering track. Give the agent a
+small Python task, customize its instructions, review its plan, then inspect a
+real model-written patch and isolated test results. NVIDIA inference runs on
+Nebius Token Factory. A secondary assurance workspace audits a synthetic invoice
+service against a deterministic protected evaluator.
 
 That protected gate applies to the curated invoice profile. Imported projects use their supplied unittest checks; passing them is scoped evidence, not independent proof of every requirement.
 
@@ -27,9 +28,10 @@ The legacy assurance audit dashboard remains available as a secondary tab in the
 ## Public Demo & Status
 
 Public demo: [benchproof.vercel.app](https://benchproof.vercel.app), hosted on Vercel with persistent storage and Nebius Token Factory inference.
-Latest verification: **611 backend tests passed in isolated Linux Docker; three Docker integration cases passed separately; 29 frontend and 22 deployment tests passed**. The latest demo includes skills, harness choices and a working read-only documentation MCP connection. Real public API, desktop/mobile UI, cold-resume, protected checks and replay passed. See [VERIFICATION.md](VERIFICATION.md) for evidence and scope.
+Latest verification (21 October): **631 backend tests passed in isolated Linux Docker; three Docker integration cases passed separately; 29 frontend and 23 deployment/toolchain tests passed**. Runner/storage hardening is deployed. Real public API, restart persistence, isolated protected checks, export and replay pass. See [VERIFICATION.md](VERIFICATION.md) for evidence and scope.
+A customized real-model browser rehearsal reached REVIEW_READY with a pinned skill, reviewed harness and read-only documentation MCP snapshot: exactly **two model calls, one patch and three isolated executions**, with desktop/mobile download and reload verified. This is one public sample with agent-assisted plan review, not a held-out benchmark or user study. See [RELEASE_REHEARSAL.md](RELEASE_REHEARSAL.md). Remaining work is tracked in [BUILD_PLAN.md](BUILD_PLAN.md).
 Frontend: TypeScript / React 19. The public demo is deployed; future Git pushes do not automatically upgrade its trusted Sandbox runtime. The public documentation MCP endpoint is `/mcp`, with `read_guide` as its only tool. The application bridge allows five MCP queries per UTC day.
-audits, leases, ordered/resumable events and idempotent creation; Engineering-State
+The secondary assurance workspace includes audits, leases, ordered/resumable events and idempotent creation; Engineering-State
 Graph and deterministic impact context; bounded NVIDIA investigation; restricted
 source-hash-bound repairs; an independent protected acceptance gate; immutable ZIP
 evidence export, non-executing integrity validation and fresh replay; and a connected
@@ -106,8 +108,10 @@ The primary demo is [BenchProof on Vercel](https://benchproof.vercel.app), with 
 UI/API, persistent cloud storage, one action at a time and a shared daily action ceiling.
 See [Vercel deployment](VERCEL_DEPLOYMENT.md) for operations and verification.
 The [laptop/ngrok route](DEMO_HOSTING.md) remains an optional fallback only. Backup/restore,
-judging-period availability, credit/pricing review, final trials, clean-clone
-installation, video and submission remain release work.
+judging-period availability, confirmed credit reserve, broader trials, clean-clone
+acceptance and actual submission remain release work. The corrected 2:18 walkthrough
+labels its saved-task review and dated customization-rehearsal screenshot; exports
+are not signed. See [video provenance](recordings/README.md); owner review remains open.
 
 ## Setup (Windows, PowerShell)
 
@@ -134,7 +138,7 @@ Set-Location frontend; npm ci; Set-Location ..
 Set-Location backend
 .\venv\Scripts\python.exe -m uvicorn benchproof.api.main:app --host 127.0.0.1 --port 8000
 
-# terminal 2 — worker (heartbeat only in this version)
+# terminal 2 — separately configured coding-task worker
 Set-Location backend
 .\venv\Scripts\python.exe scripts\start_worker.py
 
@@ -149,24 +153,59 @@ capability, and restores its last audit without issuing a second create request.
 startup; daemon/image probe timeouts are reported as unavailable rather than crashing
 the API.
 
+### Enable live coding deliberately
+
+The default `.env.example` is no-spend: the mock runner and disabled coding worker
+cannot implement tasks. For live work, build/verify the isolated Docker runner,
+set the exact Nebius model/key server-side, and set these operator values in the
+root `.env` before starting both API and worker:
+
+```dotenv
+BENCHPROOF_RUNNER=docker
+BENCHPROOF_CODING_ENABLED=true
+BENCHPROOF_CODING_MODEL_CALLS_PER_DAY=4
+BENCHPROOF_CODING_EXECUTIONS_PER_DAY=6
+BENCHPROOF_CODING_OUTPUT_TOKENS=2048
+BENCHPROOF_CODING_MAX_TASKS=100
+BENCHPROOF_CODING_DEADLINE_EPOCH=REPLACE_WITH_APPROVED_UNIX_DEADLINE
+```
+
+Compute a one-hour admission deadline in PowerShell with
+`[DateTimeOffset]::UtcNow.AddHours(1).ToUnixTimeSeconds()` and replace the placeholder
+with that number. This is an admission deadline, not a guarantee of VM uptime or
+remaining credits. Both processes must use the same configuration and database;
+restart them after changes. These sample global allowances are request/execution
+ceilings, not a currency guarantee. Creating a draft is free of inference; requesting
+a model plan and starting implementation can spend credits. Do not run them without
+an agreed envelope. A worker heartbeat alone does not prove coding admission.
+
+Only **unittest** projects are supported. Pytest-labelled imports, including legacy
+records used for new tasks, are rejected rather than silently run as unittest.
+See [data retention and admission](DATA_RETENTION.md) for storage limits and deletion
+semantics. Do not upload sensitive projects to this demo.
+
 ## Checks
 
 ```powershell
 Set-Location backend
-.\venv\Scripts\python.exe -m pytest                                   # 467 passed; full backend test suite
+.\venv\Scripts\python.exe -m pytest tests/test_release_admission.py tests/test_coding_store.py tests/test_coding_api.py # no inference or candidate execution
 .\venv\Scripts\python.exe scripts\run_coding_eval.py --scripted-smoke # gold-answer regression, Docker required; not a live-model benchmark
 .\venv\Scripts\python.exe scripts\run_coding_loop.py                  # runs end-to-end coding loop verification with isolated runner
 .\venv\Scripts\python.exe scripts\backup_restore.py backup --db-path benchproof.db --backup-dir ./backups  # WAL-consistent SQLite backup
 .\venv\Scripts\python.exe scripts\validate_fixtures.py --suite development-v2
-.\venv\Scripts\python.exe scripts\provider_preflight.py               # real catalog + inference + JSON check
+.\venv\Scripts\python.exe scripts\provider_preflight.py               # PAID: catalog + inference + JSON check; separate spending approval
 .\venv\Scripts\python.exe scripts\runner_preflight.py                 # Sandboxes permissions + Docker runs + timeout negative
 .\venv\Scripts\python.exe scripts\freeze_suites.py --verify             # frozen held-out assets still match truth.lock.json
 .\venv\Scripts\python.exe scripts\run_bundle_replay.py                # new evidence directory; Docker required; no application DB writes
 ```
 
-The fixture validator imports candidate code in-process. That is a development
-tool only. The Docker runner is the tested isolated route locally and inside the
-trusted Vercel Sandbox. Nebius Sandboxes beta access is not required by this hosted route.
+The complete backend suite includes legacy tests that import/launch fixture code.
+Run that suite and the fixture validator only inside a dedicated isolated test
+container, not directly on the laptop. The selected pytest command above uses mocks
+and storage only. The scripted evaluation/replay and real coding loop require Docker
+and are not live-model benchmarks. Nebius Sandboxes beta access is not required by
+the hosted Vercel route. See [VERIFICATION.md](VERIFICATION.md) for dated test evidence
+and [BUILD_PLAN.md](BUILD_PLAN.md) for remaining acceptance gates.
 
 ## License
 

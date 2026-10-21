@@ -25,6 +25,7 @@ from benchproof.coding.contracts import (
     TaskLimits,
 )
 from benchproof.fixtures import candidate_files, fixture_dir
+from benchproof.storage.admission import StorageAdmissionError, check_storage_admission
 
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 _PATH = re.compile(r"^(?:app|tests)/(?:[A-Za-z_][A-Za-z0-9_]*/)*[A-Za-z_][A-Za-z0-9_]*\.py$")
@@ -277,6 +278,9 @@ class CodingStore:
                 ).fetchone()
                 if proj is None:
                     raise CodingStoreError("NOT_FOUND", f"Project '{fixture_id}' not found")
+                manifest = json.loads(proj["manifest_json"])
+                if proj["runner_profile"] != "unittest" or manifest.get("runner_profile") != "unittest":
+                    raise CodingStoreError("UNSUPPORTED_RUNNER", "Only the unittest project profile is supported")
                 proj_files = json.loads(proj["files_json"])
                 if proj_files != source_files:
                     raise CodingStoreError("STALE_SOURCE", "Task source does not match stored project snapshot")
@@ -299,6 +303,13 @@ class CodingStore:
             count = connection.execute("SELECT COUNT(*) FROM coding_tasks").fetchone()[0]
             if count >= self.operator_limits.max_tasks:
                 raise CodingStoreError("STORAGE_LIMIT", "Prepared coding task storage is full")
+            try:
+                check_storage_admission(
+                    self.db_path,
+                    len((source_json + runtime_json + _json(brief_payload)).encode("utf-8")) + 16_384,
+                )
+            except StorageAdmissionError as exc:
+                raise CodingStoreError("STORAGE_LIMIT", str(exc)) from exc
             task_id = f"coding-{uuid.uuid4().hex[:16]}"
             now = self.clock()
             connection.execute("""
@@ -338,6 +349,19 @@ class CodingStore:
                         (task_id, after_sequence),
                     )]
 
+    def _require_project_runner(self, connection: sqlite3.Connection, task: sqlite3.Row) -> None:
+        if not task["fixture_id"].startswith("proj-"):
+            return
+        project = connection.execute(
+            "SELECT runner_profile,manifest_json FROM coding_projects WHERE project_id=? AND owner_ref=?",
+            (task["fixture_id"], task["owner_ref"]),
+        ).fetchone()
+        if project is not None and (
+            project["runner_profile"] != "unittest"
+            or json.loads(project["manifest_json"]).get("runner_profile") != "unittest"
+        ):
+            raise CodingStoreError("UNSUPPORTED_RUNNER", "Only the unittest project profile is supported")
+
     def enqueue(
         self, owner_ref: str, task_id: str, idempotency_key: str, *, phase: str = "plan",
     ) -> dict[str, Any]:
@@ -351,6 +375,7 @@ class CodingStore:
             replay = self._replay(connection, owner_ref, f"enqueue:{phase}", idempotency_key, fingerprint)
             if replay:
                 return replay
+            self._require_project_runner(connection, task)
             expected = "DRAFT" if phase == "plan" else "APPROVED"
             if task["state"] != expected:
                 raise CodingStoreError("INVALID_STATE", f"Task must be {expected} before this enqueue")
@@ -522,6 +547,7 @@ class CodingStore:
         self.guard(lease)
         with self._transaction() as connection:
             task = self._lease(connection, lease)
+            self._require_project_runner(connection, task)
             if task["pause_requested"]:
                 raise CodingStoreError("PAUSED", "Task pause was requested")
             if connection.execute(

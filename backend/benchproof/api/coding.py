@@ -85,6 +85,8 @@ def _project_snapshot(db_path: Path, project_id: str, owner: str, source_hash: s
     proj = ProjectStore(db_path).get_project(project_id, owner_ref=owner)
     if proj is None:
         raise CodingStoreError("NOT_FOUND", f"Project '{project_id}' not found")
+    if proj.runner_profile != "unittest" or proj.manifest.runner_profile != "unittest":
+        raise CodingStoreError("UNSUPPORTED_RUNNER", "Only the unittest project profile is supported")
     if proj.source_hash != source_hash:
         raise CodingStoreError("STALE_SOURCE", "The project source changed; select its current source revision")
     return proj.files
@@ -116,7 +118,7 @@ def coding_router(
             return operation(store())
         except CodingStoreError as exc:
             status = {
-                "NOT_FOUND": 404, "INVALID_INPUT": 422, "STORAGE_LIMIT": 413,
+                "NOT_FOUND": 404, "INVALID_INPUT": 422, "UNSUPPORTED_RUNNER": 422, "STORAGE_LIMIT": 413,
                 "OPERATOR_LIMIT": 429, "BUSY": 429,
             }.get(exc.code, 409)
             raise HTTPException(status, detail={"code": exc.code, "message": str(exc)}) from exc

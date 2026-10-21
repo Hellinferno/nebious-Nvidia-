@@ -1,6 +1,6 @@
 # Vercel deployment
 
-Status (17 October 2026 IST): the refreshed production UI is deployed at [benchproof.vercel.app](https://benchproof.vercel.app) on the Hobby team. Cloud isolation, memory enforcement and persistence/restart pass again for its packaged version; fresh-profile layout checks pass at six screen widths. Prior public gate/export/replay/SSE/access checks and one live NVIDIA diagnosis passed, but a later diagnosis returned HTTP 422, so model reliability remains open. The laptop demo is an optional fallback, not a dependency.
+Status (21 October 2026 IST): runner/storage hardening and customization are deployed at [benchproof.vercel.app](https://benchproof.vercel.app) on the verified Hobby team. Current deployment: `dpl_7SPDgfYC3M5HLPCThyCMWEPBRgi7`; trusted runtime `49337c3683310a7c137e898459dd38ab3927a2c3cd7cc3588e6523596127bcd3` (129 allowlisted files). Fresh backup/rollback, isolation/OOM/timeout, persistence/restart and public acceptance pass. One customized browser task completed with exactly two genuine model calls, protected imported tests unchanged, desktop/mobile export and reload verified. See [VERIFICATION.md](VERIFICATION.md) and [RELEASE_REHEARSAL.md](RELEASE_REHEARSAL.md). Broader model reliability/evaluation and judging access remain open. The laptop is not required to host the demo.
 
 ## Design
 
@@ -15,7 +15,7 @@ Status (17 October 2026 IST): the refreshed production UI is deployed at [benchp
 ## Acceptance before switching the demo
 
 - [x] Vercel Hobby account and Sandbox access verified.
-- [x] Exact installed SDK API and lockfile verified (`@vercel/sandbox` 3.8.0, CLI 64.3.1).
+- [x] Exact installed SDK API and lockfile verified (`@vercel/sandbox` 3.8.0, CLI 64.7.0); actual Linux install/build passed after retaining required optional peers.
 - [x] Deployment package excludes secrets and hidden held-out truth (allowlist tests pass).
 - [x] Docker isolation, cleanup and timeout controls pass inside Vercel Sandbox.
 - [x] SQLite, artifact and daily-limit state survive a stop/resume cycle, followed by a fresh isolated replay.
@@ -30,7 +30,7 @@ The frozen local evaluation configuration is retained as historical local eviden
 
 Run from the repository root after authenticating Vercel CLI with the intended Hobby account:
 
-For a new account/project, first run `npx vercel project create benchproof --scope YOUR_HOBBY_TEAM`, then link that existing project. CLI 64.3.1 otherwise attempts to convert the frontend/backend directories into Services during automatic new-project setup, conflicting with this intentionally single-project gateway configuration.
+For a new account/project, first run `npx vercel project create benchproof --scope YOUR_HOBBY_TEAM`, then link that existing project. CLI 64.3.1 originally attempted to convert the frontend/backend directories into Services during automatic new-project setup, conflicting with this intentionally single-project gateway configuration; keep the reviewed explicit project setup with the current CLI.
 
 ```powershell
 npm ci
@@ -52,7 +52,13 @@ The verifier checks the unauthenticated origin returns 403, all Docker isolation
 
 The deployer requires the same linked project and verified runtime hash, sends four gateway settings through CLI stdin, and deploys production. The provider key remains solely on the trusted origin. After deployment, verify the actual public UI and rewritten API paths, a bounded real NVIDIA diagnosis, SSE streaming, ownership denial and fresh replay through the gateway. Do not replace the fallback until those checks pass.
 
-## Local evidence and limitations
+## Historical 17 October evidence and limitations
+
+The records below identify the earlier deployment, not the current runtime or test
+counts. Current acceptance and the retained Linux lockfile failure/fix are recorded
+in [VERIFICATION.md](VERIFICATION.md). Development-tool advisories are now 23 high,
+zero critical/moderate, with zero reported by the production-only npm audit; see
+[DEPENDENCY_REVIEW.md](DEPENDENCY_REVIEW.md).
 
 - Full backend regression: 235 passed, including Docker, origin-authentication and Linux output-directory permission tests.
 - Deployment tests: 15 passed, covering forwarding, SSE, request limits, fail-closed behavior, exclusions, known-runtime lookup, explicit upgrades, Hobby restrictions and concurrent lifetime-extension recovery.

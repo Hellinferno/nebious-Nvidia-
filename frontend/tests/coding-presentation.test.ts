@@ -100,6 +100,8 @@ test('approval comparison rejects unseen plan changes regardless of object key o
 })
 
 test('task stop reasons explain recovery without overstating check coverage', () => {
+  assert.match(taskResultMessage({ code: 'UNSUPPORTED_RUNNER' }) || '', /Only unittest projects are supported/)
+  assert.match(taskResultMessage({ code: 'UNSUPPORTED_RUNNER' }) || '', /pytest was not run/)
   assert.match(taskResultMessage({ code: 'BASELINE_ALREADY_PASSES' }) || '', /Add a feature or Refactor/)
   assert.match(taskResultMessage({ code: 'CHECKS_PASSED' }) || '', /requirements those checks do not cover/)
   assert.match(taskResultMessage({ code: 'MODEL_OUTPUT_TRUNCATED' }) || '', /No automatic paid retry/)
