@@ -1,0 +1,34 @@
+{
+  "schema_version": "benchproof/generation-policy-regression-v1",
+  "created_date_ist": "2026-10-22",
+  "generation_policy": {
+    "version": "coding-generation-v2",
+    "sha256": "0a9ec6ead2f13956b9b5d9a97947bd4a6c3700587b849d4a6132324d080a00ce"
+  },
+  "changes": [
+    "Explicit Python 3.12 and import-time forward-reference guidance",
+    "Concise complete-file output and one-sentence explanation guidance",
+    "Explicit use of previous patch and candidate failure on revision",
+    "Task runtime pinning and export of the exact generation policy"
+  ],
+  "output_tokens_per_call": 2048,
+  "model_changed": false,
+  "provider_adapter_changed": false,
+  "sdk_retries": 0,
+  "network_or_candidate_limits_changed": false,
+  "production_deployed": false,
+  "new_inference_authorized": false,
+  "new_inference_calls": 0,
+  "live_generation_quality": "NOT_MEASURED",
+  "observed_truncation_cause": "The provider reported finish_reason=length at 2048 output tokens; reasoning-token attribution is unavailable and remains unconfirmed",
+  "reasoning_control": "Unchanged; NVIDIA documents model reasoning controls, but equivalent support for this exact Nebius endpoint was not verified",
+  "saved_evidence": [
+    "public-workflows-2026-10-21-results.json",
+    "bounded-followup-2026-10-21-results.json"
+  ],
+  "held_out": false,
+  "comparative_benchmark": false,
+  "prior_results_unchanged": true,
+  "legacy_task_behavior": "After an explicit rollout, tasks without the matching generation policy fail STALE_RUNTIME before paid work; inspect or export them and create/review a new task rather than silently upgrading them",
+  "remaining_gate": "Separately authorized live regression on this new policy before claiming the feature reliability issue resolved"
+}

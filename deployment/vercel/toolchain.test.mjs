@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
+test('deployment uploads exclude root local test and private review directories', async () => {
+  const ignored = (await readFile(new URL('../../.vercelignore', import.meta.url), 'utf8')).split(/\r?\n/);
+  assert.ok(ignored.includes('.codex-*'));
+  for (const name of ['.vercel', '.env', '.env.*', 'artifacts', 'backend/.codex-*']) {
+    assert.ok(ignored.includes(name), `Missing local-only deployment exclusion ${name}`);
+  }
+});
+
 test('deployment toolchain locks reviewed compatible patches without changing production dependencies', async () => {
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
   const lock = JSON.parse(await readFile(new URL('../../package-lock.json', import.meta.url), 'utf8'));

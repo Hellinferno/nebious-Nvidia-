@@ -1,6 +1,184 @@
-# Verification — 21 October 2026
+# Verification — updated 22 October 2026
 
 ## Current status
+
+### Production v3 rollout — 22 October
+
+**Live:** https://benchproof.vercel.app, deployment
+`dpl_4PGB22kBveDfE3obV57FjD25zSfx`, trusted runtime
+`517e43f650c6e7575bd5e7a198dc4dd77d56be68032050164702b42123831a3d`.
+The explicitly approved private production output limit is now **4,096**.
+Daily coding limits stay **40 model calls / 60 executions**, shared demo actions
+60 and documentation MCP queries five. The November 30 admission deadline,
+provider key, candidate limits and Hobby plan are unchanged; no paid upgrade.
+
+- Idle upgrade retains private WAL-consistent database/config backups and an
+  exact 129-file rollback package for old runtime `49337c36…`. All 130 new deployed
+  file hashes, actual worker output/daily settings and database integrity verify.
+- Trusted-cloud checks pass actual network/metadata/secret/read-only isolation,
+  timeout denial and enforced 256 MiB OOM kill. Audit, bundle, quotas and worker
+  persist across stop/resume. No model call occurs in these infrastructure checks.
+- Public cold gateway resume, readiness, clean gate, bundle integrity/fresh replay,
+  SSE, faulty-candidate rejection and owner/secret-path boundaries pass. Actual
+  production desktop/mobile UI creates one zero-spend draft pinned to v3/4,096;
+  JSON/ZIP export and reload preserve zero counters and the new UI asset.
+- Initial upload stopped on a root local cache EPERM; adding `.codex-*` to
+  `.vercelignore` and its regression fixes the upload boundary. A read-only worker
+  checker first had an invalid NUL argument; correcting its helper escaping makes
+  it pass. Neither failure performs inference or alters candidate code.
+
+[Sanitized rollout record](verification/policy-v3-rollout-2026-10-22.json).
+Raw cloud record `artifacts/vercel/cloud-check-1792677648801.json`, public record
+`artifacts/vercel/public-check-1792678015476.json`, and rollout/browser records in
+`artifacts/policy-v3-live-20261022/`. **No fresh production model call is claimed**;
+the separately frozen staging run below supplies genuine v3/4,096 model evidence.
+Source publication follows successful tests/browser checks; Git records its commit
+independently from deployment. Older production hashes/settings below are dated
+historical snapshots, not the current rollout.
+
+### Separate v3 live acceptance — 22 October
+
+The owner separately authorized another bounded v3 staging regression: three
+model calls, 4,096 output tokens/call, two edits and four isolated checks, no SDK
+retry. Task **`coding-5e6be4746ce7479b` reaches REVIEW_READY / CHECKS_PASSED**.
+
+- Same frozen public source, requested feature, protected tests and skill; exact
+  tested source `83a74711…`, policy `34108fa5…`. Baseline passes three of six
+  methods. The first physical-line response still uses an unquoted self-class
+  annotation and fails import. Retain this failure: syntax parsing is not runtime
+  correctness. The second model response quotes the annotation; candidate and a
+  separate fresh final execution each pass all six imported methods.
+- **Three calls / two edits / four isolated executions**, 72.65 active seconds;
+  **5,496 prompt + 6,404 completion = 11,900 tokens**. All finish reasons `stop`,
+  no SDK retries or manual/canned edits. Actual bill/current balance unknown.
+  Shared daily quota reserved and consumed three calls/four executions. Original
+  project/tests remain unchanged; candidates run only in pinned, non-root,
+  networkless cloud Docker with enforced limits and no secret environment.
+- Saved JSON/ZIP, exact candidate hashes, all seven actions, usage and fresh run
+  IDs reconcile. Genuine retained staging evidence passes desktop/mobile,
+  policy/export/ZIP and reload through a disabled local API/UI without spending.
+  The first browser checker expected `REVIEW_READY` instead of the UI's displayed
+  `REVIEW READY`; only its selector changed and the failed report is retained.
+- Both edit completions exceed 2,048 tokens (2,729 and 2,566). This run does not
+  prove success at the old production allowance. The owner explicitly approved
+  **4,096 for production, daily limits unchanged**; library defaults remain 2,048.
+- Full backend result remains **663 passed / three skipped**, those three Docker
+  integrations passing separately on the recorded snapshot. Fresh frontend 29,
+  deployment 30, lint/build pass. Eight deployment socket tests initially hit
+  sandbox EACCES and pass with loopback access allowed. The added deployment
+  regression excludes root `.codex-*` cache/private-review folders from uploads.
+
+Sanitized [v3 result](verification/policy-v3-live-2026-10-22-results.json); raw
+records `artifacts/policy-v3-live-20261022/`. All authorized calls are consumed.
+This is one already-seen sample after one failed candidate, not first-pass success,
+held-out evaluation, a competitor comparison, real-user study or proof beyond the
+six imported checks. Earlier failures/denominators and historical pre-live policy
+manifests remain unchanged. Production acceptance is recorded separately below.
+
+### Earlier staging failure and local v3 correction — 22 October
+
+The owner later said to proceed with live acceptance. One staging run was bounded
+to three calls, 4,096 output tokens/call, two edits and four isolated checks.
+**It failed**, and no further inference followed. Source remains local; production
+runtime `49337c36…`, its settings and the 2,048-token default are unchanged.
+
+- Task `coding-62c3821cedc44977`, v2 policy `0a9ec6ea…`, tested source `34bcf40f…`:
+  first candidate `86648580…` parses but raises the same forward-reference NameError.
+  Revision `8d5dd5f4…` quotes the annotation but encodes 28 line breaks as literal
+  backslash-n sequences on one physical line, causing SyntaxError.
+- Final **BLOCKED / HARNESS_STOPPED**, three calls / two edits / three executions.
+  All provider responses finished `stop`; this is not another output truncation.
+  Baseline passes three of six methods, both candidates fail import, final NOT_RUN.
+  Original project/tests stay unchanged. Usage **5,302 prompt + 5,228 completion =
+  10,530 tokens**; bill/balance unknown. Shared quotas reserve three calls/four
+  checks conservatively; the unused execution reservation is not refunded.
+- A private staging database and exact tested source were used, with the existing
+  key only in the trusted cloud process and candidate image ID pinned. Public
+  activity was checked before actions. No candidate ran on the laptop. A missing
+  parent directory first stopped preflight before paid work; matching source and
+  absence of a run directory were reconciled before resuming once.
+- Local v3 policy `34108fa5…` requests physical source lines and joins them with LF.
+  Explicit v1 compatibility retains literal source; no unescaping or guessed repair.
+  Mixed encodings, embedded line breaks/NULs and size/path violations reject.
+  Python 3.12 AST parsing rejects invalid changed source with **INVALID_PYTHON**
+  before returning a patch or reserving candidate execution; usage is retained,
+  with no paid retry. Parsing does not execute code or detect every runtime error,
+  including the first NameError. Isolated candidate/final checks remain required.
+- Bounded exhaustion now reports PATCH_ATTEMPT_LIMIT; historical HARNESS_STOPPED
+  messages no longer incorrectly claim a single-pass/no-revision run.
+- Final v3 suite: **663 passed / three skipped**, followed by **three separate Docker
+  integration passes**, snapshot
+  `83a74711f703faa741cb394e748c72323bcb950af407c1cb2874d702c8ae773c`.
+  Frontend **29** and deployment **29** pass; lint/build pass. Local 130-file package
+  `517e43f650c6e7575bd5e7a198dc4dd77d56be68032050164702b42123831a3d`.
+- Saved parsed-file/diff replay rejects the malformed revision before execution;
+  it does not reconstruct raw model output or establish live v3 success. A private
+  WAL-consistent staging copy was inspected through the current local API/UI:
+  desktop/mobile, original v2 policy export and reload preserve three-call counters
+  without new spend. A fresh v3 draft passes the same no-spend browser checks.
+  This is retained-result review, not continuous browser inference or production
+  acceptance of the new code.
+
+Sanitized [v2 staging failure](verification/policy-v2-live-2026-10-22-results.json)
+and [v3 identity](verification/generation-policy-v3.json) are separate; earlier
+denominators remain unchanged. Raw records: `artifacts/policy-v2-live-20261022/`.
+Final full suite:
+`artifacts/release-hardening-20261020/cloud-full-suite-1792658539472.json` / `.xml`.
+At this earlier snapshot, **v3 live quality was NOT_RUN**. The separately
+authorized v3 run above supersedes that status without changing the v2 failure.
+
+### Earlier no-spend generation-policy candidate — 22 October
+
+This subsection describes the earlier v2 snapshot before the separate resumed
+bounded staging run above; its no-spend statements are historical.
+
+This working-tree candidate is **not pushed or deployed**. Public production
+remains on `49337c36…`; the owner declined any new inference spending. The earlier
+feature failures remain failures; no new live feature completion is claimed.
+
+- `coding-generation-v2`, policy hash
+  `0a9ec6ead2f13956b9b5d9a97947bd4a6c3700587b849d4a6132324d080a00ce`,
+  adds Python 3.12/forward-reference and concise complete-file guidance. A prompt
+  instruction is not a guarantee of correct code or a provider reasoning switch.
+- API creation pins exact policy identity; API enqueue and live-worker validation
+  refuse missing/changed identity with `STALE_RUNTIME` before paid reservations.
+  Exports preserve the task's policy, not whichever prompt is current later, and
+  exclude unrelated private runtime fields. Existing task evidence is not rewritten.
+- **160 focused tests pass**. Latest full non-root/networkless cloud suite:
+  **646 passed / three skipped**; those **three Docker integrations pass separately**.
+  Same 345-file snapshot:
+  `34bcf40f96165ec819fd05374170b58f2fd1c80ac54af532662fea1130129787`.
+  Dependencies reused from the tested environment; this is not another fresh install.
+- **29 frontend / 29 deployment tests pass**, changed Python lint, frontend lint
+  and production build pass. Candidate package is
+  `32b96490f8002653a160c6cb097d2c05d9d0991933b8010dad44657c9a3e5301`
+  (130 allowlisted files). The UI assets remain unchanged; no runtime upgrade ran.
+- Static saved-diff replay reproduces both recorded candidate hashes and confirms
+  the unquoted class-self annotation without importing/executing candidates. A fake
+  client replays the saved truncated finish reason/usage: still rejected once,
+  source unchanged, no patch or retry. Raw truncated content was not retained or
+  reconstructed. This checks fail-closed handling, not improved model quality.
+- A real local API and development UI use a disposable database, disabled coding,
+  zero daily allowances, empty provider key, no worker and a provider-construction
+  trap. Browser desktop/mobile draft inspection, policy JSON/ZIP download and
+  reload with zero counters pass. No candidate code executes on the laptop.
+  The seed helper first normalized Windows fixture newlines and was correctly
+  rejected; preserving exact source bytes fixes the helper, not application policy.
+  A final checker initially compared independent JSON/ZIP exports byte-for-byte;
+  they differ only in the legitimate per-export `exported_at` timestamp. All
+  other manifest fields, pinned policy and zero counters match.
+- No output allowance, model, provider reasoning flag, SDK retry, protected test,
+  candidate resource limit or hosting setting changes. NVIDIA's documented model
+  reasoning options do not verify equivalent behavior on the exact Nebius endpoint;
+  no unverified option is sent. See the
+  [NVIDIA model reference](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-nano-30b-a3b).
+
+Records: `artifacts/generation-policy-20261022/` (`targeted.xml`, `saved-replay.json`,
+`browser-check.json`, Docker report and build/test logs) and
+`artifacts/release-hardening-20261020/cloud-full-suite-1792656061323.json` / `.xml`.
+The [new policy manifest](verification/generation-policy-v2.json) is separate from
+the immutable 21 October samples/results. Next gate: separately authorized live
+regression and reviewed rollout; until then C-05 reliability remains partial.
 
 ### Additional public workflows and release checks
 

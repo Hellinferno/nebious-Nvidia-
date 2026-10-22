@@ -1,5 +1,87 @@
 # Progress and evidence log
 
+## Latest continuation — 22 October: v3 live feature acceptance
+
+- Deployed runtime `517e43f6…`, Vercel `dpl_4PGB22kBveDfE3obV57FjD25zSfx`.
+  Approved output 4,096 is verified in the actual worker; all daily limits and
+  original deadline remain. Private WAL/config backups and exact rollback exist.
+  Cloud isolation/OOM/stop-resume, public cold/API boundaries and actual desktop/
+  mobile zero-spend draft/export/reload pass. No rollout model call; staging model
+  evidence is separate. Git history records source publication, not deployment.
+- Separately authorized v3 task `coding-5e6be4746ce7479b` reaches REVIEW_READY.
+  One annotation candidate fails import; the model revision quotes it, then all
+  six imported candidate and fresh final checks pass in pinned cloud Docker.
+  Three calls, two edits, four executions, 11,900 tokens, no SDK retry. Original
+  project/tests and earlier failed runs/denominators remain unchanged.
+- This is a known-sample bounded regression, not first-pass success, a held-out
+  benchmark, a matched comparison or user study. Actual bill/current balance are
+  unknown; its three-call authorization is consumed. No further paid run.
+- Retained genuine result, usage, action trace and ZIP reconcile; desktop/mobile,
+  policy export and reload pass without further spending. Initial browser label
+  assertion failure is retained; checker now matches displayed REVIEW READY.
+- Both edit responses exceed 2,048 tokens. Owner approves 4,096 for production
+  while keeping daily limits unchanged. Exact rollback package, private database/
+  config backups and idle upgrade are checked separately from model acceptance.
+- Validation: recorded 663 isolated backend plus three separate Docker cases;
+  fresh frontend 29/deployment 30 and lint/build pass. Root `.codex-*` folders are
+  now excluded from deployment uploads, with a regression after upload EPERM.
+- C-05 gains staging feature evidence; production verification/publication status
+  is recorded by root verification/Git history. C-09 real users/held-out evaluation
+  and C-10 judging access, rights, public YouTube and submission remain partial.
+  Evidence: `artifacts/policy-v3-live-20261022/` and the separate public v3 result.
+
+## Earlier continuation — 22 October: bounded staging failure and local v3
+
+- Owner resumed the live gate with a three-call, 4,096-output-token, two-edit,
+  four-check ceiling. Private staging task `coding-62c3821cedc44977` on v2 fails:
+  first candidate repeats the annotation NameError, revision double-encodes
+  physical newlines. BLOCKED after three model calls, two edits, three isolated
+  executions; 10,530 recorded tokens, actual bill unknown. No SDK retries, no final
+  pass and no more inference authorization. All prior failures remain.
+- Reserved three calls/four executions against shared daily quotas in advance;
+  unused execution reserve is retained. Production code/settings remain unchanged.
+  Source verification first hit a missing staging parent before any paid request;
+  source hashes/no-run-directory were reconciled before one safe resumption.
+- Local v3 requests complete physical source lines, rejects ambiguous encodings,
+  and parses changed Python 3.12 source without executing it. INVALID_PYTHON stops
+  before patch publication/candidate execution, preserving usage without a retry.
+  No unescaping or canned repair. This does not detect every import/runtime fault.
+- Corrected bounded-loop exhaustion and historical stop text. Final tests:
+  663 isolated backend plus three separate Docker integrations, frontend 29,
+  deployment 29, lint/build pass. Snapshot `83a74711…`; package `517e43f6…`.
+  Saved parsed-candidate replay and desktop/mobile/export/reload checks pass on
+  the genuine retained staging result and fresh v3 draft, without additional spend.
+- V3 live quality is unmeasured; source stays local, not committed/pushed/deployed.
+  Next: separately authorized model/format acceptance before release; C-05/C-09/
+  C-10 remain partial. Account, rights, public YouTube and actual submission gates
+  are not silently approved or marked done. Records: `artifacts/policy-v2-live-20261022/`.
+
+## Earlier no-spend continuation — 22 October 2026
+
+- Owner declined new inference spending. Implemented local `coding-generation-v2`
+  with explicit Python 3.12/import guidance and concise complete-file output;
+  task runtime pins, API/worker pre-spend checks, action metadata and sanitized
+  exports now carry its exact policy version/hash. No model/output/candidate or
+  hosting limits changed; no speculative reasoning flag is sent.
+- Validation: 160 focused passes; full non-root/networkless cloud suite 646 passed
+  plus three skipped Docker integrations passed separately on source snapshot
+  `34bcf40f96165ec819fd05374170b58f2fd1c80ac54af532662fea1130129787`.
+  Frontend 29/deployment 29, lint/build pass. Candidate runtime `32b96490…` is not
+  deployed. Source remains local, not committed or pushed; prior published main
+  is `9af885b`. Git history, not this note, determines later publication.
+- Saved-diff/AST checks reproduce both failed hashes without execution. A fake
+  client replays saved truncation metadata: one rejected response, usage retained,
+  unchanged source; no live generation is measured. Disposable real API/UI browser
+  desktop/mobile/export/reload checks pass with coding disabled, zero allowances,
+  no worker and provider construction blocked. Initial Windows-newline seed
+  failure remains a checker failure; source boundary was not relaxed.
+- Evidence: `artifacts/generation-policy-20261022/` and the versioned public policy
+  manifest. Inference calls and laptop candidate executions: **zero**.
+- Next: C-05 new live acceptance requires separate authorization; old failures
+  remain. C-09 study/evaluation and C-10 judging access/credits, rights, public
+  YouTube URL and actual submission still require their own evidence. No automatic
+  runtime migration, deployment or source push is implied by this local candidate.
+
 ## Current status — 21 October 2026
 
 The task-centered unittest agent, bounded customization and isolation/storage

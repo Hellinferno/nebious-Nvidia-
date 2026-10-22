@@ -1,0 +1,26 @@
+{
+  "schema_version": "benchproof/generation-policy-regression-v1",
+  "created_date_ist": "2026-10-22",
+  "generation_policy": {
+    "version": "coding-generation-v3",
+    "sha256": "34108fa5ff381d7b5b2da5211eac64fd89630d15a4baf682d3b29b369a35d165"
+  },
+  "requested_edit_schema": "coding-edit-v2",
+  "source_encoding": "Complete physical source lines; trusted LF join, no unescaping or guessed repairs",
+  "compatible_legacy_schema": "coding-edit-v1 with literal parsed content and the same syntax/path/size checks",
+  "syntax_validation": "Non-executing Python 3.12 AST parsing before returning a patch or reserving candidate execution",
+  "syntax_failure": "INVALID_PYTHON; retain usage and stop without retry, patch or candidate execution",
+  "default_output_tokens_per_call": 2048,
+  "provider_settings_changed": false,
+  "candidate_limits_changed": false,
+  "production_deployed": false,
+  "live_generation_quality": "NOT_MEASURED",
+  "new_inference_calls_for_v3": 0,
+  "further_inference_authorized": false,
+  "preceding_live_regression": "policy-v2-live-2026-10-22-results.json",
+  "preceding_live_regression_failed": true,
+  "earlier_results_and_denominators_unchanged": true,
+  "held_out": false,
+  "comparative_benchmark": false,
+  "remaining_gate": "Separately authorized live acceptance for v3; do not infer success from syntax/schema tests"
+}

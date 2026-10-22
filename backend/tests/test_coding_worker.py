@@ -9,6 +9,7 @@ import pytest
 from benchproof.coding.contracts import OperatorLimits
 from benchproof.coding.engine import CodingEngine, InvoiceExecutor
 from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences
+from benchproof.coding.prompts import coding_runtime_identity
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.coding.worker import CodingWorker
 from benchproof.constraints import contract_hash
@@ -347,6 +348,46 @@ def test_rejected_candidate_supplies_actual_failure_to_bounded_revision(tmp_path
     assert executor.calls[-1]["source_hash"] == task["checkpoint"]["candidate_hash"]
 
 
+def test_bounded_harness_exhaustion_is_not_reported_as_single_pass(tmp_path):
+    store, worker, provider, executor, task_id = _setup(
+        tmp_path, executor=SyntheticExecutor(["REJECTED"] * 3),
+        preferences=CodingPreferences(harness="bounded-v1"),
+    )
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "PATCH_ATTEMPT_LIMIT"
+    assert len(provider.calls) == 3
+    assert len(executor.calls) == 3
+
+
+def test_invalid_generated_syntax_stops_before_candidate_execution(tmp_path):
+    class InvalidSourceProvider(SyntheticProvider):
+        def complete(self, **kwargs):
+            response = super().complete(**kwargs)
+            payload = json.loads(kwargs["user_prompt"])
+            if "brief" not in payload:
+                proposal = json.loads(response["content"])
+                proposal["files"][0]["content"] = "def broken(:\n"
+                response["content"] = json.dumps(proposal)
+            return response
+
+    store, worker, provider, executor, task_id = _setup(tmp_path, provider=InvalidSourceProvider())
+    _approve(store, worker, task_id)
+    _drain(worker)
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert task["result"]["code"] == "INVALID_PYTHON"
+    assert "patch" not in task["checkpoint"]
+    assert task["counters"]["model_calls"] == 2
+    assert task["counters"]["patch_attempts"] == 1
+    assert task["counters"]["executions"] == 1
+    assert len(executor.calls) == 1
+    assert len(provider.calls) == 2
+    assert task["actions"][-1]["usage"]["usage"]["total_tokens"] == 120
+
+
 def test_repeated_failed_candidate_stalls_without_an_extra_execution(tmp_path):
     provider = SyntheticProvider(edits=["same", "same"])
     executor = SyntheticExecutor(["REJECTED", "REJECTED"])
@@ -506,6 +547,30 @@ def test_runtime_identity_change_blocks_before_model_reservation(tmp_path):
     task = store.get_task("owner", task_id)
     assert task["state"] == "BLOCKED"
     assert not task["actions"]
+    assert not provider.calls
+
+
+@pytest.mark.parametrize("change", ["legacy-missing-policy", "changed-policy-hash"])
+def test_prompt_identity_mismatch_blocks_worker_before_model_reservation(tmp_path, change):
+    store, worker, provider, _executor, task_id = _setup(tmp_path)
+    runtime = coding_runtime_identity(worker.engine.model_id, worker.engine.max_output_tokens)
+    if change == "legacy-missing-policy":
+        runtime.pop("generation_policy")
+    else:
+        runtime["generation_policy"]["sha256"] = "0" * 64
+    with store._transaction() as connection:
+        connection.execute(
+            "UPDATE coding_tasks SET runtime_config_json=? WHERE task_id=?",
+            (json.dumps(runtime), task_id),
+        )
+    worker.engine.synthetic = False
+    worker.live_enabled = True
+    worker.session_seconds_remaining = lambda: 600
+    assert worker.run_once()["code"] == "STALE_RUNTIME"
+    task = store.get_task("owner", task_id)
+    assert task["state"] == "BLOCKED"
+    assert not task["actions"]
+    assert task["counters"]["model_calls"] == 0
     assert not provider.calls
 
 

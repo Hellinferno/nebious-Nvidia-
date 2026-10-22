@@ -3,6 +3,7 @@
 .azure
 .agents
 .codex
+.codex-*
 .freebuff
 .env
 .env.*

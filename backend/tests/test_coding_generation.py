@@ -15,6 +15,7 @@ from benchproof.coding.generation import (
     GenerationError,
     generate_edits,
 )
+from benchproof.coding.prompts import EDIT_SYSTEM_PROMPT, generation_policy
 from benchproof.fixtures import source_hash_for_dir
 from benchproof.patch import apply_patch_to_file
 from benchproof.providers import ProviderError
@@ -67,9 +68,104 @@ def test_real_edit_primitive_builds_reviewable_diff_without_modifying_source(tmp
     assert (app / "core.py").read_bytes() == b"VALUE = 1\n"
     assert metadata["plan_hash"] == plan.identity()
     assert metadata["usage"]["total_tokens"] == 120
+    assert metadata["generation_policy"] == generation_policy()
     assert len(client.calls) == 1
     assert client.calls[0]["max_tokens"] == 2_048
     assert "VALUE = 1" in client.calls[0]["user_prompt"]
+
+
+def test_edit_prompt_pins_python_and_compact_output_without_a_sample_solution(tmp_path):
+    app, brief, plan, reply = _task(tmp_path)
+    client = ScriptedClient(reply)
+    _generate(app, brief, plan, client)
+    prompt = client.calls[0]["system_prompt"]
+    assert prompt == EDIT_SYSTEM_PROMPT
+    assert "Python 3.12" in prompt
+    assert "forward-reference" in prompt
+    assert "previous patch and its actual failure" in prompt
+    assert "one short sentence" in prompt
+    assert "BankAccount" not in prompt
+    assert "transfer" not in prompt
+    assert "extra_body" not in client.calls[0]
+    assert client.calls[0]["max_tokens"] == 2_048
+
+
+def test_line_based_edit_joins_physical_lines_without_reinterpreting_source(tmp_path):
+    app, brief, plan, reply = _task(tmp_path)
+    lines = ["import re", "", 'PATTERN = re.compile(r"\\n")', "VALUE = 2"]
+    reply.update(schema_version="coding-edit-v2", files=[{"path": "app/core.py", "lines": lines}])
+    client = ScriptedClient(reply)
+    patch, metadata = _generate(app, brief, plan, client)
+    assert apply_patch_to_file("VALUE = 1\n", patch.diff) == "\n".join(lines) + "\n"
+    assert metadata["edit_schema"] == "coding-edit-v2"
+    schema = json.loads(client.calls[0]["user_prompt"])["response_schema"]
+    assert schema["properties"]["schema_version"]["const"] == "coding-edit-v2"
+    assert "schema_version" in schema["required"]
+    assert "lines" in schema["$defs"]["LineFileEdit"]["properties"]
+    assert "content" not in schema["$defs"]["LineFileEdit"]["properties"]
+    assert (app / "core.py").read_text() == "VALUE = 1\n"
+
+
+def test_syntax_validation_never_executes_generated_top_level_code(tmp_path):
+    app, brief, plan, reply = _task(tmp_path)
+    marker = tmp_path / "must-not-exist"
+    lines = ["from pathlib import Path", f"Path({str(marker)!r}).write_text('executed')", "VALUE = 2"]
+    reply.update(schema_version="coding-edit-v2", files=[{"path": "app/core.py", "lines": lines}])
+    patch, _metadata = _generate(app, brief, plan, ScriptedClient(reply))
+    assert patch.diff
+    assert not marker.exists()
+    assert (app / "core.py").read_text() == "VALUE = 1\n"
+
+
+@pytest.mark.parametrize("lines", [
+    ["VALUE = 2\n"], ["VALUE = 2\r"], ["VALUE = 2\x00"], [],
+    "VALUE = 2", [False], ["VALUE = 2"] * 1_001, ["x" * 20_000],
+])
+def test_line_based_edit_rejects_nonphysical_or_unbounded_lines(tmp_path, lines):
+    app, brief, plan, reply = _task(tmp_path)
+    reply.update(schema_version="coding-edit-v2", files=[{"path": "app/core.py", "lines": lines}])
+    client = ScriptedClient(reply)
+    with pytest.raises(GenerationError) as error:
+        _generate(app, brief, plan, client)
+    assert error.value.code == "MALFORMED_ACTION"
+    assert error.value.metadata["usage"]["total_tokens"] == 120
+    assert len(client.calls) == 1
+    assert (app / "core.py").read_text() == "VALUE = 1\n"
+
+
+@pytest.mark.parametrize("version,files", [
+    ("coding-edit-v2", [{"path": "app/core.py", "content": "VALUE = 2\n"}]),
+    ("coding-edit-v1", [{"path": "app/core.py", "lines": ["VALUE = 2"]}]),
+    ("coding-edit-v2", [{"path": "app/core.py", "lines": ["VALUE = 2"], "content": "VALUE = 2\n"}]),
+])
+def test_edit_response_cannot_mix_or_silently_guess_source_encoding(tmp_path, version, files):
+    app, brief, plan, reply = _task(tmp_path)
+    reply.update(schema_version=version, files=files)
+    with pytest.raises(GenerationError) as error:
+        _generate(app, brief, plan, ScriptedClient(reply))
+    assert error.value.code == "MALFORMED_ACTION"
+
+
+@pytest.mark.parametrize("version", ["coding-edit-v1", "coding-edit-v2"])
+def test_invalid_python_is_not_unescaped_repaired_or_published_as_a_patch(tmp_path, version):
+    app, brief, plan, reply = _task(tmp_path)
+    content = 'class Broken:\\n    VALUE = "private-source-sentinel"'
+    entry = {"path": "app/core.py"}
+    if version == "coding-edit-v1":
+        entry["content"] = content
+    else:
+        entry["lines"] = [content]
+    reply.update(schema_version=version, files=[entry])
+    client = ScriptedClient(reply)
+    with pytest.raises(GenerationError) as error:
+        _generate(app, brief, plan, client)
+    assert error.value.code == "INVALID_PYTHON"
+    assert error.value.metadata["usage"]["total_tokens"] == 120
+    assert error.value.metadata["source_validation"] == {"status": "REJECTED", "path": "app/core.py", "line": 1}
+    assert "private-source-sentinel" not in str(error.value)
+    assert "private-source-sentinel" not in json.dumps(error.value.metadata)
+    assert len(client.calls) == 1
+    assert (app / "core.py").read_text() == "VALUE = 1\n"
 
 
 @pytest.mark.parametrize("path", [
@@ -332,3 +428,4 @@ def test_truncated_edit_retains_usage_and_never_becomes_a_patch(tmp_path):
     assert error.value.metadata["usage"]["total_tokens"] == 120
     assert len(client.calls) == 1
     assert (app / "core.py").read_bytes() == b"VALUE = 1\n"
+    assert error.value.metadata["generation_policy"] == generation_policy()

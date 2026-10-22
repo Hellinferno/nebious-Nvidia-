@@ -11,6 +11,7 @@ import pytest
 from benchproof.api import coding as coding_api
 from benchproof.api import main as api_main
 from benchproof.coding.generation import CodingBrief, CodingPlan
+from benchproof.coding.prompts import coding_runtime_identity, generation_policy
 from benchproof.coding.store import CodingStore
 from benchproof.fixtures import source_hash
 from benchproof.providers import NebiusAdapter
@@ -131,6 +132,7 @@ def test_create_replay_conflict_and_server_runtime_pin(enabled_client):
     assert task["counters"]["model_calls"] == task["counters"]["executions"] == 0
     assert task["runtime_config"]["model_id"] == "synthetic/test-model"
     assert task["runtime_config"]["max_output_tokens"] == 2_048
+    assert task["runtime_config"]["generation_policy"] == generation_policy()
     conflict = enabled_client.post(
         BASE, json=payload(task="A different request"), headers={"Idempotency-Key": "create-one"},
     )
@@ -396,6 +398,56 @@ def test_changed_runtime_pin_refuses_enqueue_without_new_spend(
     assert after["runtime_config"] == before["runtime_config"]
     assert after["counters"] == before["counters"]
     assert after["actions"] == before["actions"]
+
+
+@pytest.mark.parametrize("phase", ["plan", "start"])
+def test_changed_prompt_policy_refuses_enqueue_without_new_spend(enabled_client, monkeypatch, phase):
+    from benchproof.coding import prompts
+
+    task = create(enabled_client)
+    if phase == "start":
+        plan = await_plan(enabled_client, task)
+        approve(enabled_client, task, plan)
+    before = records().get_task("test-owner", task["task_id"])
+    monkeypatch.setattr(prompts, "EDIT_SYSTEM_PROMPT", prompts.EDIT_SYSTEM_PROMPT + "\nChanged policy.")
+    response = enabled_client.post(
+        f"{BASE}/{task['task_id']}/{phase}", headers={"Idempotency-Key": "changed-policy"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "STALE_RUNTIME"
+    after = records().get_task("test-owner", task["task_id"])
+    assert after["runtime_config"] == before["runtime_config"]
+    assert after["counters"] == before["counters"]
+    assert after["actions"] == before["actions"]
+
+
+def test_bundle_exports_the_task_policy_not_the_current_policy(enabled_client, monkeypatch):
+    from benchproof.coding import prompts
+
+    task = create(enabled_client)
+    expected = coding_runtime_identity("synthetic/test-model", 2_048)
+    monkeypatch.setattr(prompts, "EDIT_SYSTEM_PROMPT", prompts.EDIT_SYSTEM_PROMPT + "\nChanged policy.")
+    bundle = enabled_client.get(f"{BASE}/{task['task_id']}/bundle").json()
+    assert bundle["runtime_config"] == expected == task["runtime_config"]
+    assert bundle["runtime_config"]["generation_policy"] != generation_policy()
+    assert bundle["counters"]["model_calls"] == bundle["counters"]["executions"] == 0
+
+
+def test_bundle_excludes_unrelated_private_runtime_fields(enabled_client):
+    task = create(enabled_client)
+    runtime = task["runtime_config"]
+    runtime["private_config"] = "private-runtime-value"
+    runtime["generation_policy"]["private_config"] = "private-policy-value"
+    with records()._transaction() as connection:
+        connection.execute(
+            "UPDATE coding_tasks SET runtime_config_json=? WHERE task_id=?",
+            (json.dumps(runtime), task["task_id"]),
+        )
+    response = enabled_client.get(f"{BASE}/{task['task_id']}/bundle")
+    assert response.status_code == 200
+    assert response.json()["runtime_config"] == coding_runtime_identity("synthetic/test-model", 2_048)
+    assert "private-runtime-value" not in response.text
+    assert "private-policy-value" not in response.text
 
 
 def test_events_source_changes_and_usage_reads_are_non_billing(enabled_client):

@@ -109,7 +109,8 @@ export function taskResultMessage(result: { code?: string; message?: string; sum
   if (!result) return null
   const messages: Record<string, string> = {
     UNSUPPORTED_RUNNER: 'Only unittest projects are supported. Select a project with unittest checks; pytest was not run.',
-    HARNESS_STOPPED: 'The selected single-pass harness stopped after its first failed candidate. Review the preserved changes and checks; no automatic revision was made.',
+    HARNESS_STOPPED: 'The selected harness stopped further revision after failed candidate checks. Review the saved attempts, changes and results; no more work was started.',
+    INVALID_PYTHON: 'The generated source failed Python 3.12 syntax validation. No patch was accepted or executed; no automatic paid retry was made.',
     BASELINE_ALREADY_PASSES: 'The starting code already passes its checks. For changes that begin with passing tests, choose Add a feature or Refactor in a new task.',
     CHECKS_PASSED: 'The declared checks passed on the final candidate. Review the patch and any requirements those checks do not cover.',
     CHECKS_INCONCLUSIVE: 'The runner could not establish a complete check result. Review the recorded output; this is not a passing result.',

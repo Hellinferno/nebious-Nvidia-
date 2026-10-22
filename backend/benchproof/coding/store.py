@@ -877,12 +877,23 @@ class CodingStore:
                 reports["last_candidate"] = chk["last_candidate"]
             if chk.get("final"):
                 reports["final"] = chk["final"]
+            runtime = task_data.get("runtime_config") or {}
+            runtime_manifest = {
+                key: runtime[key] for key in ("model_id", "max_output_tokens", "engine_version")
+                if key in runtime
+            }
+            policy = runtime.get("generation_policy")
+            if isinstance(policy, dict):
+                runtime_manifest["generation_policy"] = {
+                    key: policy[key] for key in ("version", "sha256") if key in policy
+                }
             return {
                 "schema_version": "coding-bundle-v1",
                 "task_id": task_id,
                 "fixture_id": task_data["fixture_id"],
                 "state": task_data["state"],
                 "contract_hash": task_data["contract_hash"],
+                "runtime_config": runtime_manifest,
                 "created_at": task_data["created_at"],
                 "exported_at": self.clock(),
                 "brief": task_data["brief"],

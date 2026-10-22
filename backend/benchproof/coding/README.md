@@ -5,8 +5,9 @@ reviewed plans, bounded model edits, isolated checks, checkpoints and export are
 implemented. The public deployment and its evidence are described in the root
 `VERIFICATION.md`; local changes are not deployed just by editing or pushing files.
 
-`generation.py` defines development `coding-brief-v1`, `coding-plan-v1` and
-`coding-edit-v1` contracts. Plans bind the task's exact identity, source and editable
+`generation.py` defines `coding-brief-v1`, `coding-plan-v1` and the line-based
+`coding-edit-v2` response contract, with strictly parsed `coding-edit-v1` compatibility.
+Plans bind the task's exact identity, source and editable
 paths; edits bind the approved plan revision. The current check profile is the
 curated `invoice-observation-v1`, or `project-unittest-v1` for imported projects.
 Only unittest is supported; unsupported runner labels must fail before paid work
@@ -32,6 +33,73 @@ oversized, schema-invalid and duplicate-key responses without guessing missing
 claims, source locations or JSON endings. No automatic format retry or mock
 fallback occurs. Recorded usage remains available on rejected responses; a
 transport failure's usage is UNKNOWN, not zero.
+
+## Generation policy v3 — 22 October
+
+After the owner resumed bounded live verification, v2 was tested separately in
+staging with three calls, a 4,096-output-token allowance, two edits and four-check
+ceiling. It failed safely: the first candidate repeated the unquoted annotation
+NameError; its revision encoded physical line breaks as literal backslash-n text.
+The final state is BLOCKED, with three calls and three isolated
+executions; no final check passed. The larger allowance is not the production
+default or a matched comparison. Prior failures remain unchanged.
+
+The new local `coding-generation-v3` requests complete files as `files[].lines`:
+one physical line per array item. The trusted runtime joins them with LF. Embedded
+line breaks/NULs, excessive lines/text, mixed schema encodings and protected paths
+are rejected. Legacy v1 content is accepted only as literal parsed source, without
+unescaping or guessing a repair. Changed Python files must parse as Python 3.12
+before any patch can be returned or candidate execution reserved. AST parsing does
+not execute imports, annotations or top-level statements and does not prove runtime
+correctness. Syntax failures retain usage and stop with INVALID_PYTHON; they do not
+trigger a paid retry. A later isolated baseline/candidate/final check is still required.
+
+Bounded-loop exhaustion now reports PATCH_ATTEMPT_LIMIT instead of a misleading
+single-pass stop. The frontend's historical HARNESS_STOPPED wording is neutral
+because old tasks can record that code after more than one attempt.
+
+The initial v3 snapshot was local and unmeasured. A separately authorized staging
+run now reaches REVIEW_READY after one failed annotation candidate and one model
+revision: three calls, two edits, four isolated executions, all six candidate and
+fresh final methods pass. Both edits use the line-based contract; no source is
+unescaped or manually repaired. This known-sample result is not first-pass success
+or a held-out benchmark. See `verification/policy-v3-live-2026-10-22-results.json`.
+
+Both edit completions exceed 2,048 tokens. The owner approves 4,096 output tokens
+for the private production backend while retaining daily limits. Library defaults
+remain 2,048; provider reasoning settings, SDK retries, protected tests and
+candidate limits do not change. Exact deployed identity and public checks are in
+root `VERIFICATION.md`. Both separately resumed authorizations are consumed; no
+additional inference is authorized. Inspect/export old tasks rather than silently
+migrating their pinned model, output allowance or prompts.
+
+## Historical generation policy v2 — 22 October
+
+`prompts.py` identifies `coding-generation-v2` by the exact trusted plan/edit
+prompt text. Prompts now specify Python 3.12, import-time forward-reference
+semantics, use of previous candidate feedback, and concise complete-file JSON.
+These are generic instructions, not a hard-coded repair for a sample.
+
+API task creation pins this version/hash in `runtime_config.generation_policy`.
+The API enqueue guard and live worker compare it before reserving paid work.
+Policy-less older tasks or a changed prompt fail `STALE_RUNTIME`; inspect/export
+their evidence and create/review a new task rather than silently upgrading them.
+JSON/ZIP exports retain the task's original allowlisted runtime identity, not the
+current process's policy. Provider metadata includes the policy on completed and
+rejected requests.
+
+The output allowance remains 2,048 tokens by default; provider settings, retries,
+candidate limits and protected tests are unchanged. Truncation still rejects the
+whole proposal, with no format repair, paid retry or canned replacement. Prompt
+guidance is not an enforced guarantee of valid Python or provider reasoning mode.
+NVIDIA documents reasoning controls for its model, but equivalent support on this
+exact Nebius endpoint is not verified, so no speculative flag is sent.
+
+The initial no-spend v2 candidate was not deployed or live-model measured; that
+snapshot is `verification/generation-policy-v2.json`. The owner later resumed one
+bounded staging run, which failed as recorded above. The 21 October failures and
+denominators remain unchanged; no mock/static/saved-error check establishes new
+model success.
 
 ## Historical first-increment generation checks
 

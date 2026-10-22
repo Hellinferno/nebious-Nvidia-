@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from benchproof.coding.extensions import HARNESSES
 from benchproof.coding.generation import CodingBrief, CodingPlan, CodingPreferences, SourceHash
 from benchproof.coding.mcp import MCPError, MCPQuery, connections, query_context
+from benchproof.coding.prompts import coding_runtime_identity
 from benchproof.coding.runtime import ADMISSION_MESSAGES, CodingRuntimeConfig
 from benchproof.coding.store import CodingStore, CodingStoreError
 from benchproof.constraints import contract_hash
@@ -131,10 +132,7 @@ def coding_router(
             raise HTTPException(503, detail={"code": code, "message": ADMISSION_MESSAGES[code]})
 
     def expected_runtime() -> dict[str, Any]:
-        return {
-            "model_id": model_id(), "max_output_tokens": runtime_config().max_output_tokens,
-            "engine_version": "coding-engine-v1",
-        }
+        return coding_runtime_identity(model_id(), runtime_config().max_output_tokens)
 
     @router.get("/extensions/catalog")
     def extension_catalog(owner: str = Depends(owner_dependency)) -> dict[str, Any]:
@@ -216,7 +214,7 @@ def coding_router(
         require_admission()
         pinned = task.get("runtime_config") or {}
         if any(pinned.get(key) != value for key, value in expected_runtime().items()):
-            raise HTTPException(409, detail={"code": "STALE_RUNTIME", "message": "The configured coding runtime differs from this task's pinned model or output allowance."})
+            raise HTTPException(409, detail={"code": "STALE_RUNTIME", "message": "The configured coding runtime differs from this task's pinned model, output allowance or generation policy."})
         return _public_task(owned_call(lambda records: records.enqueue(owner, task_id, token, phase=phase)))
 
     @router.post("/{task_id}/plan", status_code=202)

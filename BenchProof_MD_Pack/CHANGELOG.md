@@ -1,5 +1,62 @@
 # Changelog
 
+## 2026-10-22 — Separate v3 live acceptance and approved output parity
+
+- Deployed v3 `517e43f6…` on the existing Hobby project. Actual worker output 4,096,
+  unchanged daily limits/deadline, source/backup/rollback, isolation/OOM/stop-resume,
+  public cold checks and desktop/mobile draft/export/reload pass without inference.
+  Source publication remains a separate Git operation; no new production model
+  generation, completed user study or submitted entry is claimed.
+- Genuine v3 staging feature reaches REVIEW_READY after one failed candidate and
+  one bounded model revision: three calls/two edits/four isolated executions,
+  six candidate and six fresh final checks pass; 11,900 tokens, bill unknown.
+  Prior failures and original source/tests remain unchanged. This known-sample
+  result is not a benchmark or first-pass success; no further inference authorized.
+- Retained-result desktop/mobile/export/reload and JSON/ZIP/action reconciliation
+  pass without more inference. Owner approves 4,096 production output tokens
+  because both edit responses exceed 2,048; daily limits/deadline stay unchanged.
+  Rollout uses private backups and exact rollback/runtime checks, not a Git push.
+- Added root `.codex-*` upload exclusion and regression after a local folder
+  caused deployment EPERM. Fresh frontend 29/deployment 30, lint/build pass;
+  recorded backend 663 plus three separate Docker passes remain unchanged.
+  C-09/C-10 user/evaluation/account/submission gates remain partial.
+
+## 2026-10-22 — Bounded staging result and local line-based edit contract
+
+- The owner resumed one bounded live v2 run: three calls, 4,096 output tokens/call,
+  two edits and four-check ceiling. It fails on an annotation NameError then a
+  double-encoded-newline SyntaxError. Three actual isolated executions, 10,530
+  tokens; no final pass, bill unknown, no further inference. Original tests/source
+  and prior denominators stay unchanged; production settings/code are untouched.
+- Local v3 requests physical source lines, joins LF deterministically, refuses
+  mixed/unbounded encodings and validates Python syntax without executing source.
+  Legacy literal-content compatibility is strict; no unescaping, guessed repair
+  or paid retry. Runtime/final checks remain necessary; new live quality is unknown.
+- Fixed bounded-loop limit reporting and misleading historical single-pass text.
+  Final 663 isolated backend plus three separate Docker, frontend 29/deployment 29,
+  lint/build pass. Saved parsed-file replay, retained real staging result and fresh
+  local draft browser/export/reload checks pass without additional spend.
+- Source remains local, not committed/pushed/deployed, while feature acceptance
+  still fails. New public result and policy identities preserve the separate runs;
+  C-05/C-09/C-10 and owner release/submission gates remain partial.
+
+## 2026-10-22 — Local generation-policy candidate, no new inference
+
+- Added versioned Python 3.12/import-time forward-reference and concise JSON
+  guidance. API task creation pins the exact prompt-policy hash; enqueue and live
+  worker refuse policy-less/changed tasks before paid reservations. Exports retain
+  the task's policy while excluding unrelated private runtime fields; action
+  metadata records the policy even on a truncated rejection.
+- Added eleven regressions. Focused 160/full isolated 646 plus three separate
+  Docker integrations, frontend 29/deployment 29, lint/build pass. Saved-diff/AST
+  and fake-client truncation replay preserve failures without executing candidate
+  code. Disposable real API/UI desktop/mobile/export/reload checks pass; initial
+  newline-normalizing browser seed was correctly rejected and its helper corrected.
+- Owner declined new spending: zero real inference, unchanged model/output and
+  isolation/hosting limits, no unverified reasoning-control flag. New live quality
+  is unmeasured; old feature failures remain. Local source/candidate only, not
+  committed, pushed or deployed; C-05/C-09/C-10 remain partial.
+
 ## 2026-10-21 — Public workflow results and remaining submission gates
 
 - Added frozen public feature/no-change inputs, four static regressions and

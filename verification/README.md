@@ -69,3 +69,60 @@ Raw browser screenshots, provider reconciliation, task bundles and private owner
 capabilities stay in ignored local artifacts/private configuration. Public
 summaries do not include credentials; hashes identify retained evidence, not
 digitally signed attestations.
+
+## Earlier local policy candidate — 22 October
+
+`generation-policy-v2.json` records a new prompt-policy identity, separate from the
+original frozen inputs and failed outcomes. Generic Python 3.12/forward-reference,
+revision-feedback and concise-output guidance is now bound to each task. Missing
+or changed policy blocks API/worker work before paid reservations; exports retain
+the task's original policy. The default 2,048-token limit is unchanged.
+
+The owner declined new spending. Static/mocked/saved-finish-reason checks and the
+complete isolated suite pass, but **new live generation is NOT_RUN**. The candidate
+is local, not pushed/deployed. Do not turn a passing saved-error rejection into a
+successful feature claim or remove the previous failures from the denominator.
+
+## Resumed staging run and current v3 candidate
+
+The owner later resumed one bounded staging run on v2: three model calls at up to
+4,096 output tokens/call, two edits and four checks. It failed: the first candidate
+again raised the annotation NameError; the revision double-encoded line breaks
+and failed syntax. Actual usage is three calls / three executions / 10,530 tokens,
+not a successful feature. The larger allowance is not a matched comparison.
+See `policy-v2-live-2026-10-22-results.json`; the production default remains 2,048.
+
+`generation-policy-v3.json` identifies the new local line-based response format
+and non-executing syntax guard. It refuses malformed source without unescaping,
+guessing a repair, returning a patch or running the candidate. Syntax checks do
+not prove runtime correctness or catch every annotation/import problem. Saved
+parsed-candidate replay and unit/browser checks are not new model generations.
+The bounded-harness stop reason and historical UI wording are also corrected.
+
+At that pre-live snapshot v3 had no live measurement; its policy manifest remains
+historical. The separate result below supersedes that status, not earlier failures.
+
+## Separate v3 live acceptance — 22 October
+
+`policy-v3-live-2026-10-22-results.json` records a separately authorized three-call
+regression on the same already-seen BankAccount sample. V3 reaches **REVIEW_READY**
+after the first candidate fails import and a model revision quotes its forward
+reference. Both edits use physical source lines without encoded-newline repair.
+Candidate and fresh final Docker checks each pass all six imported methods.
+
+Actual usage: **three calls / two edits / four isolated executions / 11,900 tokens**,
+no SDK retry; actual bill/current balance unknown. Original project/tests and all
+previous results/denominators are preserved. This is not first-pass success, a
+held-out benchmark, a matched comparison or universal feature correctness.
+
+The run uses a 4,096-token response limit; both edit completions exceed 2,048.
+The owner explicitly approves matching 4,096 in production without increasing
+daily limits. That later rollout is separate from this frozen staging outcome;
+see [verification](../VERIFICATION.md). Historical `generation-policy-v3.json`
+retains its pre-live NOT_MEASURED status rather than rewriting prior evidence.
+
+`policy-v3-rollout-2026-10-22.json` separately records the approved 4,096-token
+production rollout, unchanged daily limits/deadline, rollback/private backups,
+deployed-file/worker verification, isolation/resource checks, public cold resume
+and actual desktop/mobile draft/export/reload acceptance. These rollout checks
+make zero model calls; they do not claim another production inference run.
